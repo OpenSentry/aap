@@ -1,1 +1,1 @@
-# golang-cp-be
+# Golang Consent Provider backend 
