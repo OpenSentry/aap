@@ -2,6 +2,7 @@
 set -e
 
 CLIENT_ID=cp-be
+CLIENT_NAME=consent-provider-backend
 FILE=.cp-be.yml
 
 if [ -f "$FILE" ]
@@ -21,7 +22,7 @@ cmd=$(docker run --rm -it \
   clients create \
     --skip-tls-verify \
     --id $CLIENT_ID \
-    --name identity-provider-backend \
+    --name $CLIENT_NAME \
     --grant-types client_credentials \
     --response-types token \
     --scope oauth.*,idp.*)
