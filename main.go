@@ -3,6 +3,7 @@ package main
 import (
   "github.com/gin-gonic/gin"
   "golang-cp-be/server"
+  "golang-cp-be/config"
 )
 
 /*
@@ -10,6 +11,10 @@ import (
 /authorizations
 
 */
+
+func init() {
+  config.InitConfigurations()
+}
 
 func main() {
 
