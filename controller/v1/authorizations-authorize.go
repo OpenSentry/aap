@@ -4,6 +4,7 @@ import (
   "github.com/gin-gonic/gin"
   "net/http"
   "golang-cp-be/interfaces"
+  "golang-cp-be/config"
   _ "os"
   "fmt"
   "io/ioutil"
@@ -29,7 +30,7 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     "Accept": []string{"application/json"},
   }
 
-  req, err := http.NewRequest("GET", "http://hydra:4445/oauth2/auth/requests/consent", nil)
+  req, err := http.NewRequest("GET", config.Hydra.ConsentRequestUrl, nil)
   req.Header = headers
 
   q := req.URL.Query()
@@ -48,7 +49,7 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
       "subject": hydraConsentRequestResponse.Subject,
     })
 
-    req1, _ := http.NewRequest("PUT", "http://hydra:4445/oauth2/auth/requests/consent/accept", bytes.NewBuffer(body))
+    req1, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
     req1.Header = headers
 
     q1 := req1.URL.Query()
@@ -86,7 +87,7 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
 
   fmt.Println(string(body))
 
-  req2, _ := http.NewRequest("PUT", "http://hydra:4445/oauth2/auth/requests/consent/accept", bytes.NewBuffer(body))
+  req2, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
   req2.Header = headers
 
   q2 := req2.URL.Query()
