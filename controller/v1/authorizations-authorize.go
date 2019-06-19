@@ -4,12 +4,8 @@ import (
   "github.com/gin-gonic/gin"
   "net/http"
   "golang-cp-be/interfaces"
-  "golang-cp-be/config"
+  "golang-cp-be/gateway/hydra"
   _ "os"
-  "fmt"
-  "io/ioutil"
-  "encoding/json"
-  "bytes"
 )
 
 func PostAuthorizationsAuthorize(c *gin.Context) {
@@ -23,87 +19,34 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     return
   }
 
-  client := &http.Client{}
+  hydraConsentResponse := hydra.GetConsent(input.Challenge)
 
-  headers := map[string][]string{
-    "Content-Type": []string{"application/json"},
-    "Accept": []string{"application/json"},
-  }
-
-  req, err := http.NewRequest("GET", config.Hydra.ConsentRequestUrl, nil)
-  req.Header = headers
-
-  q := req.URL.Query()
-  q.Add("consent_challenge", input.Challenge)
-  req.URL.RawQuery = q.Encode()
-
-  response, err := client.Do(req)
-
-  responseData, err := ioutil.ReadAll(response.Body)
-
-  var hydraConsentRequestResponse interfaces.HydraConsentRequestResponse
-  json.Unmarshal(responseData, &hydraConsentRequestResponse)
-
-  if hydraConsentRequestResponse.Skip {
-    body, _ := json.Marshal(map[string]string{
-      "subject": hydraConsentRequestResponse.Subject,
-    })
-
-    req1, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
-    req1.Header = headers
-
-    q1 := req1.URL.Query()
-    q1.Add("consent_challenge", input.Challenge)
-    req1.URL.RawQuery = q1.Encode()
-
-    response1, _ := client.Do(req1)
-
-    responseData1, _ := ioutil.ReadAll(response1.Body)
-
-    var hydraConsentRequestAcceptResponse interfaces.HydraConsentRequestAcceptResponse
-    json.Unmarshal(responseData1, &hydraConsentRequestAcceptResponse)
-
-    c.JSON(http.StatusOK, gin.H{
-      "authorized": true,
-      "redirect_to": hydraConsentRequestAcceptResponse.RedirectTo,
-    })
-
-    return
-  }
-
-  fmt.Println(hydraConsentRequestResponse.GrantAccessTokenAudience)
-
-  hydraConsentAcceptRequest := &interfaces.HydraConsentAcceptRequest{
+  hydraConsentAcceptRequest := interfaces.HydraConsentAcceptRequest{
     GrantScope: input.GrantScopes,
     Session: interfaces.HydraConsentAcceptSession {
     },
-    GrantAccessTokenAudience: hydraConsentRequestResponse.GrantAccessTokenAudience,
+    GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
     Remember: false,
     RememberFor: 3600,
   }
 
-  // call hydra with accept login request
-  body, _ := json.Marshal(hydraConsentAcceptRequest)
+  if hydraConsentResponse.Skip {
+    hydraConsentAcceptRequest = interfaces.HydraConsentAcceptRequest{
+      Subject: hydraConsentResponse.Subject,
+      GrantScope: input.GrantScopes,
+      Session: interfaces.HydraConsentAcceptSession {
+      },
+      GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+      Remember: false,
+      RememberFor: 3600,
+    }
+  }
 
-  fmt.Println(string(body))
-
-  req2, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
-  req2.Header = headers
-
-  q2 := req2.URL.Query()
-  q2.Add("consent_challenge", input.Challenge)
-  req2.URL.RawQuery = q2.Encode()
-
-  response2, _ := client.Do(req2)
-
-  responseData2, _ := ioutil.ReadAll(response2.Body)
-
-  var hydraConsentRequestAcceptResponse interfaces.HydraConsentRequestAcceptResponse
-  json.Unmarshal(responseData2, &hydraConsentRequestAcceptResponse)
+  hydraConsentAcceptResponse := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
 
   c.JSON(http.StatusOK, gin.H{
     "authorized": true,
-    "redirect_to": hydraConsentRequestAcceptResponse.RedirectTo,
+    "redirect_to": hydraConsentAcceptResponse.RedirectTo,
   })
 
   return
