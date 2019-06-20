@@ -20,3 +20,11 @@ type PostAuthorizationsAuthorizeResponse struct {
   Authorized                  bool              `json:"authorized" binding:"required"`
   RedirectTo                  string            `json:"redirect_to" binding:"required"`
 }
+
+type GetAuthorizationsAuthorizeRequest struct {
+  Challenge                   string            `json:"challenge" binding:"required"`
+}
+
+type GetAuthorizationsAuthorizeResponse struct {
+  RequestedScopes             []string          `json:"requested_scopes"`
+}

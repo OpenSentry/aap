@@ -1,10 +1,13 @@
 package interfaces
 
 type HydraConsentResponse struct {
+  Subject                      string                     `json:"subject"`
   Skip                         bool                       `json:"skip"`
   RedirectTo                   string                     `json:"redirect_to"`
-  Subject                      string                     `json:"subject"`
   GrantAccessTokenAudience     string                     `json:"grant_access_token_audience"`
+  RequestUrl                   string                     `json:"request_url"`
+  RequestedAccessTokenAudience []string                   `json:"requested_access_token_audience"`
+  RequestedScopes              []string                   `json:"requested_scope"`
 }
 
 type HydraConsentAcceptSession struct {

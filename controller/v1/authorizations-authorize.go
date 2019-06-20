@@ -6,10 +6,10 @@ import (
   "golang-cp-be/interfaces"
   "golang-cp-be/gateway/hydra"
   _ "os"
+  _ "fmt"
 )
 
 func PostAuthorizationsAuthorize(c *gin.Context) {
-
   var input interfaces.PostAuthorizationsAuthorizeRequest
 
   err := c.BindJSON(&input)
@@ -19,7 +19,12 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     return
   }
 
-  hydraConsentResponse := hydra.GetConsent(input.Challenge)
+  hydraConsentResponse, err := hydra.GetConsent(input.Challenge)
+
+  if err != nil {
+    c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+    return
+  }
 
   hydraConsentAcceptRequest := interfaces.HydraConsentAcceptRequest{
     GrantScope: input.GrantScopes,
@@ -42,11 +47,33 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     }
   }
 
-  hydraConsentAcceptResponse := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
+  hydraConsentAcceptResponse, _ := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
 
   c.JSON(http.StatusOK, gin.H{
     "authorized": true,
     "redirect_to": hydraConsentAcceptResponse.RedirectTo,
+  })
+
+  return
+}
+
+func GetAuthorizationsAuthorize(c *gin.Context) {
+  challenge := c.Query("challenge")
+
+  if challenge == "" {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "GET param 'challenge' is missing"})
+    return
+  }
+
+  hydraConsentResponse, err := hydra.GetConsent(challenge)
+
+  if err != nil {
+    c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+    return
+  }
+
+  c.JSON(http.StatusOK, gin.H{
+    "requested_scopes": hydraConsentResponse.RequestedScopes,
   })
 
   return
