@@ -39,11 +39,11 @@ func InitConfigurations() {
   Hydra.ConsentRequestAcceptUrl = Hydra.ConsentRequestUrl + "/accept"
   Hydra.ConsentRequestRejectUrl = Hydra.ConsentRequestUrl + "/reject"
 
-  OAuth2Client.ClientId       = getEnv("OAUTH2_CLIENT_CLIENT_ID")
-  OAuth2Client.ClientSecret   = getEnv("OAUTH2_CLIENT_ClIENT_SECRET")
-  OAuth2Client.Scopes         = strings.Split(getEnv("OAUTH2_CLIENT_SCOPES"), ",")
-  OAuth2Client.RedirectURL    = getEnv("OAUTH2_CLIENT_REDIRECT_URL")
-  OAuth2Client.Endpoint       = getEnv("OAUTH2_CLIENT_ENDPOINT")
+  OAuth2Client.ClientId         = getEnv("OAUTH2_CLIENT_CLIENT_ID")
+  OAuth2Client.ClientSecret     = getEnv("OAUTH2_CLIENT_ClIENT_SECRET")
+  OAuth2Client.Scopes           = strings.Split(getEnv("OAUTH2_CLIENT_SCOPES"), ",")
+  OAuth2Client.RedirectURL      = getEnv("OAUTH2_CLIENT_REDIRECT_URL")
+  OAuth2Client.Endpoint         = getEnv("OAUTH2_CLIENT_ENDPOINT")
 }
 
 func getEnv(name string) string {

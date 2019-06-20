@@ -7,6 +7,7 @@ import (
   "bytes"
   "encoding/json"
   "io/ioutil"
+  "fmt"
 )
 
 func getDefaultHeaders() map[string][]string {
@@ -16,7 +17,8 @@ func getDefaultHeaders() map[string][]string {
   }
 }
 
-func GetConsent(challenge string) interfaces.HydraConsentResponse {
+func GetConsent(challenge string) (interfaces.HydraConsentResponse, error) {
+  var hydraConsentResponse interfaces.HydraConsentResponse
 
   client := &http.Client{}
 
@@ -29,16 +31,21 @@ func GetConsent(challenge string) interfaces.HydraConsentResponse {
 
   response, _ := client.Do(request)
 
+  if response.StatusCode == 404 {
+    return hydraConsentResponse, fmt.Errorf("hydra: consent request not found from challenge %s", challenge)
+  }
+
   responseData, _ := ioutil.ReadAll(response.Body)
 
-  var hydraConsentResponse interfaces.HydraConsentResponse
+  fmt.Println(string(responseData))
+
   json.Unmarshal(responseData, &hydraConsentResponse)
 
-  return hydraConsentResponse
+  return hydraConsentResponse, nil
 }
 
-func AcceptConsent(challenge string, hydraConsentAcceptRequest interfaces.HydraConsentAcceptRequest) interfaces.HydraConsentAcceptResponse {
-  // call hydra with accept login request
+func AcceptConsent(challenge string, hydraConsentAcceptRequest interfaces.HydraConsentAcceptRequest) (interfaces.HydraConsentAcceptResponse, error) {
+  var hydraConsentAcceptResponse interfaces.HydraConsentAcceptResponse
 
   client := &http.Client{}
 
@@ -55,8 +62,7 @@ func AcceptConsent(challenge string, hydraConsentAcceptRequest interfaces.HydraC
 
   responseData, _ := ioutil.ReadAll(response.Body)
 
-  var hydraConsentAcceptResponse interfaces.HydraConsentAcceptResponse
   json.Unmarshal(responseData, &hydraConsentAcceptResponse)
 
-  return hydraConsentAcceptResponse
+  return hydraConsentAcceptResponse, nil
 }
