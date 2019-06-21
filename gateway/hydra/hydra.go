@@ -37,8 +37,6 @@ func GetConsent(challenge string) (interfaces.HydraConsentResponse, error) {
 
   responseData, _ := ioutil.ReadAll(response.Body)
 
-  fmt.Println(string(responseData))
-
   json.Unmarshal(responseData, &hydraConsentResponse)
 
   return hydraConsentResponse, nil
