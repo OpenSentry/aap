@@ -29,8 +29,14 @@ type OAuth2ClientConfig struct {
   Endpoint        string
 }
 
+type CpFeConfig struct {
+  CsrfAuthKey     string
+  CpBackendUrl    string
+}
+
 var Hydra HydraConfig
 var OAuth2Client OAuth2ClientConfig
+var CpFe CpFeConfig
 
 func InitConfigurations() {
   Hydra.Url                     = getEnvStrict("HYDRA_URL")
@@ -44,6 +50,9 @@ func InitConfigurations() {
   OAuth2Client.Scopes           = strings.Split(getEnv("OAUTH2_CLIENT_SCOPES"), ",")
   OAuth2Client.RedirectURL      = getEnv("OAUTH2_CLIENT_REDIRECT_URL")
   OAuth2Client.Endpoint         = getEnv("OAUTH2_CLIENT_ENDPOINT")
+
+  CpFe.CsrfAuthKey              = getEnv("CSRF_AUTH_KEY") // 32 byte long auth key. When you change this user session will break.
+  CpFe.CpBackendUrl             = getEnv("CP_BACKEND_URL")
 }
 
 func getEnv(name string) string {
