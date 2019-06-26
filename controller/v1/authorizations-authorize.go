@@ -6,7 +6,7 @@ import (
   "golang-cp-be/interfaces"
   "golang-cp-be/gateway/hydra"
   _ "os"
-  _ "fmt"
+  "fmt"
 )
 
 func PostAuthorizationsAuthorize(c *gin.Context) {
@@ -20,6 +20,7 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
   }
 
   hydraConsentResponse, err := hydra.GetConsent(input.Challenge)
+  fmt.Println(hydraConsentResponse)
 
   if err != nil {
     c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -31,18 +32,17 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     Session: interfaces.HydraConsentAcceptSession {
     },
     GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
-    Remember: false,
+    Remember: true,
     RememberFor: 3600,
   }
 
   if hydraConsentResponse.Skip {
     hydraConsentAcceptRequest = interfaces.HydraConsentAcceptRequest{
-      Subject: hydraConsentResponse.Subject,
       GrantScope: input.GrantScopes,
       Session: interfaces.HydraConsentAcceptSession {
       },
       GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
-      Remember: false,
+      Remember: true,
       RememberFor: 3600,
     }
   }
@@ -50,6 +50,7 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
   hydraConsentAcceptResponse, _ := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
 
   c.JSON(http.StatusOK, gin.H{
+    "id": hydraConsentResponse.Subject,
     "authorized": true,
     "redirect_to": hydraConsentAcceptResponse.RedirectTo,
   })
