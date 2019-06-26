@@ -6,12 +6,12 @@ type CpSession struct {
 }
 
 type PostAuthorizationsAuthorizeRequest struct {
-  GrantScopes                 []string          `json:"grant_scopes" binding:"required"`
+  GrantScopes                 []string          `json:"grant_scopes"`
   Challenge                   string            `json:"challenge" binding:"required"`
   Session                     struct {
     AccessToken                 string            `json:"access_token"`
     IdToken                     string            `json:"id_token"`
-  } `json:"session" binding:"required"`
+  } `json:"session"`
 }
 
 type PostAuthorizationsAuthorizeResponse struct {
