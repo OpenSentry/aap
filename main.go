@@ -2,8 +2,8 @@ package main
 
 import (
   "github.com/gin-gonic/gin"
-  "golang-cp-be/server"
   "golang-cp-be/config"
+  "golang-cp-be/controller"
 )
 
 /*
@@ -19,11 +19,13 @@ func init() {
 func main() {
 
   r := gin.Default()
-  //r.GET("/ping", controller.Ping)
 
-  v1 := r.Group("v1")
+  r.POST( "/authorizations/authorize", controller.PostAuthorizationsAuthorize)
+  r.GET( "/authorizations/authorize", controller.GetAuthorizationsAuthorize)
 
-  server.V1Routes(v1) //Added all routes
+  r.GET( "/authorizations", controller.GetAuthorizations)
+  r.POST("/authorizations", controller.PostAuthorizations)
+  r.PUT( "/authorizations", controller.PutAuthorizations)
 
   r.Run() // listen and serve on 0.0.0.0:8080
 }

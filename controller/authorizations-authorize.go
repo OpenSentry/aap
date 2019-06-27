@@ -12,18 +12,46 @@ import (
 func PostAuthorizationsAuthorize(c *gin.Context) {
   var input interfaces.PostAuthorizationsAuthorizeRequest
 
-  err := c.BindJSON(&input)
 
+  err := c.BindJSON(&input)
   if err != nil {
     c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
     return
   }
 
   hydraConsentResponse, err := hydra.GetConsent(input.Challenge)
-  fmt.Println(hydraConsentResponse)
-
   if err != nil {
     c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+    return
+  }
+
+  fmt.Println(hydraConsentResponse)
+
+  if hydraConsentResponse.Skip {
+
+    hydraConsentAcceptRequest := interfaces.HydraConsentAcceptRequest{
+      GrantScope: hydraConsentResponse.RequestedScopes, // We can grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
+      Session: interfaces.HydraConsentAcceptSession {
+      },
+      GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+      Remember: true,
+      RememberFor: 3600,
+    }
+
+    hydraConsentAcceptResponse, err := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
+    if err != nil {
+      fmt.Println(err)
+      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      c.Abort();
+      return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+      "id": hydraConsentResponse.Subject,
+      "authorized": true,
+      "redirect_to": hydraConsentAcceptResponse.RedirectTo,
+    })
+    c.Abort();
     return
   }
 
@@ -35,23 +63,17 @@ func PostAuthorizationsAuthorize(c *gin.Context) {
     Remember: true,
     RememberFor: 3600,
   }
-
-  if hydraConsentResponse.Skip {
-    hydraConsentAcceptRequest = interfaces.HydraConsentAcceptRequest{
-      GrantScope: input.GrantScopes,
-      Session: interfaces.HydraConsentAcceptSession {
-      },
-      GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
-      Remember: true,
-      RememberFor: 3600,
-    }
+  hydraConsentAcceptResponse, err := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
+  if err != nil {
+    fmt.Println(err)
+    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    c.Abort();
+    return
   }
-
-  hydraConsentAcceptResponse, _ := hydra.AcceptConsent(input.Challenge, hydraConsentAcceptRequest)
 
   c.JSON(http.StatusOK, gin.H{
     "id": hydraConsentResponse.Subject,
-    "authorized": true,
+    "authorized": false,
     "redirect_to": hydraConsentAcceptResponse.RedirectTo,
   })
 
