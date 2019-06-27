@@ -2,16 +2,7 @@ package config
 
 import (
   "os"
-  "strings"
 )
-
-/*
-RedirectURL:  redirect url,
-ClientID:     "GOOGLE_CLIENT_ID",
-ClientSecret: "CLIENT_SECRET",
-Scopes:       []string{"scope1", "scope2"},
-Endpoint:     oauth2 endpoint,
-*/
 
 type HydraConfig struct {
   Url                         string
@@ -35,7 +26,6 @@ type CpFeConfig struct {
 }
 
 var Hydra HydraConfig
-var OAuth2Client OAuth2ClientConfig
 var CpFe CpFeConfig
 
 func InitConfigurations() {
@@ -44,12 +34,6 @@ func InitConfigurations() {
   Hydra.ConsentRequestUrl       = Hydra.AdminUrl + "/oauth2/auth/requests/consent"
   Hydra.ConsentRequestAcceptUrl = Hydra.ConsentRequestUrl + "/accept"
   Hydra.ConsentRequestRejectUrl = Hydra.ConsentRequestUrl + "/reject"
-
-  OAuth2Client.ClientId         = getEnv("OAUTH2_CLIENT_CLIENT_ID")
-  OAuth2Client.ClientSecret     = getEnv("OAUTH2_CLIENT_ClIENT_SECRET")
-  OAuth2Client.Scopes           = strings.Split(getEnv("OAUTH2_CLIENT_SCOPES"), ",")
-  OAuth2Client.RedirectURL      = getEnv("OAUTH2_CLIENT_REDIRECT_URL")
-  OAuth2Client.Endpoint         = getEnv("OAUTH2_CLIENT_ENDPOINT")
 
   CpFe.CsrfAuthKey              = getEnv("CSRF_AUTH_KEY") // 32 byte long auth key. When you change this user session will break.
   CpFe.CpBackendUrl             = getEnv("CP_BACKEND_URL")
