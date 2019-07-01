@@ -27,3 +27,15 @@ type HydraConsentAcceptRequest struct {
   Remember                     bool                       `json:"remember" binding:"required"`
   RememberFor                  int                        `json:"remember_for" binding:"required"`
 }
+
+type HydraConsentRejectRequest struct {
+  Error            string `json:"error"`
+  ErrorDebug       string `json:"error_debug"`
+  ErrorDescription string `json:"error_description"`
+  ErrorHint        string `json:"error_hint"`
+  StatusCode       int    `json:"status_code"`
+}
+
+type HydraConsentRejectResponse struct {
+  RedirectTo                   string                     `json:"redirect_to"`
+}

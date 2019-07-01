@@ -7,36 +7,32 @@ import (
 type HydraConfig struct {
   Url                         string
   AdminUrl                    string
+  TokenUrl                    string
   ConsentRequestUrl           string
   ConsentRequestAcceptUrl     string
   ConsentRequestRejectUrl     string
 }
 
-type OAuth2ClientConfig struct {
-  ClientId        string
-  ClientSecret    string
-  Scopes          []string
-  RedirectURL     string
-  Endpoint        string
-}
-
-type CpFeConfig struct {
-  CsrfAuthKey     string
-  CpBackendUrl    string
+type CpBeConfig struct {
+  ClientId string
+  ClientSecret string
+  RequiredScopes []string
 }
 
 var Hydra HydraConfig
-var CpFe CpFeConfig
+var CpBe CpBeConfig
 
 func InitConfigurations() {
   Hydra.Url                     = getEnvStrict("HYDRA_URL")
   Hydra.AdminUrl                = getEnvStrict("HYDRA_ADMIN_URL")
+  Hydra.TokenUrl                = Hydra.Url + "/oauth2/token"
   Hydra.ConsentRequestUrl       = Hydra.AdminUrl + "/oauth2/auth/requests/consent"
   Hydra.ConsentRequestAcceptUrl = Hydra.ConsentRequestUrl + "/accept"
   Hydra.ConsentRequestRejectUrl = Hydra.ConsentRequestUrl + "/reject"
 
-  CpFe.CsrfAuthKey              = getEnv("CSRF_AUTH_KEY") // 32 byte long auth key. When you change this user session will break.
-  CpFe.CpBackendUrl             = getEnv("CP_BACKEND_URL")
+  CpBe.ClientId       = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_ID")
+  CpBe.ClientSecret   = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_SECRET")
+  CpBe.RequiredScopes = []string{"hydra"}
 }
 
 func getEnv(name string) string {
