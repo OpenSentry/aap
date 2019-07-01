@@ -26,8 +26,7 @@ COPY . .
 
 # Download all the dependencies
 # https://stackoverflow.com/questions/28031603/what-do-three-dots-mean-in-go-command-line-invocations
-RUN go get github.com/gin-gonic/gin
-RUN go get github.com/neo4j/neo4j-go-driver/neo4j
+RUN go get -d -v ./...
 
 # Install the package
 RUN go install -v ./...

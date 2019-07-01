@@ -10,20 +10,11 @@ import (
   "fmt"
 )
 
-func getDefaultHeaders() map[string][]string {
-  return map[string][]string{
-    "Content-Type": []string{"application/json"},
-    "Accept": []string{"application/json"},
-  }
-}
-
-func GetConsent(challenge string) (interfaces.HydraConsentResponse, error) {
+func GetConsent(challenge string, client *http.Client) (interfaces.HydraConsentResponse, error) {
   var hydraConsentResponse interfaces.HydraConsentResponse
-
-  client := &http.Client{}
+  var err error
 
   request, _ := http.NewRequest("GET", config.Hydra.ConsentRequestUrl, nil)
-  request.Header = getDefaultHeaders()
 
   query := request.URL.Query()
   query.Add("consent_challenge", challenge)
@@ -31,26 +22,29 @@ func GetConsent(challenge string) (interfaces.HydraConsentResponse, error) {
 
   response, _ := client.Do(request)
 
-  if response.StatusCode == 404 {
-    return hydraConsentResponse, fmt.Errorf("hydra: consent request not found from challenge %s", challenge)
+  statusCode := response.StatusCode
+
+  if statusCode == 200 {
+    responseData, _ := ioutil.ReadAll(response.Body)
+    json.Unmarshal(responseData, &hydraConsentResponse)
+    return hydraConsentResponse, nil
   }
 
-  responseData, _ := ioutil.ReadAll(response.Body)
-fmt.Println(string(responseData))
-  json.Unmarshal(responseData, &hydraConsentResponse)
-
-  return hydraConsentResponse, nil
+  // Deny by default
+  if ( statusCode == 404 ) {
+    err = fmt.Errorf("Consent request not found for challenge %s", challenge)
+  } else {
+    err = fmt.Errorf("Consent request failed with status code %s for challenge %s", statusCode, challenge)
+  }
+  return hydraConsentResponse, err
 }
 
-func AcceptConsent(challenge string, hydraConsentAcceptRequest interfaces.HydraConsentAcceptRequest) (interfaces.HydraConsentAcceptResponse, error) {
+func AcceptConsent(challenge string, client *http.Client, hydraConsentAcceptRequest interfaces.HydraConsentAcceptRequest) (interfaces.HydraConsentAcceptResponse, error) {
   var hydraConsentAcceptResponse interfaces.HydraConsentAcceptResponse
-
-  client := &http.Client{}
 
   body, _ := json.Marshal(hydraConsentAcceptRequest)
 
   request, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
-  request.Header = getDefaultHeaders()
 
   query := request.URL.Query()
   query.Add("consent_challenge", challenge)
@@ -59,9 +53,28 @@ func AcceptConsent(challenge string, hydraConsentAcceptRequest interfaces.HydraC
   response, _ := client.Do(request)
 
   responseData, _ := ioutil.ReadAll(response.Body)
-fmt.Println(string(responseData))
 
   json.Unmarshal(responseData, &hydraConsentAcceptResponse)
 
   return hydraConsentAcceptResponse, nil
+}
+
+func RejectConsent(challenge string, client *http.Client, hydraConsentRejectRequest interfaces.HydraConsentRejectRequest) (interfaces.HydraConsentRejectResponse, error) {
+  var hydraConsentRejectResponse interfaces.HydraConsentRejectResponse
+
+  body, _ := json.Marshal(hydraConsentRejectRequest)
+
+  request, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
+
+  query := request.URL.Query()
+  query.Add("consent_challenge", challenge)
+  request.URL.RawQuery = query.Encode()
+
+  response, _ := client.Do(request)
+
+  responseData, _ := ioutil.ReadAll(response.Body)
+
+  json.Unmarshal(responseData, &hydraConsentRejectResponse)
+
+  return hydraConsentRejectResponse, nil
 }

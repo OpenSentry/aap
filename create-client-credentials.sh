@@ -25,7 +25,8 @@ cmd=$(docker run --rm -it \
     --name $CLIENT_NAME \
     --grant-types client_credentials \
     --response-types token \
-    --scope oauth.*,idp.*)
+    --scope hydra \
+    --audience hydra)
 
 if [ "$?" -eq 0 ]
 then
@@ -37,5 +38,3 @@ else
   echo "Error: $?"
   exit $?
 fi
-
-
