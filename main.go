@@ -58,7 +58,8 @@ func main() {
   r.POST( "/authorizations/authorize", controller.AuthorizationsAuthorize)
   r.POST( "/authorizations/reject", controller.AuthorizationsReject)
 
-  r.Run() // listen and serve on 0.0.0.0:8080
+  r.RunTLS(":80", "/srv/certs/cpbe-cert.pem", "/srv/certs/cpbe-key.pem")
+  // r.Run() // listen and serve on 0.0.0.0:8080
 }
 
 func requestAccessTokenForHydra(provider *clientcredentials.Config) (*oauth2.Token, error) {
