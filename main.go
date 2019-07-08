@@ -57,7 +57,7 @@ func main() {
   r.POST( "/authorizations/authorize", controller.AuthorizationsAuthorize)
   r.POST( "/authorizations/reject", controller.AuthorizationsReject)
 
-  r.RunTLS(":80", "/srv/certs/cpbe-cert.pem", "/srv/certs/cpbe-key.pem")
+  r.RunTLS(":" + config.Self.Port, "/srv/certs/cpbe-cert.pem", "/srv/certs/cpbe-key.pem")
   // r.Run() // listen and serve on 0.0.0.0:8080
 }
 
