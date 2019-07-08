@@ -4,6 +4,10 @@ import (
   "os"
 )
 
+type SelfConfig struct {
+  Port          string
+}
+
 type HydraConfig struct {
   Url                         string
   AdminUrl                    string
@@ -21,8 +25,11 @@ type CpBeConfig struct {
 
 var Hydra HydraConfig
 var CpBe CpBeConfig
+var Self SelfConfig
 
 func InitConfigurations() {
+  Self.Port                   = getEnvStrict("PORT")
+
   Hydra.Url                     = getEnvStrict("HYDRA_URL")
   Hydra.AdminUrl                = getEnvStrict("HYDRA_ADMIN_URL")
   Hydra.TokenUrl                = Hydra.Url + "/oauth2/token"
