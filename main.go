@@ -47,7 +47,6 @@ func main() {
 
   r := gin.Default()
   r.Use(ginrequestid.RequestId())
-  //r.Use(logRequest())
   r.Use(requireBearerAccessToken())
   r.Use(useHydraClient(hydraClient))
 
@@ -76,14 +75,6 @@ func requestAccessTokenForHydra(provider *clientcredentials.Config) (*oauth2.Tok
 func useHydraClient(client *http.Client) gin.HandlerFunc {
   return func(c *gin.Context) {
     c.Set("hydraClient", client)
-    c.Next()
-  }
-}
-
-func logRequest() gin.HandlerFunc {
-  return func(c *gin.Context) {
-    fmt.Println("Logging all requests. Do not do this in production it will leak tokens")
-    fmt.Println(c.Request)
     c.Next()
   }
 }
