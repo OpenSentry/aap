@@ -1,20 +1,72 @@
 package hydra
 
 import (
-  "golang-cp-be/config"
-  "golang-cp-be/interfaces"
   "net/http"
   "bytes"
   "encoding/json"
   "io/ioutil"
   "fmt"
+
+  "golang.org/x/net/context"
+  "golang.org/x/oauth2/clientcredentials"
 )
 
-func GetConsent(challenge string, client *http.Client) (interfaces.HydraConsentResponse, error) {
-  var hydraConsentResponse interfaces.HydraConsentResponse
+type HydraConsentResponse struct {
+  Subject                      string                     `json:"subject"`
+  Skip                         bool                       `json:"skip"`
+  RedirectTo                   string                     `json:"redirect_to"`
+  GrantAccessTokenAudience     string                     `json:"grant_access_token_audience"`
+  RequestUrl                   string                     `json:"request_url"`
+  RequestedAccessTokenAudience []string                   `json:"requested_access_token_audience"`
+  RequestedScopes              []string                   `json:"requested_scope"`
+}
+
+type HydraConsentAcceptSession struct {
+  AccessToken                  string                     `json:"access_token,omitempty"`
+  IdToken                      string                     `json:"id_token,omitempty"`
+}
+
+type HydraConsentAcceptResponse struct {
+  RedirectTo                   string                     `json:"redirect_to"`
+}
+
+type HydraConsentAcceptRequest struct {
+  Subject                      string                     `json:"subject,omitempty"`
+  GrantScope                   []string                   `json:"grant_scope"`
+  Session                      HydraConsentAcceptSession  `json:"session" binding:"required"`
+  GrantAccessTokenAudience     string                     `json:"grant_access_token_audience,omitempty" binding:"required"`
+  Remember                     bool                       `json:"remember" binding:"required"`
+  RememberFor                  int                        `json:"remember_for" binding:"required"`
+}
+
+type HydraConsentRejectRequest struct {
+  Error            string `json:"error"`
+  ErrorDebug       string `json:"error_debug"`
+  ErrorDescription string `json:"error_description"`
+  ErrorHint        string `json:"error_hint"`
+  StatusCode       int    `json:"status_code"`
+}
+
+type HydraConsentRejectResponse struct {
+  RedirectTo                   string                     `json:"redirect_to"`
+}
+
+type HydraClient struct {
+  *http.Client
+}
+
+func NewHydraClient(config *clientcredentials.Config) *HydraClient {
+  ctx := context.Background()
+  client := config.Client(ctx)
+  return &HydraClient{client}
+}
+
+// config.Hydra.ConsentRequestUrl
+func GetConsent(url string, client *HydraClient, challenge string) (HydraConsentResponse, error) {
+  var hydraConsentResponse HydraConsentResponse
   var err error
 
-  request, _ := http.NewRequest("GET", config.Hydra.ConsentRequestUrl, nil)
+  request, _ := http.NewRequest("GET", url, nil)
 
   query := request.URL.Query()
   query.Add("consent_challenge", challenge)
@@ -39,12 +91,13 @@ func GetConsent(challenge string, client *http.Client) (interfaces.HydraConsentR
   return hydraConsentResponse, err
 }
 
-func AcceptConsent(challenge string, client *http.Client, hydraConsentAcceptRequest interfaces.HydraConsentAcceptRequest) (interfaces.HydraConsentAcceptResponse, error) {
-  var hydraConsentAcceptResponse interfaces.HydraConsentAcceptResponse
+// config.Hydra.ConsentRequestAcceptUrl
+func AcceptConsent(url string, client *HydraClient, challenge string, hydraConsentAcceptRequest HydraConsentAcceptRequest) (HydraConsentAcceptResponse, error) {
+  var hydraConsentAcceptResponse HydraConsentAcceptResponse
 
   body, _ := json.Marshal(hydraConsentAcceptRequest)
 
-  request, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
+  request, _ := http.NewRequest("PUT", url, bytes.NewBuffer(body))
 
   query := request.URL.Query()
   query.Add("consent_challenge", challenge)
@@ -59,12 +112,13 @@ func AcceptConsent(challenge string, client *http.Client, hydraConsentAcceptRequ
   return hydraConsentAcceptResponse, nil
 }
 
-func RejectConsent(challenge string, client *http.Client, hydraConsentRejectRequest interfaces.HydraConsentRejectRequest) (interfaces.HydraConsentRejectResponse, error) {
-  var hydraConsentRejectResponse interfaces.HydraConsentRejectResponse
+// config.Hydra.ConsentRequestAcceptUrl
+func RejectConsent(url string, client *HydraClient, challenge string, hydraConsentRejectRequest HydraConsentRejectRequest) (HydraConsentRejectResponse, error) {
+  var hydraConsentRejectResponse HydraConsentRejectResponse
 
   body, _ := json.Marshal(hydraConsentRejectRequest)
 
-  request, _ := http.NewRequest("PUT", config.Hydra.ConsentRequestAcceptUrl, bytes.NewBuffer(body))
+  request, _ := http.NewRequest("PUT", url, bytes.NewBuffer(body))
 
   query := request.URL.Query()
   query.Add("consent_challenge", challenge)
