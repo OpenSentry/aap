@@ -1,14 +1,13 @@
 package authorizations
 
 import (
-  _ "os"
-  "net/http"
-  _ "encoding/json"
   "fmt"
+  "net/http"
 
   "github.com/gin-gonic/gin"
 
   "golang-cp-be/config"
+  "golang-cp-be/environment"
   "golang-cp-be/gateway/hydra"
 )
 
@@ -34,9 +33,10 @@ type RejectResponse struct {
   RedirectTo                  string            `json:"redirect_to" binding:"required"`
 }
 
-func PostAuthorize(env *CpBeEnv) gin.HandlerFunc {
+func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    fmt.Println(fmt.Sprintf("[request-id:%s][event:authorizations.PostAuthorize]", c.MustGet("RequestId")))
+    requestId := c.MustGet(environment.RequestIdKey).(string)
+    environment.DebugLog(route.LogId, "PostAuthorize", "", requestId)
 
     var input AuthorizeRequest
     err := c.BindJSON(&input)
@@ -46,6 +46,7 @@ func PostAuthorize(env *CpBeEnv) gin.HandlerFunc {
       return
     }
 
+    // Create a new HTTP client to perform the request, to prevent serialization
     hydraClient := hydra.NewHydraClient(env.HydraConfig)
 
     authorizeResponse, err := authorize(hydraClient, input)
@@ -55,15 +56,17 @@ func PostAuthorize(env *CpBeEnv) gin.HandlerFunc {
       return
     }
 
-    fmt.Println(fmt.Sprintf("CpBe.PostAuthorize, authorized:%s redirect_to:%s", authorizeResponse.Authorized, authorizeResponse.RedirectTo))
+    log := fmt.Sprintf("authorized:%s redirect_to:%s", authorizeResponse.Authorized, authorizeResponse.RedirectTo)
+    environment.DebugLog(route.LogId, "PostAuthorize", log, requestId)
     c.JSON(http.StatusOK, authorizeResponse)
   }
   return gin.HandlerFunc(fn)
 }
 
-func PostReject(env *CpBeEnv) gin.HandlerFunc {
+func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    fmt.Println(fmt.Sprintf("[request-id:%s][event:PostReject]", c.MustGet("RequestId")))
+    requestId := c.MustGet(environment.RequestIdKey).(string)
+    environment.DebugLog(route.LogId, "PostReject", "", requestId)
 
     var input RejectRequest
     err := c.BindJSON(&input)
@@ -89,7 +92,7 @@ func PostReject(env *CpBeEnv) gin.HandlerFunc {
       return
     }
 
-    fmt.Println("CpBe.PostAuthorizationsReject, authorized:false redirect_to:" + hydraConsentRejectResponse.RedirectTo)
+    environment.DebugLog(route.LogId, "PostReject", "authorized:false redirect_to:" + hydraConsentRejectResponse.RedirectTo, requestId)
     c.JSON(http.StatusOK, gin.H{
       "authorized": false,
       "redirect_to": hydraConsentRejectResponse.RedirectTo,
