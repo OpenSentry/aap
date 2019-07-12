@@ -3,22 +3,16 @@ package authorizations
 import (
   "net/http"
 
-  "golang.org/x/oauth2/clientcredentials"
-
-  oidc "github.com/coreos/go-oidc"
-
   "github.com/gin-gonic/gin"
-  "golang-cp-be/gateway/hydra"
+  "golang-cp-be/environment"
+  //"golang-cp-be/gateway/hydra"
 )
 
-type CpBeEnv struct {
-  Provider *oidc.Provider
-  HydraConfig *clientcredentials.Config
-  HydraClient *hydra.HydraClient
-}
-
-func GetCollection(env *CpBeEnv) gin.HandlerFunc {
+func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
+    requestId := c.MustGet(environment.RequestIdKey).(string)
+    environment.DebugLog(route.LogId, "GetCollection", "", requestId)
+
     c.JSON(http.StatusOK, gin.H{
       "message": "pong",
     })
@@ -26,8 +20,11 @@ func GetCollection(env *CpBeEnv) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PostCollection(env *CpBeEnv) gin.HandlerFunc {
+func PostCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
+    requestId := c.MustGet(environment.RequestIdKey).(string)
+    environment.DebugLog(route.LogId, "PostCollection", "", requestId)
+
     c.JSON(http.StatusOK, gin.H{
       "message": "pong",
     })
@@ -35,8 +32,11 @@ func PostCollection(env *CpBeEnv) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PutCollection(env *CpBeEnv) gin.HandlerFunc {
+func PutCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
+    requestId := c.MustGet(environment.RequestIdKey).(string)
+    environment.DebugLog(route.LogId, "PutCollection", "", requestId)
+
     c.JSON(http.StatusOK, gin.H{
       "message": "pong",
     })
