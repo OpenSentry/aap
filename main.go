@@ -14,6 +14,8 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/atarantini/ginrequestid"
 
+  "github.com/neo4j/neo4j-go-driver/neo4j"
+
   "golang-cp-be/config"
   "golang-cp-be/environment"
   //"golang-cp-be/gateway/hydra"
@@ -27,6 +29,17 @@ func init() {
 }
 
 func main() {
+
+  // https://medium.com/neo4j/neo4j-go-driver-is-out-fbb4ba5b3a30
+  // Each driver instance is thread-safe and holds a pool of connections that can be re-used over time. If you don’t have a good reason to do otherwise, a typical application should have a single driver instance throughout its lifetime.
+  driver, err := neo4j.NewDriver(config.CpBe.Neo4jUri, neo4j.BasicAuth(config.CpBe.Neo4jUserName, config.CpBe.Neo4jPassword, ""), func(config *neo4j.Config) {
+    config.Log = neo4j.ConsoleLogger(neo4j.DEBUG)
+  });
+  if err != nil {
+    environment.DebugLog(app, "main", "[database:Neo4j] " + err.Error(), "")
+    return
+  }
+  defer driver.Close()
 
   provider, err := oidc.NewProvider(context.Background(), config.Hydra.Url + "/")
   if err != nil {
@@ -48,6 +61,7 @@ func main() {
   env := &environment.State{
     Provider: provider,
     HydraConfig: hydraConfig,
+    Driver: driver,
   }
 
   // Setup routes to use, this defines log for debug log

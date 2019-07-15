@@ -21,6 +21,10 @@ type CpBeConfig struct {
   ClientId string
   ClientSecret string
   RequiredScopes []string
+
+  Neo4jUri string
+  Neo4jUserName string
+  Neo4jPassword string
 }
 
 var Hydra HydraConfig
@@ -40,6 +44,9 @@ func InitConfigurations() {
   CpBe.ClientId       = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_ID")
   CpBe.ClientSecret   = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_SECRET")
   CpBe.RequiredScopes = []string{"hydra"}
+  CpBe.Neo4jUri       = getEnvStrict("NEO4J_URI")
+  CpBe.Neo4jUserName  = getEnvStrict("NEO4J_USERNAME")
+  CpBe.Neo4jPassword  = getEnvStrict("NEO4J_PASSWORD")
 }
 
 func getEnv(name string) string {
