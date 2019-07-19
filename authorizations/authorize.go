@@ -3,6 +3,7 @@ package authorizations
 import (
   "fmt"
   "net/http"
+  "net/url"
 
   "github.com/gin-gonic/gin"
 
@@ -21,7 +22,9 @@ type AuthorizeResponse struct {
   Authorized                  bool              `json:"authorized" binding:"required"`
   GrantScopes                 []string          `json:"grant_scopes,omitempty"`
   RequestedScopes             []string          `json:"requested_scopes,omitempty"`
-  RedirectTo                  string            `json:"redirect_to,omitempty`
+  RedirectTo                  string            `json:"redirect_to,omitempty"`
+  Subject                     string            `json:"subject,omitempty"`
+  ClientId                    string            `json:"client_id,omitempty"`
 }
 
 type RejectRequest struct {
@@ -56,7 +59,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
       return
     }
 
-    log := fmt.Sprintf("authorized:%s redirect_to:%s", authorizeResponse.Authorized, authorizeResponse.RedirectTo)
+    log := fmt.Sprintf("client_id:%s subject:%s authorized:%s redirect_to:%s", authorizeResponse.ClientId, authorizeResponse.Subject, authorizeResponse.Authorized, authorizeResponse.RedirectTo)
     environment.DebugLog(route.LogId, "PostAuthorize", log, requestId)
     c.JSON(http.StatusOK, authorizeResponse)
   }
@@ -85,7 +88,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
       ErrorHint: "",
       StatusCode: 403,
     }
-    hydraConsentRejectResponse, err := hydra.RejectConsent(config.Hydra.ConsentRequestAcceptUrl, hydraClient, input.Challenge, hydraConsentRejectRequest)
+    hydraConsentRejectResponse, err := hydra.RejectConsent(config.Hydra.ConsentRequestRejectUrl, hydraClient, input.Challenge, hydraConsentRejectRequest)
     if err != nil {
       c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
       c.Abort()
@@ -111,6 +114,17 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     return authorizeResponse, err
   }
 
+  // Extract client_id from RequestUrl
+  // FIXME: Is there another way to find out on behalf of which client the request is made?
+  var clientId string
+  if hydraConsentResponse.RequestUrl != "" {
+    u, err := url.Parse(hydraConsentResponse.RequestUrl)
+    if err == nil {
+      q := u.Query();
+      clientId = q.Get("client_id")
+    }
+  }
+
   if hydraConsentResponse.Skip {
     hydraConsentAcceptRequest := hydra.HydraConsentAcceptRequest{
       GrantScope: hydraConsentResponse.RequestedScopes, // We can grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
@@ -118,7 +132,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       },
       GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
       Remember: true,
-      RememberFor: 3600,
+      RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
     hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Hydra.ConsentRequestAcceptUrl, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
     if err != nil {
@@ -127,6 +141,8 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
 
     authorizeResponse = AuthorizeResponse{
       Challenge: authorizeRequest.Challenge,
+      Subject: hydraConsentResponse.Subject,
+      ClientId: clientId,
       Authorized: true,
       GrantScopes: hydraConsentResponse.RequestedScopes,
       RequestedScopes: authorizeRequest.GrantScopes,
@@ -139,6 +155,8 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
   if len(authorizeRequest.GrantScopes) <= 0 {
     authorizeResponse = AuthorizeResponse{
       Challenge: authorizeRequest.Challenge,
+      Subject: hydraConsentResponse.Subject,
+      ClientId: clientId,
       Authorized: false,
       RequestedScopes: hydraConsentResponse.RequestedScopes,
     }
@@ -151,7 +169,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     },
     GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
     Remember: true,
-    RememberFor: 3600,
+    RememberFor: 0, // Never expire consent in hydra. Control this from aap system
   }
   hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Hydra.ConsentRequestAcceptUrl, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
   if err != nil {
@@ -160,6 +178,8 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
 
   authorizeResponse = AuthorizeResponse{
     Challenge: authorizeRequest.Challenge,
+    Subject: hydraConsentResponse.Subject,
+    ClientId: clientId,
     Authorized: true,
     GrantScopes: authorizeRequest.GrantScopes,
     RequestedScopes: authorizeRequest.GrantScopes,
