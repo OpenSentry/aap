@@ -1,7 +1,7 @@
 package main
 
 import (
-  "fmt"
+  //"fmt"
   "strings"
   "net/http"
   "net/url"
@@ -98,7 +98,7 @@ func main() {
   r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "cpbe.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
 
   r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "cpbe.authorize"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
-  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "cpbe.reject"), authorizations.PostAuthorize(env, routes["/authorizations/reject"]))
+  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "cpbe.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
 
   r.RunTLS(":" + config.Self.Port, "/srv/certs/cpbe-cert.pem", "/srv/certs/cpbe-key.pem")
 }
@@ -145,7 +145,7 @@ func authorizationRequired(route environment.Route, requiredScopes ...string) gi
     requestId := c.MustGet(environment.RequestIdKey).(string)
     environment.DebugLog(app, "authorizationRequired", "Checking Authorization: Bearer <token> in request", requestId)
 
-    accessToken, accessTokenExists := c.Get(environment.AccessTokenKey)
+    _ /*(accessToken)*/, accessTokenExists := c.Get(environment.AccessTokenKey)
     if accessTokenExists == false {
       c.JSON(http.StatusUnauthorized, gin.H{"error": "No access token found. Hint: Is bearer token missing?"})
       c.Abort()
@@ -153,7 +153,7 @@ func authorizationRequired(route environment.Route, requiredScopes ...string) gi
     }
 
     // Sanity check: Claims
-    fmt.Println(accessToken)
+    //fmt.Println(accessToken)
 
     foundRequiredScopes := true
     if foundRequiredScopes {

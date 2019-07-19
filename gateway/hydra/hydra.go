@@ -48,7 +48,7 @@ type HydraConsentRejectRequest struct {
 }
 
 type HydraConsentRejectResponse struct {
-  RedirectTo                   string                     `json:"redirect_to"`
+  RedirectTo string `json:"redirect_to"`
 }
 
 type HydraIntrospectRequest struct {
@@ -153,7 +153,7 @@ func AcceptConsent(url string, client *HydraClient, challenge string, hydraConse
   return hydraConsentAcceptResponse, nil
 }
 
-// config.Hydra.ConsentRequestAcceptUrl
+// config.Hydra.ConsentRequestRejectUrl
 func RejectConsent(url string, client *HydraClient, challenge string, hydraConsentRejectRequest HydraConsentRejectRequest) (HydraConsentRejectResponse, error) {
   var hydraConsentRejectResponse HydraConsentRejectResponse
 
