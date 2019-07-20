@@ -20,15 +20,6 @@ MERGE (:System {name:"aap"}) // The authorization access provder
 MERGE (:System {name:"hydra"}) // The oauth2 delegator
 ;
 
-// Apps
-CREATE CONSTRAINT ON (a:App) ASSERT a.name IS UNIQUE;
-MERGE (:App {name:"idpapi"}) // The idp api
-MERGE (:App {name:"idpui"})  // The idp ui
-MERGE (:App {name:"aapapi"}) // The aap api
-MERGE (:App {name:"aapui"})  // The aap ui
-MERGE (:App {name:"hydra"})  // The hydra
-;
-
 // Identity (pass: 123)
 CREATE CONSTRAINT ON (i:Identity) ASSERT i.sub IS UNIQUE;
 // Apps (client_id) (pass: 123), should probably be the client_secret
@@ -47,35 +38,31 @@ MATCH (yaiam:Brand {name:"yaiam"})
 MATCH (idp:System {name:"idp"})
 MATCH (aap:System {name:"aap"})
 MATCH (hydra:System {name:"hydra"})
-MATCH (appIdpApi:App {name:"idpapi"})
-MATCH (appIdpUi:App {name:"idpui"})
-MATCH (appAapApi:App {name:"aapapi"})
-MATCH (appAapUi:App {name:"aapui"})
-MATCH (appHydra:App {name:"hydra"})
-MATCH (idIdpApi:Identity {sub:"idpapi"})
-MATCH (idIdpUi:Identity {sub:"idpui"})
-MATCH (idAapApi:Identity {sub:"aapapi"})
-MATCH (idAapUi:Identity {sub:"aapui"})
-MATCH (idHydra:Identity {sub:"hydra"})
-MERGE (yaiam)-[:Manages]->(idp)-[:Manages]->(appIdpApi)-[:Manages]->(idIdpApi)
-MERGE (idp)-[:Manages]->(appIdpUi)-[:Manages]->(idIdpUi)
-MERGE (yaiam)-[:Manages]->(aap)-[:Manages]->(appAapApi)-[:Manages]->(idAapApi)
-MERGE (aap)-[:Manages]->(appAapUi)-[:Manages]->(idAapUi)
-MERGE (yaiam)-[:Manages]->(hydra)-[:Manages]->(appHydra)-[:Manages]->(idHydra)
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (idpui:Identity {sub:"idpui"})
+MATCH (aapapi:Identity {sub:"aapapi"})
+MATCH (aapui:Identity {sub:"aapui"})
+MATCH (ihydra:Identity {sub:"hydra"})
+MERGE (yaiam)-[:Manages]->(idp)-[:Manages]->(idpapi)
+MERGE (idp)-[:Manages]->(idpui)
+MERGE (yaiam)-[:Manages]->(aap)-[:Manages]->(aapapi)
+MERGE (aap)-[:Manages]->(aapui)
+MERGE (yaiam)-[:Manages]->(hydra)-[:Manages]->(ihydra)
 ;
 
 // Register which permission an app exposes trough a Policy
-MATCH (appIdpUi:App {name:"idpui"})
+MATCH (idpui:Identity {sub:"idpui"})
 MATCH (p:Permission {name:"openid"})
-MERGE (appIdpUi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
 ;
 
-MATCH (appIdpUi:App {name:"idpui"})
+MATCH (idpui:Identity {sub:"idpui"})
 MATCH (p:Permission {name:"offline"})
-MERGE (appIdpUi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
 ;
 
-MATCH (appIdpUi:App {name:"idpui"})
+MATCH (idpui:Identity {sub:"idpui"})
 MATCH (p:Permission {name:"email.read"})
-MERGE (appIdpUi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
 ;
