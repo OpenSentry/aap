@@ -16,10 +16,6 @@ type System struct {
   Name string `json:"name" binding:"required"`
 }
 
-type App struct {
-  Name string `json:"name" binding:"required"`
-}
-
 type Permission struct {
   Name string `json:"name" binding:"required"`
 }
@@ -32,7 +28,7 @@ type Identity struct {
 }
 
 // Giving consent: The user identity grant permissions to the identity of the app
-func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identity, app App, appIdentity Identity, grantedPermissions []Permission, revokedPermissions []Permission) ([]Permission, error) {
+func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identity, appIdentity Identity, grantedPermissions []Permission, revokedPermissions []Permission) ([]Permission, error) {
   if len(grantedPermissions) <= 0 && len(revokedPermissions) <= 0 {
     return nil, errors.New("You must either grant permissions or revoke permissions or both, but it cannot be empty")
   }
@@ -70,40 +66,28 @@ func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identi
 
     cypher = `
       MATCH (i:Identity {sub:$sub})
-      MATCH (appid:Identity {sub:$appId})<-[:Manages]-(app:App {name:$app})
+      MATCH (app:Identity {sub:$appId})
 
-      WITH i, app, appid
+      WITH i, app
 
-      OPTIONAL MATCH (appid)<-[:Manages]-(app)-[:Exposes]->(policyGrant:Policy)-[:Grant]->(grantedPermissions:Permission) WHERE grantedPermissions.name in split($grantedScopes, ",")
-      OPTIONAL MATCH (appid)<-[:Manages]-(app)-[:Exposes]->(policyRevoke:Policy)-[:Grant]->(revokedPermissions:Permission) WHERE revokedPermissions.name in split($revokedScopes, ",")
+      // Find policies exposed by the app to granted scopes and revoked scopes.
+      OPTIONAL MATCH (app)-[:Exposes]->(policyGrant:Policy)-[:Grant]->(grantedPermissions:Permission) WHERE grantedPermissions.name in split($grantedScopes, ",")
+      OPTIONAL MATCH (app)-[:Exposes]->(policyRevoke:Policy)-[:Grant]->(revokedPermissions:Permission) WHERE revokedPermissions.name in split($revokedScopes, ",")
 
-      WITH i, app, appid, grantedPermissions, policyGrant, collect(policyGrant) as grantedPolicies, revokedPermissions, policyRevoke, collect(policyRevoke) as revokedPolicies
+      WITH i, app, grantedPermissions, policyGrant, collect(policyGrant) as grantedPolicies, revokedPermissions, policyRevoke, collect(policyRevoke) as revokedPolicies
 
       // BEGIN::GRANT
       FOREACH ( policy in grantedPolicies |
-        MERGE (appid)-[is_granted:IsGranted]->(r:Rule)-[:Grant]->(policyGrant) ON CREATE SET is_granted.created_dtm = timestamp()
-        MERGE (r)-[granted_by:GrantedBy]->(i) ON CREATE SET granted_by.created_dtm = timestamp()
+        MERGE (i)<-[granted_by:GrantedBy]-(r:Rule)-[:Grant]->(policyGrant) ON CREATE SET granted_by.created_dtm = timestamp()
+        MERGE (app)-[is_granted:IsGranted]->(r) ON CREATE SET is_granted.created_dtm = timestamp()
+        //MERGE (r)-[granted_by:GrantedBy]->(i) ON CREATE SET granted_by.created_dtm = timestamp()
       )
-
-      WITH i, app, appid, grantedPermissions, policyGrant, grantedPolicies, revokedPermissions, policyRevoke, revokedPolicies
-
-      OPTIONAL MATCH (appid)-[:IsRevoked]->(revokedRule:Rule)-[:RevokedBy]->(i) WHERE (revokedRule)-[:Grant]->(policyGrant)
-      DETACH DELETE revokedRule
       // END::GRANT
 
-
-      WITH i, app, appid, grantedPermissions, policyGrant, grantedPolicies, revokedPermissions, policyRevoke, revokedPolicies
-
+      WITH i, app, grantedPermissions, policyGrant, grantedPolicies, revokedPermissions, policyRevoke, revokedPolicies
 
       // BEGIN::REVOKE
-      FOREACH ( policy in revokedPolicies |
-        MERGE (appid)-[is_revoked:IsRevoked]->(r:Rule)-[:Grant]->(policyRevoke) ON CREATE SET is_revoked.created_dtm = timestamp()
-        MERGE (r)-[revoked_by:RevokedBy]->(i) ON CREATE SET revoked_by.created_dtm = timestamp()
-      )
-
-      WITH i, app, appid, grantedPermissions, policyGrant, grantedPolicies, revokedPermissions, policyRevoke, revokedPolicies
-
-      OPTIONAL MATCH (appid)-[:IsGranted]->(grantedRule:Rule)-[:GrantedBy]->(i) WHERE (grantedRule)-[:Grant]->(policyRevoke)
+      OPTIONAL MATCH (app)-[:IsGranted]->(grantedRule:Rule)-[:GrantedBy]->(i) WHERE (grantedRule)-[:Grant]->(policyRevoke)
       DETACH DELETE grantedRule
       // END::REVOKE
 
@@ -111,7 +95,7 @@ func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identi
       return grantedPermissions.name //, revokedPermissions
     `
 
-    params = map[string]interface{}{"sub": identity.Subject, "app": app.Name, "appId": appIdentity.Subject, "grantedScopes": grantedScopes, "revokedScopes": revokedScopes,}
+    params = map[string]interface{}{"sub": identity.Subject, "appId": appIdentity.Subject, "grantedScopes": grantedScopes, "revokedScopes": revokedScopes,}
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
     }
@@ -149,7 +133,7 @@ func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identi
 }
 
 // Looking for Consent: Fetch the permissions actually granted to the identity of the app for the requested permissions by the user identity
-func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identity, app App, appIdentity Identity, requestedPermissions []Permission) ([]Permission, error) {
+func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identity, appIdentity Identity, requestedPermissions []Permission) ([]Permission, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -175,21 +159,21 @@ func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identit
     if (requestedScopes == "") {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (appid:Identity {sub:$appId})<-[:Manages]-(app:App {name:$app})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission)
-        MATCH (aapid)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
+        MATCH (app:Identity {sub:$appId})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission)
+        MATCH (aap)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
         MATCH (grantedRule)-[:GrantedBy]->(i)
         return grantedPermission.name ORDER BY grantedPermission.name
       `
-      params = map[string]interface{}{"sub": identity.Subject, "app": app.Name, "appId": appIdentity.Subject,}
+      params = map[string]interface{}{"sub": identity.Subject, "appId": appIdentity.Subject,}
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (appid:Identity {sub:$appId})<-[:Manages]-(app:App {name:$app})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission) WHERE grantedPermission.name in split($requestedScopes, ",")
-        MATCH (aapid)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
+        MATCH (app:Identity {sub:$appId})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission) WHERE grantedPermission.name in split($requestedScopes, ",")
+        MATCH (aap)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
         MATCH (grantedRule)-[:GrantedBy]->(i)
         return grantedPermission.name ORDER BY grantedPermission.name
       `
-      params = map[string]interface{}{"sub": identity.Subject, "app": app.Name, "appId": appIdentity.Subject, "requestedScopes": requestedScopes,}
+      params = map[string]interface{}{"sub": identity.Subject, "appId": appIdentity.Subject, "requestedScopes": requestedScopes,}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -225,7 +209,7 @@ func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identit
 // Fetch the permissions actually granted [:IsGranted] to the identity [:Identity] for the app [:App] of the requested permissions [:Permission].
 // (:App)-[:Exposes]->(o:Policy)-[:Grant]->(p:Permission)
 // (:Identity)-[:IsGranted]->(:Rule)-[:Grant]->(o)-[:Grant]->(p)
-func FetchPermissionsForIdentityForApplication(driver neo4j.Driver, identity Identity, app App, requestedPermissions []Permission) ([]Permission, error) {
+func FetchPermissionsForIdentityForApplication(driver neo4j.Driver, identity Identity, appIdentity Identity, requestedPermissions []Permission) ([]Permission, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -244,8 +228,8 @@ func FetchPermissionsForIdentityForApplication(driver neo4j.Driver, identity Ide
       scopes = append(scopes, permission.Name)
     }
 
-    cypher := "MATCH (a:App {name:$app})-[:Exposes]->(o:Policy)-[:Grant]->(p:Permission) WHERE p.name in split($requestedScopes, \",\") MATCH (i:Identity {sub: $sub})-[:IsGranted]->(r:Rule)-[:Grant]->(o)-[:Grant]->(p) RETURN p.name ORDER BY p.name"
-    params := map[string]interface{}{"sub": identity.Subject, "app": app.Name, "requestedScopes": scopes}
+    cypher := "MATCH (app:Identity {sub:$appId})-[:Exposes]->(o:Policy)-[:Grant]->(p:Permission) WHERE p.name in split($requestedScopes, \",\") MATCH (i:Identity {sub: $sub})-[:IsGranted]->(r:Rule)-[:Grant]->(o)-[:Grant]->(p) RETURN p.name ORDER BY p.name"
+    params := map[string]interface{}{"sub": identity.Subject, "appId": appIdentity.Subject, "requestedScopes": scopes}
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
     }

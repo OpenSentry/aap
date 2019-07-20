@@ -68,13 +68,10 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     identity := cpbe.Identity{
       Subject: id,
     }
-    application := cpbe.App{
-      Name: app,
-    }
     applicationIdentity := cpbe.Identity{
       Subject: clientId,
     }
-    permissionList, err := cpbe.FetchConsentsForIdentityToApplication(env.Driver, identity, application, applicationIdentity, permissions)
+    permissionList, err := cpbe.FetchConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, permissions)
     if err == nil {
 
       var grantedPermissions []string
@@ -127,13 +124,10 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     identity := cpbe.Identity{
       Subject: input.Subject,
     }
-    application := cpbe.App{
-      Name: input.App,
-    }
     applicationIdentity := cpbe.Identity{
       Subject: input.ClientId,
     }
-    permissionList, err := cpbe.CreateConsentsForIdentityToApplication(env.Driver, identity, application, applicationIdentity, grantPermissions, revokePermissions)
+    permissionList, err := cpbe.CreateConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, grantPermissions, revokePermissions)
     if err != nil {
       fmt.Println(err)
     }
