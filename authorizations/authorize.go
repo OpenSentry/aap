@@ -88,7 +88,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
       ErrorHint: "",
       StatusCode: 403,
     }
-    hydraConsentRejectResponse, err := hydra.RejectConsent(config.Hydra.ConsentRequestRejectUrl, hydraClient, input.Challenge, hydraConsentRejectRequest)
+    hydraConsentRejectResponse, err := hydra.RejectConsent(config.Discovery.Hydra.Private.Url + config.Discovery.Hydra.Private.Endpoints.ConsentReject, hydraClient, input.Challenge, hydraConsentRejectRequest)
     if err != nil {
       c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
       c.Abort()
@@ -109,7 +109,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
 func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
   var authorizeResponse AuthorizeResponse
 
-  hydraConsentResponse, err := hydra.GetConsent(config.Hydra.ConsentRequestUrl, client, authorizeRequest.Challenge)
+  hydraConsentResponse, err := hydra.GetConsent(config.Discovery.Hydra.Private.Url + config.Discovery.Hydra.Private.Endpoints.Consent, client, authorizeRequest.Challenge)
   if err != nil {
     return authorizeResponse, err
   }
@@ -134,7 +134,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       Remember: true,
       RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
-    hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Hydra.ConsentRequestAcceptUrl, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
+    hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Discovery.Hydra.Private.Url + config.Discovery.Hydra.Private.Endpoints.ConsentAccept, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
     if err != nil {
       return authorizeResponse, err
     }
@@ -171,7 +171,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     Remember: true,
     RememberFor: 0, // Never expire consent in hydra. Control this from aap system
   }
-  hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Hydra.ConsentRequestAcceptUrl, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
+  hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.Discovery.Hydra.Private.Url + config.Discovery.Hydra.Private.Endpoints.ConsentAccept, client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
   if err != nil {
     return authorizeResponse, err
   }
