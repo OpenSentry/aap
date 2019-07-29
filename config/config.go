@@ -1,64 +1,154 @@
 package config
 
 import (
-  "os"
+  "github.com/spf13/viper"
+  "fmt"
+  "strings"
 )
 
-type SelfConfig struct {
-  Port          string
+type DiscoveryConfig struct {
+  IdpUi struct {
+    Public struct {
+      Url  string
+      Port string
+      Endpoints struct {
+      }
+    }
+  }
+  IdpApi struct {
+    Public struct {
+      Url  string
+      Port string
+      Endpoints struct {
+        Authenticate string
+        Identities string
+        Logout string
+      }
+    }
+  }
+  AapUi struct {
+    Public struct {
+      Url  string
+      Port string
+      Endpoints struct {
+      }
+    }
+  }
+  AapApi struct {
+    Public struct {
+      Url  string
+      Port string
+      Endpoints struct {
+        Authorizations string
+        AuthorizationsAuthorize string
+        AuthorizationsReject string
+      }
+    }
+  }
+  Hydra struct {
+    Public struct {
+      Url  string
+      Port string
+      Endpoints struct {
+        Oauth2Token string
+        Oauth2Auth string
+        Userinfo string
+        HealthAlive string
+        HealthReady string
+        Logout string
+      }
+    }
+    Private struct {
+      Url  string
+      Port string
+      Endpoints struct {
+        Consent string
+        ConsentAccept string
+        ConsentReject string
+        Login string
+        LoginAccept string
+        LoginReject string
+        Logout string
+        LogoutAccept string
+        LogoutReject string
+      }
+    }
+  }
 }
 
-type HydraConfig struct {
-  Url                         string
-  AdminUrl                    string
-  TokenUrl                    string
-  ConsentRequestUrl           string
-  ConsentRequestAcceptUrl     string
-  ConsentRequestRejectUrl     string
+type AppConfig struct {
+  Serve struct {
+    Public struct {
+      Port string
+    }
+    Tls struct {
+      Key struct {
+        Path string
+      }
+      Cert struct {
+        Path string
+      }
+    }
+  }
+  Neo4j struct {
+    Uri string
+    Username string
+    Password string
+  }
+  Csrf struct {
+    AuthKey string
+  }
+  Oauth2 struct {
+    Client struct {
+      Id string
+      Secret string
+    }
+    Scopes struct {
+      Required []string
+    }
+  }
 }
 
-type CpBeConfig struct {
-  ClientId string
-  ClientSecret string
-  RequiredScopes []string
+var Discovery DiscoveryConfig
+var App AppConfig
 
-  Neo4jUri string
-  Neo4jUserName string
-  Neo4jPassword string
+func setDefaults() {
+  viper.SetDefault("config.discovery.path", "./discovery.yml")
+  viper.SetDefault("config.app.path", "./app.yml")
 }
-
-var Hydra HydraConfig
-var CpBe CpBeConfig
-var Self SelfConfig
 
 func InitConfigurations() {
-  Self.Port                   = getEnvStrict("PORT")
+  var err error
 
-  Hydra.Url                     = getEnvStrict("HYDRA_URL")
-  Hydra.AdminUrl                = getEnvStrict("HYDRA_ADMIN_URL")
-  Hydra.TokenUrl                = Hydra.Url + "/oauth2/token"
-  Hydra.ConsentRequestUrl       = Hydra.AdminUrl + "/oauth2/auth/requests/consent"
-  Hydra.ConsentRequestAcceptUrl = Hydra.ConsentRequestUrl + "/accept"
-  Hydra.ConsentRequestRejectUrl = Hydra.ConsentRequestUrl + "/reject"
+  // lets environment variable override config file
+  viper.AutomaticEnv()
+  viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-  CpBe.ClientId       = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_ID")
-  CpBe.ClientSecret   = getEnvStrict("CP_BACKEND_OAUTH2_CLIENT_SECRET")
-  CpBe.RequiredScopes = []string{"hydra"}
-  CpBe.Neo4jUri       = getEnvStrict("NEO4J_URI")
-  CpBe.Neo4jUserName  = getEnvStrict("NEO4J_USERNAME")
-  CpBe.Neo4jPassword  = getEnvStrict("NEO4J_PASSWORD")
-}
+  setDefaults()
 
-func getEnv(name string) string {
-  return os.Getenv(name)
-}
+  // Load discovery configurations
 
-func getEnvStrict(name string) string {
-  r := getEnv(name)
-
-  if r == "" {
-    panic("Missing environment variable: " + name)
+  viper.SetConfigFile(viper.GetString("config.discovery.path"))
+  err = viper.ReadInConfig() // Find and read the config file
+  if err != nil { // Handle errors reading the config file
+    panic(fmt.Errorf("Fatal error config file: %s \n", err))
   }
 
-  return r
+  err = viper.Unmarshal(&Discovery)
+  if err != nil {
+    fmt.Printf("unable to decode into config struct, %v", err)
+  }
+
+  // Load app specific configurations
+
+  viper.SetConfigFile(viper.GetString("config.app.path"))
+  err = viper.ReadInConfig() // Find and read the config file
+  if err != nil { // Handle errors reading the config file
+    panic(fmt.Errorf("Fatal error config file: %s \n", err))
+  }
+
+  err = viper.Unmarshal(&App)
+  if err != nil {
+    fmt.Printf("unable to decode into config struct, %v", err)
+  }
 }
