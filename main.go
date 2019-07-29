@@ -51,7 +51,7 @@ func main() {
   hydraConfig := &clientcredentials.Config{
     ClientID:     config.App.Oauth2.Client.Id,
     ClientSecret: config.App.Oauth2.Client.Secret,
-    TokenURL:     config.Discovery.Hydra.Public.Endpoints.Oauth2Token,
+    TokenURL:     provider.Endpoint().TokenURL,
     Scopes:       config.App.Oauth2.Scopes.Required,
     EndpointParams: url.Values{"audience": {"hydra"}},
     AuthStyle: 2, // https://godoc.org/golang.org/x/oauth2#AuthStyle
