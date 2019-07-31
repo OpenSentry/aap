@@ -2,26 +2,22 @@
 
 // Permission facts (immutable axioms)
 // TODO: Should we split permission into sub groups of functional vs. data permissions?
-CREATE CONSTRAINT ON (p:Permission) ASSERT p.name IS UNIQUE;
 MERGE (:Permission {name:"openid"})
 MERGE (:Permission {name:"offline"})
 MERGE (:Permission {name:"email.read"})
 ;
 
 // Brands
-CREATE CONSTRAINT ON (b:Brands) ASSERT b.name IS UNIQUE;
 MERGE (:Brand {name:"yaiam"}) // Yet another Identity Access Managemet system
 ;
 
 // Systems
-CREATE CONSTRAINT ON (s:System) ASSERT s.name IS UNIQUE;
 MERGE (:System {name:"idp"}) // The identity provider
 MERGE (:System {name:"aap"}) // The authorization access provder
 MERGE (:System {name:"hydra"}) // The oauth2 delegator
 ;
 
 // Identity (pass: 123)
-CREATE CONSTRAINT ON (i:Identity) ASSERT i.sub IS UNIQUE;
 // Apps (client_id) (pass: 123), should probably be the client_secret
 MERGE (:Identity {sub:"idpui", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"IdP UI"})
 MERGE (:Identity {sub:"idpapi", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"IdP API"})
