@@ -5,6 +5,7 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "io/ioutil"
   "strings"
+  "golang-cp-be/config"
 )
 
 func loadMigrationsFromFile(path string) []string {
@@ -52,7 +53,7 @@ func Migrate(driver neo4j.Driver) {
   }
   defer session.Close()
 
-  schemaMigrations := loadMigrationsFromFile("./model/schema.cyp")
+  schemaMigrations := loadMigrationsFromFile(config.GetString("migration.schema.path"))
 
   err = applyMigrations(schemaMigrations, session)
   if err != nil {
@@ -62,7 +63,7 @@ func Migrate(driver neo4j.Driver) {
 
   fmt.Println("Schema migrations applied and commited")
 
-  dataMigrations := loadMigrationsFromFile("./model/data.cyp")
+  dataMigrations := loadMigrationsFromFile(config.GetString("migration.data.path"))
 
   err = applyMigrations(dataMigrations, session)
   if err != nil {
