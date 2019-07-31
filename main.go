@@ -5,6 +5,8 @@ import (
   "strings"
   "net/http"
   "net/url"
+  "os"
+  "fmt"
 
   "golang.org/x/net/context"
   "golang.org/x/oauth2"
@@ -20,6 +22,9 @@ import (
   "golang-cp-be/environment"
   //"golang-cp-be/gateway/hydra"
   "golang-cp-be/authorizations"
+  "golang-cp-be/migration"
+
+  "github.com/pborman/getopt"
 )
 
 const app = "cpbe"
@@ -64,11 +69,40 @@ func main() {
     Driver: driver,
   }
 
+  optMigrate := getopt.BoolLong("migrate", 0, "Run migration")
+  optServe := getopt.BoolLong("serve", 0, "Serve application")
+  optHelp := getopt.BoolLong("help", 0, "Help")
+  getopt.Parse()
+
+  if *optHelp {
+    getopt.Usage()
+    os.Exit(0)
+  }
+
+  fmt.Println("=================")
+  fmt.Println(optMigrate)
+
+  if *optMigrate {
+    migrate(env)
+  } else if *optServe {
+    serve(env)
+  } else {
+    getopt.Usage()
+    os.Exit(0)
+  }
+
+}
+
+func migrate(env *environment.State) {
+  migration.Migrate(env.Driver)
+}
+
+func serve(env *environment.State) {
   // Setup routes to use, this defines log for debug log
   routes := map[string]environment.Route{
     "/authorizations": environment.Route{
-       URL: "/authorizations",
-       LogId: "cpbe://authorizations",
+      URL: "/authorizations",
+      LogId: "cpbe://authorizations",
     },
     "/authorizations/authorize": environment.Route{
       URL: "/authorizations/authorize",
