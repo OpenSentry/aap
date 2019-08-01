@@ -6,7 +6,6 @@ import (
   "net/http"
   "net/url"
   "os"
-  "fmt"
 
   "golang.org/x/net/context"
   "golang.org/x/oauth2"
@@ -63,7 +62,7 @@ func main() {
     return
   }
 
-  provider, err := oidc.NewProvider(context.Background(), config.GetString("hydra.public.url") + "/")
+  provider, err := oidc.NewProvider(context.Background(), config.Discovery.Hydra.Public.Url + "/")
   if err != nil {
     environment.DebugLog(app, "main", "[provider:hydra] " + err.Error(), "")
     return
