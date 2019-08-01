@@ -35,6 +35,16 @@ func init() {
 
 func main() {
 
+  optMigrate := getopt.BoolLong("migrate", 0, "Run migration")
+  optServe := getopt.BoolLong("serve", 0, "Serve application")
+  optHelp := getopt.BoolLong("help", 0, "Help")
+  getopt.Parse()
+
+  if *optHelp {
+    getopt.Usage()
+    os.Exit(0)
+  }
+
   // https://medium.com/neo4j/neo4j-go-driver-is-out-fbb4ba5b3a30
   // Each driver instance is thread-safe and holds a pool of connections that can be re-used over time. If you don’t have a good reason to do otherwise, a typical application should have a single driver instance throughout its lifetime.
   driver, err := neo4j.NewDriver(config.App.Neo4j.Uri, neo4j.BasicAuth(config.App.Neo4j.Username, config.App.Neo4j.Password, ""), func(config *neo4j.Config) {
@@ -46,7 +56,14 @@ func main() {
   }
   defer driver.Close()
 
-  provider, err := oidc.NewProvider(context.Background(), config.Discovery.Hydra.Public.Url + "/")
+  // migrate then exit application
+  if *optMigrate {
+    migrate(driver)
+    os.Exit(0)
+    return
+  }
+
+  provider, err := oidc.NewProvider(context.Background(), config.GetString("hydra.public.url") + "/")
   if err != nil {
     environment.DebugLog(app, "main", "[provider:hydra] " + err.Error(), "")
     return
@@ -69,22 +86,7 @@ func main() {
     Driver: driver,
   }
 
-  optMigrate := getopt.BoolLong("migrate", 0, "Run migration")
-  optServe := getopt.BoolLong("serve", 0, "Serve application")
-  optHelp := getopt.BoolLong("help", 0, "Help")
-  getopt.Parse()
-
-  if *optHelp {
-    getopt.Usage()
-    os.Exit(0)
-  }
-
-  fmt.Println("=================")
-  fmt.Println(optMigrate)
-
-  if *optMigrate {
-    migrate(env)
-  } else if *optServe {
+  if *optServe {
     serve(env)
   } else {
     getopt.Usage()
@@ -93,8 +95,8 @@ func main() {
 
 }
 
-func migrate(env *environment.State) {
-  migration.Migrate(env.Driver)
+func migrate(driver neo4j.Driver) {
+  migration.Migrate(driver)
 }
 
 func serve(env *environment.State) {
