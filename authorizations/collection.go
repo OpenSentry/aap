@@ -5,6 +5,7 @@ import (
   "strings"
   "fmt"
 
+  "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "golang-cp-be/environment"
   "golang-cp-be/gateway/cpbe"
@@ -26,8 +27,15 @@ type ConsentResponse struct {
 
 func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    requestId := c.MustGet(environment.RequestIdKey).(string)
-    environment.DebugLog(route.LogId, "GetCollection", "", requestId)
+
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "route.logid": route.LogId,
+      "component": "authorizations",
+      "func": "GetCollection",
+    })
+
+    log.Debug("Received authorizations request")
 
     id, _ := c.GetQuery("id")
     if id == "" {
@@ -94,8 +102,15 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
 
 func PostCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    requestId := c.MustGet(environment.RequestIdKey).(string)
-    environment.DebugLog(route.LogId, "PostCollection", "", requestId)
+
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "route.logid": route.LogId,
+      "component": "authorizations",
+      "func": "PostCollection",
+    })
+
+    log.Debug("Received authorizations request")
 
     var input ConsentRequest
     err := c.BindJSON(&input)
@@ -153,8 +168,14 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
 
 func PutCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    requestId := c.MustGet(environment.RequestIdKey).(string)
-    environment.DebugLog(route.LogId, "PutCollection", "", requestId)
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "route.logid": route.LogId,
+      "component": "authorizations",
+      "func": "PutCollection",
+    })
+
+    log.Debug("Received authorizations request")
 
     c.JSON(http.StatusOK, gin.H{
       "message": "pong",

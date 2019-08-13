@@ -11,6 +11,7 @@ import (
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
 
+  "github.com/sirupsen/logrus"
   oidc "github.com/coreos/go-oidc"
   "github.com/gin-gonic/gin"
   "github.com/atarantini/ginrequestid"
@@ -29,6 +30,7 @@ import (
 const app = "cpbe"
 
 func init() {
+  logrus.SetFormatter(&logrus.JSONFormatter{})
   config.InitConfigurations()
 }
 
@@ -44,13 +46,19 @@ func main() {
     os.Exit(0)
   }
 
+  // The app log
+  appFields := logrus.Fields{
+    "appname": app,
+    "func": "main",
+  }
+
   // https://medium.com/neo4j/neo4j-go-driver-is-out-fbb4ba5b3a30
   // Each driver instance is thread-safe and holds a pool of connections that can be re-used over time. If you don’t have a good reason to do otherwise, a typical application should have a single driver instance throughout its lifetime.
   driver, err := neo4j.NewDriver(config.GetString("neo4j.uri"), neo4j.BasicAuth(config.GetString("neo4j.username"), config.GetString("neo4j.password"), ""), func(config *neo4j.Config) {
     config.Log = neo4j.ConsoleLogger(neo4j.DEBUG)
   });
   if err != nil {
-    environment.DebugLog(app, "main", "[database:Neo4j] " + err.Error(), "")
+    logrus.WithFields(appFields).WithFields(logrus.Fields{"component": "Storage"}).Fatal("neo4j.NewDriver" + err.Error())
     return
   }
   defer driver.Close()
@@ -64,7 +72,7 @@ func main() {
 
   provider, err := oidc.NewProvider(context.Background(), config.GetString("hydra.public.url") + "/")
   if err != nil {
-    environment.DebugLog(app, "main", "[provider:hydra] " + err.Error(), "")
+    logrus.WithFields(appFields).WithFields(logrus.Fields{"component": "Hydra Provider"}).Fatal("oidc.NewProvider" + err.Error())
     return
   }
 
@@ -80,6 +88,7 @@ func main() {
 
   // Setup app state variables. Can be used in handler functions by doing closures see exchangeAuthorizationCodeCallback
   env := &environment.State{
+    AppName: app,
     Provider: provider,
     HydraConfig: hydraConfig,
     Driver: driver,
@@ -117,6 +126,7 @@ func serve(env *environment.State) {
 
   r := gin.Default()
   r.Use(ginrequestid.RequestId())
+  r.Use(logger(env))
 
   // ## QTNA - Questions that need answering before granting access to a protected resource
   // 1. Is the user or client authenticated? Answered by the process of obtaining an access token.
@@ -138,37 +148,58 @@ func serve(env *environment.State) {
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
 }
 
+func logger(env *environment.State) gin.HandlerFunc {
+  fn := func(c *gin.Context) {
+    var requestId string = c.MustGet(environment.RequestIdKey).(string)
+    logger := logrus.New() // Use this to direct request log somewhere else than app log
+    logger.SetFormatter(&logrus.JSONFormatter{})
+    requestLog := logger.WithFields(logrus.Fields{
+      "appname": env.AppName,
+      "requestid": requestId,
+    })
+    c.Set(environment.LogKey, requestLog)
+    c.Next()
+  }
+  return gin.HandlerFunc(fn)
+}
+
 func authenticationRequired() gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    requestId := c.MustGet(environment.RequestIdKey).(string)
-    environment.DebugLog(app, "authenticationRequired", "Checking Authorization: Bearer <token> in request", requestId)
+
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "func": "main.authenticationRequired",
+      "component": "Authentication",
+    })
+
+    log.Debug("Checking Authorization: Bearer <token> in request")
 
     var token *oauth2.Token
     auth := c.Request.Header.Get("Authorization")
     split := strings.SplitN(auth, " ", 2)
     if len(split) == 2 || strings.EqualFold(split[0], "bearer") {
-      environment.DebugLog(app, "authenticationRequired", "Authorization: Bearer <token> found for request.", requestId)
+      log.Debug("Authorization: Bearer <token> found for request")
       token = &oauth2.Token{
         AccessToken: split[1],
         TokenType: split[0],
       }
 
       if token.Valid() == true {
-        environment.DebugLog(app, "authenticationRequired", "Valid access token", requestId)
+        log.Debug("Valid access token")
         c.Set(environment.AccessTokenKey, token)
         c.Next() // Authentication successful, continue.
         return;
       }
 
       // Deny by default
-      environment.DebugLog(app, "authenticationRequired", "Invalid Access token", requestId)
+      log.Debug("Invalid Access token")
       c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid access token."})
       c.Abort()
       return
     }
 
     // Deny by default
-    environment.DebugLog(app, "authenticationRequired", "Missing access token", requestId)
+    log.Debug("Missing access token")
     c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization: Bearer <token> not found in request."})
     c.Abort()
   }
@@ -177,8 +208,14 @@ func authenticationRequired() gin.HandlerFunc {
 
 func authorizationRequired(route environment.Route, requiredScopes ...string) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    requestId := c.MustGet(environment.RequestIdKey).(string)
-    environment.DebugLog(app, "authorizationRequired", "Checking Authorization: Bearer <token> in request", requestId)
+
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "func": "main.authorizationRequired",
+      "component": "Authorization",
+    })
+
+    log.Debug("Checking Authorization: Bearer <token> in request")
 
     _ /*(accessToken)*/, accessTokenExists := c.Get(environment.AccessTokenKey)
     if accessTokenExists == false {
@@ -189,17 +226,18 @@ func authorizationRequired(route environment.Route, requiredScopes ...string) gi
 
     // Sanity check: Claims
     //fmt.Println(accessToken)
+    log.Warn("Missing check for required scopes in access token")
 
     foundRequiredScopes := true
     if foundRequiredScopes {
-      environment.DebugLog(app, "authorizationRequired", "Valid scopes. WE DID NOT CHECK IT - TODO!", requestId)
+      log.Debug("Valid scopes")
       c.Next() // Authentication successful, continue.
       return;
     }
 
     // Deny by default
-    environment.DebugLog(app, "authorizationRequired", "Missing required scopes: ", requestId)
-    c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing required scopes: "})
+    log.Debug("Missing required scopes")
+    c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing required scopes"})
     c.Abort()
   }
   return gin.HandlerFunc(fn)
