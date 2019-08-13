@@ -160,7 +160,7 @@ func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identit
       cypher = `
         MATCH (i:Identity {sub:$sub})
         MATCH (app:Identity {sub:$appId})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission)
-        MATCH (aap)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
+        MATCH (app)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
         MATCH (grantedRule)-[:GrantedBy]->(i)
         return grantedPermission.name ORDER BY grantedPermission.name
       `
@@ -169,7 +169,7 @@ func FetchConsentsForIdentityToApplication(driver neo4j.Driver, identity Identit
       cypher = `
         MATCH (i:Identity {sub:$sub})
         MATCH (app:Identity {sub:$appId})-[:Exposes]->(o:Policy)-[:Grant]->(grantedPermission:Permission) WHERE grantedPermission.name in split($requestedScopes, ",")
-        MATCH (aap)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
+        MATCH (app)-[:IsGranted]->(grantedRule:Rule)-[:Grant]->(o) WHERE NOT (grantedRule)<-[:IsRevoked]-()
         MATCH (grantedRule)-[:GrantedBy]->(i)
         return grantedPermission.name ORDER BY grantedPermission.name
       `

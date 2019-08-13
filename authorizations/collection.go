@@ -46,15 +46,6 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       return;
     }
 
-    app, _ := c.GetQuery("app")
-    if app == "" {
-      c.JSON(http.StatusNotFound, gin.H{
-        "error": "Not found. Hint: Are you missing app in request?",
-      })
-      c.Abort()
-      return;
-    }
-
     clientId, _ := c.GetQuery("client_id")
     if clientId == "" {
       c.JSON(http.StatusNotFound, gin.H{
