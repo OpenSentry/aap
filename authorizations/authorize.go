@@ -6,9 +6,9 @@ import (
   "net/url"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
+  "github.com/CharMixer/hydra-client" // FIXME: Do not use upper case
   "golang-cp-be/config"
   "golang-cp-be/environment"
-  "golang-cp-be/gateway/hydra"
 )
 
 type AuthorizeRequest struct {
@@ -94,7 +94,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
 
     hydraClient := hydra.NewHydraClient(env.HydraConfig)
 
-    hydraConsentRejectRequest := hydra.HydraConsentRejectRequest{
+    hydraConsentRejectRequest := hydra.ConsentRejectRequest{
       Error: "",
       ErrorDebug: "",
       ErrorDescription: "",
@@ -139,9 +139,9 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
   }
 
   if hydraConsentResponse.Skip {
-    hydraConsentAcceptRequest := hydra.HydraConsentAcceptRequest{
+    hydraConsentAcceptRequest := hydra.ConsentAcceptRequest{
       GrantScope: hydraConsentResponse.RequestedScopes, // We can grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
-      Session: hydra.HydraConsentAcceptSession {
+      Session: hydra.ConsentAcceptSession {
       },
       GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
       Remember: true,
@@ -176,9 +176,9 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     return authorizeResponse, nil
   }
 
-  hydraConsentAcceptRequest := hydra.HydraConsentAcceptRequest{
+  hydraConsentAcceptRequest := hydra.ConsentAcceptRequest{
     GrantScope: authorizeRequest.GrantScopes,
-    Session: hydra.HydraConsentAcceptSession {
+    Session: hydra.ConsentAcceptSession {
     },
     GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
     Remember: true,
