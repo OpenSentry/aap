@@ -8,7 +8,7 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "golang-cp-be/environment"
-  "golang-cp-be/gateway/cpbe"
+  "golang-cp-be/gateway/aapapi"
   //"golang-cp-be/gateway/hydra"
 )
 
@@ -64,22 +64,22 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       return;
     }
 
-    var permissions []cpbe.Permission
+    var permissions []aapapi.Permission
     requestedScopes, _ := c.GetQuery("scope")
     if requestedScopes != "" {
       scopes := strings.Split(requestedScopes, ",")
       for _, scope := range scopes {
-        permissions = append(permissions, cpbe.Permission{ Name:scope,})
+        permissions = append(permissions, aapapi.Permission{ Name:scope,})
       }
     }
 
-    identity := cpbe.Identity{
+    identity := aapapi.Identity{
       Subject: id,
     }
-    applicationIdentity := cpbe.Identity{
+    applicationIdentity := aapapi.Identity{
       Subject: clientId,
     }
-    permissionList, err := cpbe.FetchConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, permissions)
+    permissionList, err := aapapi.FetchConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, permissions)
     if err == nil {
 
       var grantedPermissions []string
@@ -126,23 +126,23 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       return
     }
 
-    var grantPermissions []cpbe.Permission
+    var grantPermissions []aapapi.Permission
     for _, scope := range input.GrantedScopes {
-      grantPermissions = append(grantPermissions, cpbe.Permission{ Name:scope,})
+      grantPermissions = append(grantPermissions, aapapi.Permission{ Name:scope,})
     }
 
-    var revokePermissions []cpbe.Permission
+    var revokePermissions []aapapi.Permission
     for _, scope := range input.RevokedScopes {
-      revokePermissions = append(revokePermissions, cpbe.Permission{ Name:scope,})
+      revokePermissions = append(revokePermissions, aapapi.Permission{ Name:scope,})
     }
 
-    identity := cpbe.Identity{
+    identity := aapapi.Identity{
       Subject: input.Subject,
     }
-    applicationIdentity := cpbe.Identity{
+    applicationIdentity := aapapi.Identity{
       Subject: input.ClientId,
     }
-    permissionList, err := cpbe.CreateConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, grantPermissions, revokePermissions)
+    permissionList, err := aapapi.CreateConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, grantPermissions, revokePermissions)
     if err != nil {
       fmt.Println(err)
     }
