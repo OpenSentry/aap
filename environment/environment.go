@@ -1,7 +1,7 @@
 package environment
 
 import (
-  "fmt"
+  //"fmt"
   "golang.org/x/oauth2/clientcredentials"
 
   oidc "github.com/coreos/go-oidc"
@@ -10,11 +10,13 @@ import (
 
 const (
   RequestIdKey string = "RequestId"
-  AccessTokenKey = "access_token"
-  IdTokenKey = "id_token"
+  AccessTokenKey string = "access_token"
+  IdTokenKey string = "id_token"
+  LogKey string = "log"
 )
 
 type State struct {
+  AppName string
   Provider *oidc.Provider
   HydraConfig *clientcredentials.Config
   Driver   neo4j.Driver
@@ -23,12 +25,4 @@ type State struct {
 type Route struct {
   URL string
   LogId string
-}
-
-func DebugLog(app string, event string, msg string, requestId string) {
-  if requestId == "" {
-    fmt.Println(fmt.Sprintf("[app:%s][event:%s] %s", app, event, msg))
-    return;
-  }
-  fmt.Println(fmt.Sprintf("[app:%s][request-id:%s][event:%s] %s", app, requestId, event, msg))
 }
