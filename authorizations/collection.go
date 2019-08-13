@@ -14,7 +14,6 @@ import (
 
 type ConsentRequest struct {
   Subject string `json:"sub" binding:"required"`
-  App string `json:"app" binding:"required"`
   ClientId string `json:"client_id,omitempty"`
   GrantedScopes []string `json:"granted_scopes,omitempty"`
   RevokedScopes []string `json:"revoked_scopes,omitempty"`
