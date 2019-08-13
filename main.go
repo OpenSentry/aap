@@ -1,33 +1,26 @@
 package main
 
 import (
-  //"fmt"
   "strings"
   "net/http"
   "net/url"
   "os"
-
   "golang.org/x/net/context"
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
-
   "github.com/sirupsen/logrus"
   oidc "github.com/coreos/go-oidc"
   "github.com/gin-gonic/gin"
   "github.com/atarantini/ginrequestid"
-
   "github.com/neo4j/neo4j-go-driver/neo4j"
-
   "golang-cp-be/config"
   "golang-cp-be/environment"
-  //"golang-cp-be/gateway/hydra"
   "golang-cp-be/authorizations"
   "golang-cp-be/migration"
-
   "github.com/pborman/getopt"
 )
 
-const app = "cpbe"
+const app = "aapapi"
 
 func init() {
   logrus.SetFormatter(&logrus.JSONFormatter{})
@@ -76,7 +69,7 @@ func main() {
     return
   }
 
-  // Setup the hydra client cpbe is going to use (oauth2 client credentials flow)
+  // Setup the hydra client aapapi is going to use (oauth2 client credentials flow)
   hydraConfig := &clientcredentials.Config{
     ClientID:     config.GetString("oauth2.client.id"),
     ClientSecret: config.GetString("oauth2.client.secret"),
@@ -112,15 +105,15 @@ func serve(env *environment.State) {
   routes := map[string]environment.Route{
     "/authorizations": environment.Route{
       URL: "/authorizations",
-      LogId: "cpbe://authorizations",
+      LogId: "aapapi://authorizations",
     },
     "/authorizations/authorize": environment.Route{
       URL: "/authorizations/authorize",
-      LogId: "cpfe://authorizations/authorize",
+      LogId: "aapui://authorizations/authorize",
     },
     "/authorizations/reject": environment.Route{
       URL: "/authorizations/reject",
-      LogId: "cpfe://authorizations/reject",
+      LogId: "aapui://authorizations/reject",
     },
   }
 
@@ -138,12 +131,12 @@ func serve(env *environment.State) {
   // All requests need to be authenticated.
   r.Use(authenticationRequired())
 
-  r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "cpbe.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
-  r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "cpbe.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
-  r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "cpbe.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
+  r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
+  r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
+  r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
 
-  r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "cpbe.authorize"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
-  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "cpbe.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
+  r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "aapapi.authorize"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
+  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aapapi.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
 }
