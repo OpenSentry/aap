@@ -28,6 +28,9 @@ COPY . .
 # https://stackoverflow.com/questions/28031603/what-do-three-dots-mean-in-go-command-line-invocations
 RUN go get -d -v ./...
 
+# Development requires fresh
+RUN go get github.com/pilu/fresh
+
 # Install the package
 RUN go install -v ./...
 
@@ -43,11 +46,4 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-CMD if [ "$release_build" = "1" ]; \
-      then \
-        golang-cp-be; \
-      else \
-        go get github.com/pilu/fresh && \
-        fresh; \
-      fi
+CMD ["golang-cp-be"]
