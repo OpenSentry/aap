@@ -3,8 +3,6 @@ package aapapi
 import (
   "strings"
   "errors"
-  "fmt"
-
   "github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
@@ -39,7 +37,6 @@ func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identi
 
   session, err = driver.Session(neo4j.AccessModeWrite);
   if err != nil {
-    fmt.Println(err)
     return nil, err
   }
   defer session.Close()
@@ -119,14 +116,12 @@ func CreateConsentsForIdentityToApplication(driver neo4j.Driver, identity Identi
 
     // Check if we encountered any error during record streaming
     if err = result.Err(); err != nil {
-      fmt.Println(err)
       return nil, err
     }
     return permissions, nil
   })
 
   if err != nil {
-    fmt.Println(err)
     return nil, err
   }
   return perms.([]Permission), nil
