@@ -3,13 +3,10 @@ package authorizations
 import (
   "net/http"
   "strings"
-  "fmt"
-
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "golang-cp-be/environment"
   "golang-cp-be/gateway/aapapi"
-  //"golang-cp-be/gateway/hydra"
 )
 
 type ConsentRequest struct {
@@ -29,12 +26,8 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "route.logid": route.LogId,
-      "component": "authorizations",
       "func": "GetCollection",
     })
-
-    log.Debug("Received authorizations request")
 
     id, _ := c.GetQuery("id")
     if id == "" {
@@ -95,12 +88,8 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "route.logid": route.LogId,
-      "component": "authorizations",
       "func": "PostCollection",
     })
-
-    log.Debug("Received authorizations request")
 
     var input ConsentRequest
     err := c.BindJSON(&input)
@@ -134,7 +123,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     }
     permissionList, err := aapapi.CreateConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, grantPermissions, revokePermissions)
     if err != nil {
-      fmt.Println(err)
+      log.Debug(err.Error())
     }
     if err == nil {
 
@@ -160,12 +149,8 @@ func PutCollection(env *environment.State, route environment.Route) gin.HandlerF
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "route.logid": route.LogId,
-      "component": "authorizations",
       "func": "PutCollection",
     })
-
-    log.Debug("Received authorizations request")
 
     c.JSON(http.StatusOK, gin.H{
       "message": "pong",

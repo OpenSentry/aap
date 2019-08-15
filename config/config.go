@@ -2,7 +2,6 @@ package config
 
 import (
   "github.com/spf13/viper"
-  "fmt"
   "strings"
 )
 
@@ -11,6 +10,14 @@ func setDefaults() {
   viper.SetDefault("migration.schema.path", "./model/schema.cyp")
   viper.SetDefault("migration.data.path", "./model/data.cyp")
   viper.SetDefault("config.discovery.path", "./discovery.yml")
+}
+
+func GetInt(key string) int {
+  return viper.GetInt(key)
+}
+
+func GetIntStrict(key string) int {
+  return viper.GetInt(key)
 }
 
 func GetString(key string) string {
@@ -25,7 +32,7 @@ func GetStringSlice(key string) []string {
   return viper.GetStringSlice(key)
 }
 
-func InitConfigurations() {
+func InitConfigurations() (error) {
   var err error
 
   // lets environment variable override config file
@@ -39,7 +46,7 @@ func InitConfigurations() {
   viper.SetConfigFile(viper.GetString("config.discovery.path"))
   err = viper.ReadInConfig() // Find and read the config file
   if err != nil { // Handle errors reading the config file
-    panic(fmt.Errorf("Fatal error config file: %s \n", err))
+    return err
   }
 
   // Load app specific configurations
@@ -47,7 +54,8 @@ func InitConfigurations() {
   viper.SetConfigFile(viper.GetString("config.app.path"))
   err = viper.MergeInConfig() // Find and read the config file
   if err != nil { // Handle errors reading the config file
-    panic(fmt.Errorf("Fatal error config file: %s \n", err))
+    return err
   }
 
+  return nil
 }
