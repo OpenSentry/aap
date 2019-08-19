@@ -25,8 +25,8 @@ MERGE (:Identity {sub:"aapui", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.Lfak
 MERGE (:Identity {sub:"aapapi", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"AaP API"})
 MERGE (:Identity {sub:"hydra", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"Hydra"})
 // Humans (pass: 123)
-MERGE (:Identity {sub:"wraix", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"wraix@domain.com", name:"Wraix"})
-MERGE (:Identity {sub:"user-1", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"user-1@domain.com", name:"User 1"})
+MERGE (:Identity {sub:"wraix", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"wraix@domain.com", name:"Wraix", require_2fa: false, secret_2fa: ""})
+MERGE (:Identity {sub:"user-1", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"user-1@domain.com", name:"User 1", require_2fa: false, secret_2fa: ""})
 ;
 
 // Register relations between components
