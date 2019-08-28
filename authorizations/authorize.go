@@ -144,7 +144,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       Session: hydra.ConsentAcceptSession {
       },
       GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
-      Remember: true,
+      Remember: true, // FIXME: Mindre timeout eller flere kald mod neo?
       RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
     hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentAccept"), client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
