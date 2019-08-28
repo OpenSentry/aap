@@ -6,9 +6,7 @@ import (
 )
 
 func setDefaults() {
-  viper.SetDefault("config.app.path", "./app.yml")
-  viper.SetDefault("migration.schema.path", "./model/schema.cyp")
-  viper.SetDefault("migration.data.path", "./model/data.cyp")
+  viper.SetDefault("config.app.path", "./app.yml")  
   viper.SetDefault("config.discovery.path", "./discovery.yml")
 }
 
