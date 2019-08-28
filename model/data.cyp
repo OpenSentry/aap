@@ -1,11 +1,6 @@
 // Bootstrap YAIAM
 
-// Permission facts (immutable axioms)
-// TODO: Should we split permission into sub groups of functional vs. data permissions?
-MERGE (:Permission {name:"openid"})
-MERGE (:Permission {name:"offline"})
-MERGE (:Permission {name:"email.read"})
-;
+// Depends on Identity model from IDP
 
 // Brands
 MERGE (:Brand {name:"yaiam"}) // Yet another Identity Access Managemet system
@@ -15,18 +10,6 @@ MERGE (:Brand {name:"yaiam"}) // Yet another Identity Access Managemet system
 MERGE (:System {name:"idp"}) // The identity provider
 MERGE (:System {name:"aap"}) // The authorization access provder
 MERGE (:System {name:"hydra"}) // The oauth2 delegator
-;
-
-// Identity (pass: 123)
-// Apps (client_id) (pass: 123), should probably be the client_secret
-MERGE (:Identity {sub:"idpui",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"IdP UI",  require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-MERGE (:Identity {sub:"idpapi", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"IdP API", require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-MERGE (:Identity {sub:"aapui",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"AaP UI",  require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-MERGE (:Identity {sub:"aapapi", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"AaP API", require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-MERGE (:Identity {sub:"hydra",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"Hydra",   require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-// Humans (pass: 123)
-MERGE (:Identity {sub:"wraix",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"wraix@domain.com",  name:"Wraix",  require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
-MERGE (:Identity {sub:"user-1", password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", email:"user-1@domain.com", name:"User 1", require_2fa:false, secret_2fa:"", otp_recover_code:"", otp_recover_code_expire:0})
 ;
 
 // Register relations between components
@@ -47,18 +30,84 @@ MERGE (aap)-[:Manages]->(aapui)
 MERGE (yaiam)-[:Manages]->(hydra)-[:Manages]->(ihydra)
 ;
 
+// # Permission
 // Register which permission an app exposes trough a Policy
-MATCH (idpui:Identity {sub:"idpui"})
+// Description: facts (immutable axioms)
+// TODO: Should we split permission into sub groups of functional vs. data permissions?
+
+// ## IDP API
+MERGE (:Permission {name:"openid"})
+MERGE (:Permission {name:"offline"})
+MERGE (:Permission {name:"authenticate:identity"})
+MERGE (:Permission {name:"read:identity"})
+MERGE (:Permission {name:"update:identity"})
+MERGE (:Permission {name:"delete:identity"})
+MERGE (:Permission {name:"recover:identity"})
+MERGE (:Permission {name:"logout:identity"})
+;
+
+// Permission exposed by idpapi
+MATCH (idpapi:Identity {sub:"idpapi"})
 MATCH (p:Permission {name:"openid"})
-MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
 ;
 
-MATCH (idpui:Identity {sub:"idpui"})
+MATCH (idpapi:Identity {sub:"idpapi"})
 MATCH (p:Permission {name:"offline"})
-MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
 ;
 
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"authenticate:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"read:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"update:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"delete:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"authenticate:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"recover:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (p:Permission {name:"logout:identity"})
+MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+;
+
+// ## IDP UI
+
+// ### Grant IDP UI permission to access IDP API
 MATCH (idpui:Identity {sub:"idpui"})
-MATCH (p:Permission {name:"email.read"})
-MERGE (idpui)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (root:Identity {sub:"root"})
+
+WITH idpui, idpapi, root
+
+// Find policies exposed by the app to granted scopes and revoked scopes.
+OPTIONAL MATCH (idpapi)-[:Exposes]->(policyGrant:Policy)-[:Grant]->(grantedPermissions:Permission) WHERE grantedPermissions.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
+
+WITH idpui, idpapi, root, grantedPermissions, policyGrant, collect(policyGrant) as grantedPolicies
+
+FOREACH ( policy in grantedPolicies |
+  MERGE (root)<-[granted_by:GrantedBy]-(r:Rule)-[:Grant]->(policyGrant) ON CREATE SET granted_by.created_dtm = timestamp()
+  MERGE (idpui)-[is_granted:IsGranted]->(r) ON CREATE SET is_granted.created_dtm = timestamp()
+)
 ;
