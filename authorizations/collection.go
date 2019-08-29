@@ -21,6 +21,15 @@ type ConsentResponse struct {
 
 }
 
+type CreateConsentRequest struct {
+  Subject                string   `json:"sub" binding:"required"`
+  ClientId               string   `json:"client_id" binding:"required"`
+  ResourceServerClientId string   `json:"client_id,omitempty" binding:"required"`
+  GrantedScopes          []string `json:"granted_scopes,omitempty"`
+  RevokedScopes          []string `json:"revoked_scopes,omitempty"`
+  RequestedScopes        []string `json:"requested_scopes,omitempty"`
+}
+
 func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
@@ -56,13 +65,13 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       }
     }
 
-    identity := aapapi.Identity{
+    resourceOwner := aapapi.Identity{
       Subject: id,
     }
-    applicationIdentity := aapapi.Identity{
-      Subject: clientId,
+    client := aapapi.Client{
+      ClientId: clientId,
     }
-    permissionList, err := aapapi.FetchConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, permissions)
+    permissionList, err := aapapi.FetchConsentsForResourceOwnerToClient(env.Driver, resourceOwner, client, permissions)
     if err == nil {
 
       var grantedPermissions []string
@@ -91,7 +100,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       "func": "PostCollection",
     })
 
-    var input ConsentRequest
+    var input CreateConsentRequest
     err := c.BindJSON(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -115,13 +124,16 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       revokePermissions = append(revokePermissions, aapapi.Permission{ Name:scope,})
     }
 
-    identity := aapapi.Identity{
+    resourceOwner := aapapi.Identity{
       Subject: input.Subject,
     }
-    applicationIdentity := aapapi.Identity{
-      Subject: input.ClientId,
+    client := aapapi.Client{
+      ClientId: input.ClientId,
     }
-    permissionList, err := aapapi.CreateConsentsForIdentityToApplication(env.Driver, identity, applicationIdentity, grantPermissions, revokePermissions)
+    resourceServer := aapapi.Client{
+      ClientId: input.ResourceServerClientId,
+    }
+    permissionList, err := aapapi.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, resourceServer, grantPermissions, revokePermissions)
     if err != nil {
       log.Debug(err.Error())
     }
