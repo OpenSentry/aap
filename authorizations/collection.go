@@ -2,7 +2,7 @@ package authorizations
 
 import (
   "net/http"
-  "strings"
+  //"strings"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "golang-cp-be/environment"
@@ -10,25 +10,16 @@ import (
 )
 
 type ConsentRequest struct {
-  Subject string `json:"sub" binding:"required"`
-  ClientId string `json:"client_id,omitempty"`
-  GrantedScopes []string `json:"granted_scopes,omitempty"`
-  RevokedScopes []string `json:"revoked_scopes,omitempty"`
-  RequestedScopes []string `json:"requested_scopes,omitempty"`
-  RequestedAudiences []string `json:"requested_audiences,omitempty"`
+  Subject              string `form:"sub" json:"sub" binding:"required"`
+  ClientId             string `form:"client_id,omitempty" json:"client_id,omitempty" binding:"required"`
+  GrantedScopes      []string `form:"granted_scopes,omitempty" json:"granted_scopes,omitempty"`
+  RevokedScopes      []string `form:"revoked_scopes,omitempty" json:"revoked_scopes,omitempty"`
+  RequestedScopes    []string `form:"requested_scopes,omitempty" json:"requested_scopes,omitempty"`
+  RequestedAudiences []string `form:"requested_audiences,omitempty" json:"requested_audiences,omitempty"` // hydra.requested_access_token_audience
 }
 
 type ConsentResponse struct {
 
-}
-
-type CreateConsentRequest struct {
-  Subject                string   `json:"sub" binding:"required"`
-  ClientId               string   `json:"client_id" binding:"required"`
-  Audience               string   `json:"aud" binding:"required"`
-  GrantedScopes          []string `json:"granted_scopes,omitempty"`
-  RevokedScopes          []string `json:"revoked_scopes,omitempty"`
-  RequestedScopes        []string `json:"requested_scopes,omitempty"`
 }
 
 func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
@@ -39,45 +30,57 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       "func": "GetCollection",
     })
 
-    id, _ := c.GetQuery("id")
-    if id == "" {
-      c.JSON(http.StatusNotFound, gin.H{
-        "error": "Not found. Hint: Are you missing id in request?",
-      })
+    var input ConsentRequest
+    err := c.Bind(&input)
+    if err != nil {
+      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       c.Abort()
-      return;
+      return
     }
 
-    clientId, _ := c.GetQuery("client_id")
-    if clientId == "" {
-      c.JSON(http.StatusNotFound, gin.H{
-        "error": "Not found. Hint: Are you missing client_id in request?",
-      })
-      c.Abort()
-      return;
-    }
-
-    var permissions []aapapi.Permission
-    requestedScopes, _ := c.GetQuery("scope")
-    if requestedScopes != "" {
-      scopes := strings.Split(requestedScopes, ",")
-      for _, scope := range scopes {
-        permissions = append(permissions, aapapi.Permission{ Name:scope,})
-      }
+    var requestedPermissions []aapapi.Permission
+    for _, scope := range input.RequestedScopes {
+      requestedPermissions = append(requestedPermissions, aapapi.Permission{ Name:scope})
     }
 
     resourceOwner := aapapi.Identity{
-      Subject: id,
+      Subject: input.Subject,
     }
     client := aapapi.Client{
-      ClientId: clientId,
+      ClientId: input.ClientId,
     }
-    resourceServer := aapapi.ResourceServer{
-      Name: "idpapi",
+
+    var resourceServer *aapapi.ResourceServer = nil
+    if len(input.RequestedAudiences) > 0 {
+      if ( len(input.RequestedAudiences) ) > 1 {
+        log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
+        c.JSON(http.StatusNotFound, gin.H{
+          "error": "More than one audience not supported yet Hint: Try only to use audience per token request one for now",
+        })
+        c.Abort()
+        return
+      }
+
+      resourceServer, err = aapapi.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
+      if err != nil {
+        log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
+        c.JSON(http.StatusNotFound, gin.H{
+          "error": "Not found. Hint: Maybe audience does not exist.",
+        })
+        c.Abort()
+        return
+      }
     }
-    consentList, err := aapapi.FetchConsentsForResourceOwnerToClientAndResourceServer(env.Driver, resourceOwner, client, resourceServer, permissions)
+
+    var consentList []aapapi.Consent
+    if resourceServer != nil {
+      consentList, err = aapapi.FetchConsentsForResourceOwnerToClientAndResourceServer(env.Driver, resourceOwner, client, *resourceServer, requestedPermissions)
+    } else {
+      consentList, err = aapapi.FetchConsentsForResourceOwnerToClient(env.Driver, resourceOwner, client, requestedPermissions)
+    }
+
     if err != nil {
-      log.WithFields(logrus.Fields{"id":resourceOwner.Subject, "client_id":client.ClientId, "scope":requestedScopes}).Debug(err.Error())
+      log.WithFields(logrus.Fields{"id":resourceOwner.Subject, "client_id":client.ClientId, "scope":input.RequestedScopes}).Debug(err.Error())
       c.JSON(http.StatusInternalServerError, gin.H{
         "error": "Unable to fetch consents",
       })
@@ -111,7 +114,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       "func": "PostCollection",
     })
 
-    var input CreateConsentRequest
+    var input ConsentRequest
     err := c.BindJSON(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -143,10 +146,19 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     }
 
     var permissionList []aapapi.Permission
-    if input.Audience != "" {
-      resourceServer, err := aapapi.FetchResourceServerByAudience(env.Driver, input.Audience)
+    if len(input.RequestedAudiences) > 0 {
+      if ( len(input.RequestedAudiences) ) > 1 {
+        log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
+        c.JSON(http.StatusNotFound, gin.H{
+          "error": "More than one audience not supported yet Hint: Try only to use audience per token request one for now",
+        })
+        c.Abort()
+        return
+      }
+
+      resourceServer, err := aapapi.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
       if err != nil {
-        log.WithFields(logrus.Fields{"aud":input.Audience}).Debug("Resource server not found")
+        log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
         c.JSON(http.StatusNotFound, gin.H{
           "error": "Not found. Hint: Maybe audience does not exist.",
         })

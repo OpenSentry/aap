@@ -2,7 +2,7 @@ package authorizations
 
 import (
   "net/http"
-  "net/url"
+  //"net/url"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "github.com/CharMixer/hydra-client" // FIXME: Do not use upper case
@@ -54,7 +54,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
     // Create a new HTTP client to perform the request, to prevent serialization
     hydraClient := hydra.NewHydraClient(env.HydraConfig)
 
-    authorizeResponse, err := authorize(hydraClient, input)
+    authorizeResponse, err := authorize(hydraClient, input, log)
     if err != nil {
       c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
       c.Abort()
@@ -120,7 +120,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
 
 
 // helper
-func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
+func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log *logrus.Entry) (AuthorizeResponse, error) {
   var authorizeResponse AuthorizeResponse
 
   hydraConsentResponse, err := hydra.GetConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consent"), client, authorizeRequest.Challenge)
@@ -128,17 +128,9 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     return authorizeResponse, err
   }
 
-  // hydraConsentResponse.RequestedAccessTokenAudience, requested_access_token_audience
-
-  // Extract client_id from RequestUrl
-  // FIXME: Is there another way to find out on behalf of which client the request is made?
-  var clientId string
-  if hydraConsentResponse.RequestUrl != "" {
-    u, err := url.Parse(hydraConsentResponse.RequestUrl)
-    if err == nil {
-      q := u.Query();
-      clientId = q.Get("client_id")
-    }
+  clientId := hydraConsentResponse.Client.ClientId
+  if clientId == "" {
+    log.WithFields(logrus.Fields{"consent_challenge":authorizeRequest.Challenge}).Debug("No client_id found")
   }
 
   if hydraConsentResponse.Skip {
