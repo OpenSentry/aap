@@ -509,19 +509,19 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
         MATCH (i:Identity {sub:$sub})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$name})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
+        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject}
+      params = map[string]interface{}{"sub": resourceOwner.Subject, "rsName":resourceServer.Name}
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$name})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
+        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "requestedScopes":requestedScopes,}
+      params = map[string]interface{}{"sub":resourceOwner.Subject, "rsName":resourceServer.Name, "requestedScopes":requestedScopes,}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -607,7 +607,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject}
+      params = map[string]interface{}{"sub": resourceOwner.Subject, "clientId": client.ClientId}
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
@@ -616,7 +616,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "requestedScopes":requestedScopes,}
+      params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId": client.ClientId, "requestedScopes":requestedScopes}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
