@@ -185,7 +185,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
 
     // Deny by default
     c.JSON(http.StatusNotFound, gin.H{
-      "error": "Not found",
+      "error": "Not found. Hint does the client exists?",
     })
     c.Abort()
   }
