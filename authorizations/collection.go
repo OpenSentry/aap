@@ -15,6 +15,7 @@ type ConsentRequest struct {
   GrantedScopes []string `json:"granted_scopes,omitempty"`
   RevokedScopes []string `json:"revoked_scopes,omitempty"`
   RequestedScopes []string `json:"requested_scopes,omitempty"`
+  RequestedAudiences []string `json:"requested_audiences,omitempty"`
 }
 
 type ConsentResponse struct {
@@ -24,7 +25,7 @@ type ConsentResponse struct {
 type CreateConsentRequest struct {
   Subject                string   `json:"sub" binding:"required"`
   ClientId               string   `json:"client_id" binding:"required"`
-  ResourceServerClientId string   `json:"client_id,omitempty" binding:"required"`
+  Audience               string   `json:"aud" binding:"required"`
   GrantedScopes          []string `json:"granted_scopes,omitempty"`
   RevokedScopes          []string `json:"revoked_scopes,omitempty"`
   RequestedScopes        []string `json:"requested_scopes,omitempty"`
@@ -71,23 +72,33 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     client := aapapi.Client{
       ClientId: clientId,
     }
-    permissionList, err := aapapi.FetchConsentsForResourceOwnerToClient(env.Driver, resourceOwner, client, permissions)
-    if err == nil {
-
-      var grantedPermissions []string
-      for _, permission := range permissionList {
-        grantedPermissions = append(grantedPermissions, permission.Name)
-      }
-
-      c.JSON(http.StatusOK, grantedPermissions)
+    resourceServer := aapapi.ResourceServer{
+      Name: "idpapi",
+    }
+    consentList, err := aapapi.FetchConsentsForResourceOwnerToClientAndResourceServer(env.Driver, resourceOwner, client, resourceServer, permissions)
+    if err != nil {
+      log.WithFields(logrus.Fields{"id":resourceOwner.Subject, "client_id":client.ClientId, "scope":requestedScopes}).Debug(err.Error())
+      c.JSON(http.StatusInternalServerError, gin.H{
+        "error": "Unable to fetch consents",
+      })
+      c.Abort()
       return
     }
 
+    //if len(consentList) > 0 {
+      var consentedPermissions []string
+      for _, consent := range consentList {
+        consentedPermissions = append(consentedPermissions, consent.Permission.Name)
+      }
+      c.JSON(http.StatusOK, consentedPermissions)
+      return
+    //}
+
     // Deny by default
-    c.JSON(http.StatusNotFound, gin.H{
+    /*c.JSON(http.StatusNotFound, gin.H{
       "error": "Not found",
     })
-    c.Abort()
+    c.Abort()*/
   }
   return gin.HandlerFunc(fn)
 }
@@ -130,15 +141,27 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     client := aapapi.Client{
       ClientId: input.ClientId,
     }
-    resourceServer := aapapi.Client{
-      ClientId: input.ResourceServerClientId,
+
+    var permissionList []aapapi.Permission
+    if input.Audience != "" {
+      resourceServer, err := aapapi.FetchResourceServerByAudience(env.Driver, input.Audience)
+      if err != nil {
+        log.WithFields(logrus.Fields{"aud":input.Audience}).Debug("Resource server not found")
+        c.JSON(http.StatusNotFound, gin.H{
+          "error": "Not found. Hint: Maybe audience does not exist.",
+        })
+        c.Abort()
+        return
+      }
+      permissionList, err = aapapi.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, *resourceServer, grantPermissions, revokePermissions)
+    } else {
+      permissionList, err = aapapi.CreateConsentsForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, grantPermissions, revokePermissions)
     }
-    permissionList, err := aapapi.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, resourceServer, grantPermissions, revokePermissions)
     if err != nil {
       log.Debug(err.Error())
     }
-    if err == nil {
 
+    if len(permissionList) > 0 {
       var grantedPermissions []string
       for _, permission := range permissionList {
         grantedPermissions = append(grantedPermissions, permission.Name)

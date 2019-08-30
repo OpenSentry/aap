@@ -23,6 +23,7 @@ type AuthorizeResponse struct {
   RedirectTo                  string            `json:"redirect_to,omitempty"`
   Subject                     string            `json:"subject,omitempty"`
   ClientId                    string            `json:"client_id,omitempty"`
+  RequestedAudiences          []string          `json:"requested_audiences,omitempty"` // requested_access_token_audience
 }
 
 type RejectRequest struct {
@@ -127,6 +128,8 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     return authorizeResponse, err
   }
 
+  // hydraConsentResponse.RequestedAccessTokenAudience, requested_access_token_audience
+
   // Extract client_id from RequestUrl
   // FIXME: Is there another way to find out on behalf of which client the request is made?
   var clientId string
@@ -143,7 +146,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       GrantScope: hydraConsentResponse.RequestedScopes, // We can grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
       Session: hydra.ConsentAcceptSession {
       },
-      GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+      GrantAccessTokenAudience: hydraConsentResponse.RequestedAccessTokenAudience,
       Remember: true, // FIXME: Mindre timeout eller flere kald mod neo?
       RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
@@ -159,6 +162,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       Authorized: true,
       GrantScopes: hydraConsentResponse.RequestedScopes,
       RequestedScopes: authorizeRequest.GrantScopes,
+      RequestedAudiences: hydraConsentResponse.RequestedAccessTokenAudience,
       RedirectTo: hydraConsentAcceptResponse.RedirectTo,
     }
     return authorizeResponse, nil
@@ -180,7 +184,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     GrantScope: authorizeRequest.GrantScopes,
     Session: hydra.ConsentAcceptSession {
     },
-    GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+    GrantAccessTokenAudience: hydraConsentResponse.RequestedAccessTokenAudience, // FIXME this should be changed to allow for choosing audience (resource server) the user trust
     Remember: true,
     RememberFor: 0, // Never expire consent in hydra. Control this from aap system
   }
