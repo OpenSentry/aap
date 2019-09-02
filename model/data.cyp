@@ -1,41 +1,18 @@
-// Bootstrap YAIAM
+// # AAP
 
-// Depends on Identity model from IDP
+// ## Requirement: Depends on Identity from IDP
 
-// Brands
-MERGE (:Brand {name:"yaiam"}) // Yet another Identity Access Managemet system
+// ### Required clients
+MERGE (:Client {name: "idpapi", client_id:"idpapi", client_secret:"", name: "IDP hydra client", description:"Used by the Identity Provider api to call Hydra"})
+MERGE (:Client {name: "idpui",  client_id:"idpui",  client_secret:"", name: "IDP api client",   description:"Used by the Identity Provider UI to call the Identity Provider API"})
 ;
 
-// Systems
-MERGE (:System {name:"idp"}) // The identity provider
-MERGE (:System {name:"aap"}) // The authorization access provder
-MERGE (:System {name:"hydra"}) // The oauth2 delegator
+// ## IDPAPI
+MERGE (:ResourceServer {name:"idpapi", aud:"idpapi", description:"Identity Provider"})
 ;
 
-// Register relations between components
-MATCH (yaiam:Brand {name:"yaiam"})
-MATCH (idp:System {name:"idp"})
-MATCH (aap:System {name:"aap"})
-MATCH (hydra:System {name:"hydra"})
+// ### Permission, IDPAPI
 
-MATCH (idpapi:Identity {sub:"idpapi"})
-MATCH (idpui:Identity {sub:"idpui"})
-MATCH (aapapi:Identity {sub:"aapapi"})
-MATCH (aapui:Identity {sub:"aapui"})
-MATCH (ihydra:Identity {sub:"hydra"})
-MERGE (yaiam)-[:Manages]->(idp)-[:Manages]->(idpapi)
-MERGE (idp)-[:Manages]->(idpui)
-MERGE (yaiam)-[:Manages]->(aap)-[:Manages]->(aapapi)
-MERGE (aap)-[:Manages]->(aapui)
-MERGE (yaiam)-[:Manages]->(hydra)-[:Manages]->(ihydra)
-;
-
-// # Permission
-// Register which permission an app exposes trough a Policy
-// Description: facts (immutable axioms)
-// TODO: Should we split permission into sub groups of functional vs. data permissions?
-
-// ## IDP API
 MERGE (:Permission {name:"openid"})
 MERGE (:Permission {name:"offline"})
 MERGE (:Permission {name:"authenticate:identity"})
@@ -46,68 +23,93 @@ MERGE (:Permission {name:"recover:identity"})
 MERGE (:Permission {name:"logout:identity"})
 ;
 
-// Permission exposed by idpapi
-MATCH (idpapi:Identity {sub:"idpapi"})
+// ### Expose permissions for IDPAPI
+
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"openid"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"offline"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"authenticate:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"read:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"update:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"delete:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"authenticate:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"recover:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-MATCH (idpapi:Identity {sub:"idpapi"})
+MATCH (i:Identity {sub:"root"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
 MATCH (p:Permission {name:"logout:identity"})
-MERGE (idpapi)-[:Exposes]->(o:Policy)-[:Grant]->(p)
+MERGE (idpapi)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p)
+MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
-// ## IDP UI
 
-// ### Grant IDP UI permission to access IDP API
-MATCH (idpui:Identity {sub:"idpui"})
-MATCH (idpapi:Identity {sub:"idpapi"})
-MATCH (root:Identity {sub:"root"})
+// ## IDPUI
 
-WITH idpui, idpapi, root
+// Grant IDPUI access to authenticate:identity in IDPAPI
+MATCH (i:Identity {sub:"root"})
+MATCH (idpui:Client {client_id:"idpui"})
+MATCH (idpapi:ResourceServer {name:"idpapi"})
+MATCH (p:Permission {name:"authenticate:identity"})
+MERGE (idpui)-[:IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(p)
+MERGE (gr)-[:GRANTED_BY]->(i)
+;
 
-// Find policies exposed by the app to granted scopes and revoked scopes.
-OPTIONAL MATCH (idpapi)-[:Exposes]->(policyGrant:Policy)-[:Grant]->(grantedPermissions:Permission) WHERE grantedPermissions.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
 
-WITH idpui, idpapi, root, grantedPermissions, policyGrant, collect(policyGrant) as grantedPolicies
+// # AAP
+MERGE (:Client {client_id:"aapapi",  client_secret:"", name: "AAP hydra client", description:"Used by the Access and Authorization Provider api to call Hydra"})
+MERGE (:Client {client_id:"aapui",  client_secret:"",  name: "AAP api client",   description:"Used by the Access and Authorization Provider UI to call the Access and Authorization API"})
+;
 
-FOREACH ( policy in grantedPolicies |
-  MERGE (root)<-[granted_by:GrantedBy]-(r:Rule)-[:Grant]->(policyGrant) ON CREATE SET granted_by.created_dtm = timestamp()
-  MERGE (idpui)-[is_granted:IsGranted]->(r) ON CREATE SET is_granted.created_dtm = timestamp()
-)
+// AAP API
+MERGE (:ResourceServer {name:"aapapi", description:"Access and Authorization provider"})
+;
+
+// HYDRA API
+MERGE (:ResourceServer {name:"hydra",  description:"OAuth2 API"})
 ;
