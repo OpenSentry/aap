@@ -2,11 +2,11 @@ package authorizations
 
 import (
   "net/http"
-  //"strings"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
-  "aap/environment"
-  "aap/gateway/aap"
+
+  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/gateway/aap"
 )
 
 type ConsentRequest struct {
