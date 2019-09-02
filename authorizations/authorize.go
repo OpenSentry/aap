@@ -2,12 +2,12 @@ package authorizations
 
 import (
   "net/http"
-  //"net/url"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
-  "github.com/CharMixer/hydra-client" // FIXME: Do not use upper case
-  "aap/config"
-  "aap/environment"
+  hydra "github.com/charmixer/hydra/client"
+
+  "github.com/charmixer/aap/config"
+  "github.com/charmixer/aap/environment"
 )
 
 type AuthorizeRequest struct {

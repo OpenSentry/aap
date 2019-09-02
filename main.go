@@ -14,11 +14,12 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/atarantini/ginrequestid"
   "github.com/neo4j/neo4j-go-driver/neo4j"
-  "aap/config"
-  "aap/environment"
-  "aap/authorizations"
-  "aap/migration"
   "github.com/pborman/getopt"
+
+  "github.com/charmixer/aap/config"
+  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/authorizations"
+  "github.com/charmixer/aap/migration"
 )
 
 const app = "aap"
@@ -169,7 +170,7 @@ func serve(env *environment.State) {
 
 func RequestLogger(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    
+
     // Start timer
     start := time.Now()
     path := c.Request.URL.Path

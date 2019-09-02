@@ -5,7 +5,8 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "io/ioutil"
   "strings"
-  "aap/config"
+
+  "github.com/charmixer/aap/config"
 )
 
 func loadMigrationsFromFile(path string) []string {
