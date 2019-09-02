@@ -5,8 +5,8 @@ import (
   //"strings"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
-  "golang-cp-be/environment"
-  "golang-cp-be/gateway/aapapi"
+  "aap/environment"
+  "aap/gateway/aap"
 )
 
 type ConsentRequest struct {
@@ -38,19 +38,19 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       return
     }
 
-    var requestedPermissions []aapapi.Permission
+    var requestedPermissions []aap.Permission
     for _, scope := range input.RequestedScopes {
-      requestedPermissions = append(requestedPermissions, aapapi.Permission{ Name:scope})
+      requestedPermissions = append(requestedPermissions, aap.Permission{ Name:scope})
     }
 
-    resourceOwner := aapapi.Identity{
+    resourceOwner := aap.Identity{
       Subject: input.Subject,
     }
-    client := aapapi.Client{
+    client := aap.Client{
       ClientId: input.ClientId,
     }
 
-    var resourceServer *aapapi.ResourceServer = nil
+    var resourceServer *aap.ResourceServer = nil
     if len(input.RequestedAudiences) > 0 {
       if ( len(input.RequestedAudiences) ) > 1 {
         log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
@@ -61,7 +61,7 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
         return
       }
 
-      resourceServer, err = aapapi.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
+      resourceServer, err = aap.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
       if err != nil {
         log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
         c.JSON(http.StatusNotFound, gin.H{
@@ -72,11 +72,11 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       }
     }
 
-    var consentList []aapapi.Consent
+    var consentList []aap.Consent
     if resourceServer != nil {
-      consentList, err = aapapi.FetchConsentsForResourceOwnerToClientAndResourceServer(env.Driver, resourceOwner, client, *resourceServer, requestedPermissions)
+      consentList, err = aap.FetchConsentsForResourceOwnerToClientAndResourceServer(env.Driver, resourceOwner, client, *resourceServer, requestedPermissions)
     } else {
-      consentList, err = aapapi.FetchConsentsForResourceOwnerToClient(env.Driver, resourceOwner, client, requestedPermissions)
+      consentList, err = aap.FetchConsentsForResourceOwnerToClient(env.Driver, resourceOwner, client, requestedPermissions)
     }
 
     if err != nil {
@@ -128,24 +128,24 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       return
     }
 
-    var grantPermissions []aapapi.Permission
+    var grantPermissions []aap.Permission
     for _, scope := range input.GrantedScopes {
-      grantPermissions = append(grantPermissions, aapapi.Permission{ Name:scope,})
+      grantPermissions = append(grantPermissions, aap.Permission{ Name:scope,})
     }
 
-    var revokePermissions []aapapi.Permission
+    var revokePermissions []aap.Permission
     for _, scope := range input.RevokedScopes {
-      revokePermissions = append(revokePermissions, aapapi.Permission{ Name:scope,})
+      revokePermissions = append(revokePermissions, aap.Permission{ Name:scope,})
     }
 
-    resourceOwner := aapapi.Identity{
+    resourceOwner := aap.Identity{
       Subject: input.Subject,
     }
-    client := aapapi.Client{
+    client := aap.Client{
       ClientId: input.ClientId,
     }
 
-    var permissionList []aapapi.Permission
+    var permissionList []aap.Permission
     if len(input.RequestedAudiences) > 0 {
       if ( len(input.RequestedAudiences) ) > 1 {
         log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
@@ -156,7 +156,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
         return
       }
 
-      resourceServer, err := aapapi.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
+      resourceServer, err := aap.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
       if err != nil {
         log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
         c.JSON(http.StatusNotFound, gin.H{
@@ -165,9 +165,9 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
         c.Abort()
         return
       }
-      permissionList, err = aapapi.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, *resourceServer, grantPermissions, revokePermissions)
+      permissionList, err = aap.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, *resourceServer, grantPermissions, revokePermissions)
     } else {
-      permissionList, err = aapapi.CreateConsentsForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, grantPermissions, revokePermissions)
+      permissionList, err = aap.CreateConsentsForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, grantPermissions, revokePermissions)
     }
     if err != nil {
       log.Debug(err.Error())

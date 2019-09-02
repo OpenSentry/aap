@@ -6,8 +6,8 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "github.com/CharMixer/hydra-client" // FIXME: Do not use upper case
-  "golang-cp-be/config"
-  "golang-cp-be/environment"
+  "aap/config"
+  "aap/environment"
 )
 
 type AuthorizeRequest struct {
