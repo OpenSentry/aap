@@ -4,7 +4,7 @@
 
 // ### Required clients
 MERGE (:Client {name: "idpapi", client_id:"idpapi", client_secret:"", name: "IDP hydra client", description:"Used by the Identity Provider api to call Hydra"})
-MERGE (:Client {name: "idpui",  client_id:"idpui",  client_secret:"", name: "IDP api client"    description:"Used by the Identity Provider UI to call the Identity Provider API"})
+MERGE (:Client {name: "idpui",  client_id:"idpui",  client_secret:"", name: "IDP api client",   description:"Used by the Identity Provider UI to call the Identity Provider API"})
 ;
 
 // ## IDPAPI
@@ -108,6 +108,8 @@ MERGE (:Client {client_id:"aapui",  client_secret:"",  name: "AAP api client",  
 
 // AAP API
 MERGE (:ResourceServer {name:"aapapi", description:"Access and Authorization provider"})
+;
 
 // HYDRA API
 MERGE (:ResourceServer {name:"hydra",  description:"OAuth2 API"})
+;
