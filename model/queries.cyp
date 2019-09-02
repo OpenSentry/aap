@@ -22,14 +22,14 @@ MERGE (:Identity {sub:"user1", email:"user1@domain.com",  password:"$2a$10$SOyUC
 
 MATCH (user:Identity {sub:"user1"})
 MATCH (idpui:Client {client_id:"idpui"})
-MATCH (idpapi:Client {client_id:"idpapi"})
+MATCH (idp:Client {client_id:"idp"})
 
-WITH idpui, idpapi, user
+WITH idpui, idp, user
 
 // Find all permission exposed by client that we want to consent on behalf of the user
-OPTIONAL MATCH (idpapi)-[:IS_EXPOSED]->(exposeRule:ExposeRule)-[:EXPOSE]->(exposedPermission:Permission) WHERE exposedPermission.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
+OPTIONAL MATCH (idp)-[:IS_EXPOSED]->(exposeRule:ExposeRule)-[:EXPOSE]->(exposedPermission:Permission) WHERE exposedPermission.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
 
-WITH idpui, idpapi, user, collect(exposedPermission) as exposedPermissions
+WITH idpui, idp, user, collect(exposedPermission) as exposedPermissions
 
 FOREACH ( permission in exposedPermissions |
   MERGE (user)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(permission)

@@ -14,14 +14,14 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/atarantini/ginrequestid"
   "github.com/neo4j/neo4j-go-driver/neo4j"
-  "golang-cp-be/config"
-  "golang-cp-be/environment"
-  "golang-cp-be/authorizations"
-  "golang-cp-be/migration"
+  "aap/config"
+  "aap/environment"
+  "aap/authorizations"
+  "aap/migration"
   "github.com/pborman/getopt"
 )
 
-const app = "aapapi"
+const app = "aap"
 
 var (
   logDebug int // Set to 1 to enable debug
@@ -103,7 +103,7 @@ func main() {
     return
   }
 
-  // Setup the hydra client aapapi is going to use (oauth2 client credentials flow)
+  // Setup the hydra client aap is going to use (oauth2 client credentials flow)
   hydraConfig := &clientcredentials.Config{
     ClientID:     config.GetString("oauth2.client.id"),
     ClientSecret: config.GetString("oauth2.client.secret"),
@@ -136,7 +136,7 @@ func migrate(driver neo4j.Driver) {
 func serve(env *environment.State) {
   // Setup routes to use, this defines log for debug log
   routes := map[string]environment.Route{
-    "/authorizations":           environment.Route{URL: "/authorizations",           LogId: "aapapi://authorizations"},
+    "/authorizations":           environment.Route{URL: "/authorizations",           LogId: "aap://authorizations"},
     "/authorizations/authorize": environment.Route{URL: "/authorizations/authorize", LogId: "aapui://authorizations/authorize"},
     "/authorizations/reject":    environment.Route{URL: "/authorizations/reject",    LogId: "aapui://authorizations/reject"},
   }
@@ -157,12 +157,12 @@ func serve(env *environment.State) {
   // All requests need to be authenticated.
   r.Use(authenticationRequired())
 
-  r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
-  r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
-  r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aapapi.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
+  r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
+  r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
+  r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
 
-  r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "aapapi.authorize"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
-  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aapapi.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
+  r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "aap.authorize"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
+  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
 }
