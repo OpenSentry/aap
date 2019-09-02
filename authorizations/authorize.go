@@ -2,7 +2,7 @@ package authorizations
 
 import (
   "net/http"
-  "net/url"
+  //"net/url"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "github.com/CharMixer/hydra-client" // FIXME: Do not use upper case
@@ -23,6 +23,7 @@ type AuthorizeResponse struct {
   RedirectTo                  string            `json:"redirect_to,omitempty"`
   Subject                     string            `json:"subject,omitempty"`
   ClientId                    string            `json:"client_id,omitempty"`
+  RequestedAudiences          []string          `json:"requested_audiences,omitempty"` // requested_access_token_audience
 }
 
 type RejectRequest struct {
@@ -53,7 +54,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
     // Create a new HTTP client to perform the request, to prevent serialization
     hydraClient := hydra.NewHydraClient(env.HydraConfig)
 
-    authorizeResponse, err := authorize(hydraClient, input)
+    authorizeResponse, err := authorize(hydraClient, input, log)
     if err != nil {
       c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
       c.Abort()
@@ -119,7 +120,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
 
 
 // helper
-func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
+func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log *logrus.Entry) (AuthorizeResponse, error) {
   var authorizeResponse AuthorizeResponse
 
   hydraConsentResponse, err := hydra.GetConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consent"), client, authorizeRequest.Challenge)
@@ -127,15 +128,9 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     return authorizeResponse, err
   }
 
-  // Extract client_id from RequestUrl
-  // FIXME: Is there another way to find out on behalf of which client the request is made?
-  var clientId string
-  if hydraConsentResponse.RequestUrl != "" {
-    u, err := url.Parse(hydraConsentResponse.RequestUrl)
-    if err == nil {
-      q := u.Query();
-      clientId = q.Get("client_id")
-    }
+  clientId := hydraConsentResponse.Client.ClientId
+  if clientId == "" {
+    log.WithFields(logrus.Fields{"consent_challenge":authorizeRequest.Challenge}).Debug("No client_id found")
   }
 
   if hydraConsentResponse.Skip {
@@ -143,7 +138,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       GrantScope: hydraConsentResponse.RequestedScopes, // We can grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
       Session: hydra.ConsentAcceptSession {
       },
-      GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+      GrantAccessTokenAudience: hydraConsentResponse.RequestedAccessTokenAudience,
       Remember: true, // FIXME: Mindre timeout eller flere kald mod neo?
       RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
@@ -159,6 +154,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
       Authorized: true,
       GrantScopes: hydraConsentResponse.RequestedScopes,
       RequestedScopes: authorizeRequest.GrantScopes,
+      RequestedAudiences: hydraConsentResponse.RequestedAccessTokenAudience,
       RedirectTo: hydraConsentAcceptResponse.RedirectTo,
     }
     return authorizeResponse, nil
@@ -180,7 +176,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest) (Au
     GrantScope: authorizeRequest.GrantScopes,
     Session: hydra.ConsentAcceptSession {
     },
-    GrantAccessTokenAudience: hydraConsentResponse.GrantAccessTokenAudience,
+    GrantAccessTokenAudience: hydraConsentResponse.RequestedAccessTokenAudience, // FIXME this should be changed to allow for choosing audience (resource server) the user trust
     Remember: true,
     RememberFor: 0, // Never expire consent in hydra. Control this from aap system
   }
