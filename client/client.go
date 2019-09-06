@@ -8,6 +8,7 @@ import (
   "strings"
   "errors"
   "golang.org/x/net/context"
+  "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
   "fmt"
 )
@@ -49,17 +50,23 @@ type ConsentResponse struct {
 
 }
 
-type AapApiClient struct {
+type AapClient struct {
   *http.Client
 }
 
-func NewAapApiClient(config *clientcredentials.Config) *AapApiClient {
+func NewAapApiClient(config *clientcredentials.Config) *AapClient {
   ctx := context.Background()
   client := config.Client(ctx)
-  return &AapApiClient{client}
+  return &AapClient{client}
 }
 
-func CreateConsents(authorizationsUrl string, client *AapApiClient, consentRequest ConsentRequest) ([]string, error) {
+func NewAapClientWithUserAccessToken(config *oauth2.Config, token *oauth2.Token) *AapClient {
+  ctx := context.Background()
+  client := config.Client(ctx, token)
+  return &AapClient{client}
+}
+
+func CreateConsents(authorizationsUrl string, client *AapClient, consentRequest ConsentRequest) ([]string, error) {
 
   body, err := json.Marshal(consentRequest)
   if err != nil {
@@ -96,7 +103,7 @@ func CreateConsents(authorizationsUrl string, client *AapApiClient, consentReque
   return grantedConsents, nil
 }
 
-func FetchConsents(authorizationsUrl string, client *AapApiClient, consentRequest ConsentRequest) ([]string, error) {
+func FetchConsents(authorizationsUrl string, client *AapClient, consentRequest ConsentRequest) ([]string, error) {
 
   request, err := http.NewRequest("GET", authorizationsUrl, nil)
   if err != nil {
@@ -142,7 +149,7 @@ func FetchConsents(authorizationsUrl string, client *AapApiClient, consentReques
   return grantedConsents, nil
 }
 
-func Authorize(authorizeUrl string, client *AapApiClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
+func Authorize(authorizeUrl string, client *AapClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
   var authorizeResponse AuthorizeResponse
 
   body, err := json.Marshal(authorizeRequest)
@@ -182,7 +189,7 @@ func Authorize(authorizeUrl string, client *AapApiClient, authorizeRequest Autho
   return authorizeResponse, nil
 }
 
-func Reject(authorizeUrl string, client *AapApiClient, rejectRequest RejectRequest) (RejectResponse, error) {
+func Reject(authorizeUrl string, client *AapClient, rejectRequest RejectRequest) (RejectResponse, error) {
   var rejectResponse RejectResponse
 
   body, err := json.Marshal(rejectRequest)
