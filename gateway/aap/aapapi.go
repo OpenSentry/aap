@@ -605,7 +605,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.sub, c.client_id, rs.name, rs.aud, p.name
       `
       params = map[string]interface{}{"sub": resourceOwner.Subject, "clientId": client.ClientId}
     } else {
@@ -614,7 +614,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.sub, c.client_id, rs.name, rs.aud, p.name
       `
       params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId": client.ClientId, "requestedScopes":requestedScopes}
     }
