@@ -12,13 +12,14 @@ import (
   "github.com/sirupsen/logrus"
   oidc "github.com/coreos/go-oidc"
   "github.com/gin-gonic/gin"
-  "github.com/atarantini/ginrequestid"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "github.com/pborman/getopt"
+  "github.com/gofrs/uuid"
 
   "github.com/charmixer/aap/config"
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/authorizations"
+  "github.com/charmixer/aap/access"
   "github.com/charmixer/aap/migration"
 )
 
@@ -138,14 +139,17 @@ func serve(env *environment.State) {
   // Setup routes to use, this defines log for debug log
   routes := map[string]environment.Route{
     "/authorizations":           environment.Route{URL: "/authorizations",           LogId: "aap://authorizations"},
-    "/authorizations/authorize": environment.Route{URL: "/authorizations/authorize", LogId: "aapui://authorizations/authorize"},
-    "/authorizations/reject":    environment.Route{URL: "/authorizations/reject",    LogId: "aapui://authorizations/reject"},
+    "/authorizations/authorize": environment.Route{URL: "/authorizations/authorize", LogId: "aap://authorizations/authorize"},
+    "/authorizations/reject":    environment.Route{URL: "/authorizations/reject",    LogId: "aap://authorizations/reject"},
+    "/access":                   environment.Route{URL: "/access",                   LogId: "aap://access"},
+    "/access/grant":             environment.Route{URL: "/access/grant",             LogId: "aap://access/grant"},
+    "/access/revoke":            environment.Route{URL: "/access/revoke",            LogId: "aap://access/revoke"},
   }
 
   r := gin.New() // Clean gin to take control with logging.
   r.Use(gin.Recovery())
 
-  r.Use(ginrequestid.RequestId())
+  r.Use(requestId())
   r.Use(RequestLogger(env))
 
   // ## QTNA - Questions that need answering before granting access to a protected resource
@@ -161,6 +165,13 @@ func serve(env *environment.State) {
   r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
   r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
   r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
+
+  r.GET(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:read:access"), access.GetCollection(env, routes["/access"]))
+  r.POST(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:create:access"), access.PostCollection(env, routes["/access"]))
+  r.PUT(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:update:access"), access.PutCollection(env, routes["/access"]))
+
+  r.PUT(routes["/access/grant"].URL, authorizationRequired(routes["/access/grant"], "aap:update:access:grant"), access.PutGrant(env, routes["/access/grant"]))
+  r.PUT(routes["/access/revoke"].URL, authorizationRequired(routes["/access/revoke"], "aap:update:access:revoke"), access.PutRevoke(env, routes["/access/revoke"]))
 
   r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "authorize:identity"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
   r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
@@ -182,11 +193,11 @@ func RequestLogger(env *environment.State) gin.HandlerFunc {
     })
     c.Set(environment.LogKey, requestLog)
 
-		c.Next() // Give control to the controllers
+    c.Next() // Give control to the controllers
 
-		// Stop timer
-		stop := time.Now()
-		latency := stop.Sub(start)
+    // Stop timer
+    stop := time.Now()
+    latency := stop.Sub(start)
 
     ipData, err := getRequestIpData(c.Request)
     if err != nil {
@@ -202,18 +213,18 @@ func RequestLogger(env *environment.State) gin.HandlerFunc {
       }).Debug(err.Error())
     }
 
-		method := c.Request.Method
-		statusCode := c.Writer.Status()
-		errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
+    method := c.Request.Method
+    statusCode := c.Writer.Status()
+    errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
 
-		bodySize := c.Writer.Size()
+    bodySize := c.Writer.Size()
 
     var fullpath string = path
-		if raw != "" {
-			fullpath = path + "?" + raw
-		}
+    if raw != "" {
+      fullpath = path + "?" + raw
+    }
 
-		log.WithFields(appFields).WithFields(logrus.Fields{
+    log.WithFields(appFields).WithFields(logrus.Fields{
       "latency": latency,
       "forwarded_for.ip": forwardedForIpData.Ip,
       "forwarded_for.port": forwardedForIpData.Port,
@@ -317,4 +328,24 @@ func authorizationRequired(route environment.Route, requiredScopes ...string) gi
     c.Abort()
   }
   return gin.HandlerFunc(fn)
+}
+
+func requestId() gin.HandlerFunc {
+  return func(c *gin.Context) {
+    // Check for incoming header, use it if exists
+    requestID := c.Request.Header.Get("X-Request-Id")
+
+    // Create request id with UUID4
+    if requestID == "" {
+      uuid4, _ := uuid.NewV4()
+      requestID = uuid4.String()
+    }
+
+    // Expose it for use in the application
+    c.Set("RequestId", requestID)
+
+    // Set X-Request-Id header
+    c.Writer.Header().Set("X-Request-Id", requestID)
+    c.Next()
+  }
 }
