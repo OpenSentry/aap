@@ -11,7 +11,7 @@ type Permission struct {
 }
 
 type Identity struct {
-  Subject string `json:"sub" binding:"required"`
+  Id string `json:"id" binding:"required"`
   Password string `json:"password"`
   Name string `json:"name"`
   Email string `json:"email"`
@@ -74,7 +74,7 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
     var params map[string]interface{}
 
     cypher = `
-      MATCH (resourceOwner:Identity {sub:$sub})
+      MATCH (resourceOwner:Identity {id:$id})
       MATCH (client:Client {client_id:$clientId})
 
       WITH resourceOwner, client
@@ -102,7 +102,7 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
       return consentPermission.name //, revokePermission.name
     `
 
-    params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId":client.ClientId, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
+    params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
     }
@@ -173,7 +173,7 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
     var params map[string]interface{}
 
     cypher = `
-      MATCH (resourceOwner:Identity {sub:$sub})
+      MATCH (resourceOwner:Identity {id:$id})
       MATCH (client:Client {client_id:$clientId})
       MATCH (resourceServer:ResourceServer {name:$rsName})
 
@@ -202,7 +202,7 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
       return consentPermission.name //, revokePermission.name
     `
 
-    params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId":client.ClientId, "rsName":resourceServer.Name, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
+    params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
     }
@@ -318,22 +318,22 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject}
+      params = map[string]interface{}{"id": resourceOwner.Id}
     } else {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "requestedScopes":requestedScopes}
+      params = map[string]interface{}{"id":resourceOwner.Id, "requestedScopes":requestedScopes}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -347,7 +347,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      sub := record.GetByIndex(0).(string)
+      id := record.GetByIndex(0).(string)
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
@@ -357,7 +357,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
         Name: permissionName,
       }
       identity := Identity{
-        Subject: sub,
+        Id: id,
       }
       client := Client{
         ClientId: clientId,
@@ -412,22 +412,22 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject, "clientId":client.ClientId, "rsName":resourceServer.Name}
+      params = map[string]interface{}{"id": resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name}
     } else {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId":client.ClientId, "rsName":resourceServer.Name, "requestedScopes":requestedScopes}
+      params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name, "requestedScopes":requestedScopes}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -441,7 +441,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      sub := record.GetByIndex(0).(string)
+      id := record.GetByIndex(0).(string)
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
@@ -451,7 +451,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
         Name: permissionName,
       }
       identity := Identity{
-        Subject: sub,
+        Id: id,
       }
       client := Client{
         ClientId: clientId,
@@ -506,22 +506,22 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject, "rsName":resourceServer.Name}
+      params = map[string]interface{}{"id": resourceOwner.Id, "rsName":resourceServer.Name}
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, p.name
+        return i.id, c.client_id, rs.name, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "rsName":resourceServer.Name, "requestedScopes":requestedScopes,}
+      params = map[string]interface{}{"id":resourceOwner.Id, "rsName":resourceServer.Name, "requestedScopes":requestedScopes,}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -535,7 +535,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      sub := record.GetByIndex(0).(string)
+      id := record.GetByIndex(0).(string)
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
@@ -545,7 +545,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
         Name: permissionName,
       }
       identity := Identity{
-        Subject: sub,
+        Id: id,
       }
       client := Client{
         ClientId: clientId,
@@ -601,22 +601,22 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, rs.aud, p.name
+        return i.id, c.client_id, rs.name, rs.aud, p.name
       `
-      params = map[string]interface{}{"sub": resourceOwner.Subject, "clientId": client.ClientId}
+      params = map[string]interface{}{"id": resourceOwner.Id, "clientId": client.ClientId}
     } else {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
+        MATCH (i:Identity {id:$id})
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.sub, c.client_id, rs.name, rs.aud, p.name
+        return i.id, c.client_id, rs.name, rs.aud, p.name
       `
-      params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId": client.ClientId, "requestedScopes":requestedScopes}
+      params = map[string]interface{}{"id":resourceOwner.Id, "clientId": client.ClientId, "requestedScopes":requestedScopes}
     }
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
@@ -630,7 +630,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      sub := record.GetByIndex(0).(string)
+      id := record.GetByIndex(0).(string)
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
@@ -640,7 +640,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         Name: permissionName,
       }
       identity := Identity{
-        Subject: sub,
+        Id: id,
       }
       client := Client{
         ClientId: clientId,

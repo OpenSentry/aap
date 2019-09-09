@@ -44,7 +44,7 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     }
 
     resourceOwner := aap.Identity{
-      Subject: input.Subject,
+      Id: input.Subject,
     }
     client := aap.Client{
       ClientId: input.ClientId,
@@ -80,7 +80,7 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     }
 
     if err != nil {
-      log.WithFields(logrus.Fields{"id":resourceOwner.Subject, "client_id":client.ClientId, "scope":input.RequestedScopes}).Debug(err.Error())
+      log.WithFields(logrus.Fields{"id":resourceOwner.Id, "client_id":client.ClientId, "scope":input.RequestedScopes}).Debug(err.Error())
       c.JSON(http.StatusInternalServerError, gin.H{
         "error": "Unable to fetch consents",
       })
@@ -139,7 +139,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     }
 
     resourceOwner := aap.Identity{
-      Subject: input.Subject,
+      Id: input.Subject,
     }
     client := aap.Client{
       ClientId: input.ClientId,
