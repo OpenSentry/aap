@@ -5,18 +5,10 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/authorizations/model"
+  "github.com/charmixer/aap/client"
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
 )
-
-type ConsentRequest struct {
-  *model.ConsentRequest
-}
-
-type ConsentResponse struct {
-  *model.ConsentResponse
-}
 
 func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
@@ -26,7 +18,7 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       "func": "GetCollection",
     })
 
-    var input ConsentRequest
+    var input client.ConsentRequest
     err := c.Bind(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -34,9 +26,9 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       return
     }
 
-    var requestedPermissions []aap.Permission
+    var requestedPermissions []aap.Scope
     for _, scope := range input.RequestedScopes {
-      requestedPermissions = append(requestedPermissions, aap.Permission{ Name:scope})
+      requestedPermissions = append(requestedPermissions, aap.Scope{ Name:scope})
     }
 
     resourceOwner := aap.Identity{
@@ -87,7 +79,7 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     //if len(consentList) > 0 {
       var consentedPermissions []string
       for _, consent := range consentList {
-        consentedPermissions = append(consentedPermissions, consent.Permission.Name)
+        consentedPermissions = append(consentedPermissions, consent.Scope.Name)
       }
       c.JSON(http.StatusOK, consentedPermissions)
       return
@@ -110,7 +102,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       "func": "PostCollection",
     })
 
-    var input ConsentRequest
+    var input client.ConsentRequest
     err := c.BindJSON(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -124,14 +116,14 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       return
     }
 
-    var grantPermissions []aap.Permission
+    var grantPermissions []aap.Scope
     for _, scope := range input.GrantedScopes {
-      grantPermissions = append(grantPermissions, aap.Permission{ Name:scope,})
+      grantPermissions = append(grantPermissions, aap.Scope{ Name:scope,})
     }
 
-    var revokePermissions []aap.Permission
+    var revokePermissions []aap.Scope
     for _, scope := range input.RevokedScopes {
-      revokePermissions = append(revokePermissions, aap.Permission{ Name:scope,})
+      revokePermissions = append(revokePermissions, aap.Scope{ Name:scope,})
     }
 
     resourceOwner := aap.Identity{
@@ -141,7 +133,7 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
       ClientId: input.ClientId,
     }
 
-    var permissionList []aap.Permission
+    var permissionList []aap.Scope
     if len(input.RequestedAudiences) > 0 {
       if ( len(input.RequestedAudiences) ) > 1 {
         log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")

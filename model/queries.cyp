@@ -1,18 +1,18 @@
 // Find permission exposed by client
-MATCH (c:Client)-[IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p:Permission) return c, er, p
+MATCH (c:Client)-[IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p:Scope) return c, er, p
 
 // Find permission exposed by client and by whom
-MATCH (c:Client)-[IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p:Permission)
+MATCH (c:Client)-[IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(p:Scope)
 MATCH (er)-[:EXPOSED_BY]->(i:Identity)
 return c, er, p, i
 
 // Find permissions granted to client and by whom
-MATCH (c:Client)-[IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(p:Permission)
+MATCH (c:Client)-[IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(p:Scope)
 MATCH (gr)-[:GRANTED_BY]->(i:Identity)
 return c, gr, p, i
 
 // Find consents given to client by user
-MATCH (c:Client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENT]->(p:Permission)
+MATCH (c:Client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENT]->(p:Scope)
 MATCH (gr)-[:CONSENTED_BY]->(i:Identity)
 return c, gr, p, i
 
@@ -27,11 +27,11 @@ MATCH (idp:Client {client_id:"idp"})
 WITH idpui, idp, user
 
 // Find all permission exposed by client that we want to consent on behalf of the user
-OPTIONAL MATCH (idp)-[:IS_EXPOSED]->(exposeRule:ExposeRule)-[:EXPOSE]->(exposedPermission:Permission) WHERE exposedPermission.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
+OPTIONAL MATCH (idp)-[:IS_EXPOSED]->(exposeRule:ExposeRule)-[:EXPOSE]->(exposedScope:Scope) WHERE exposedScope.name in split("openid offline authenticate:identity read:identity update:identity delete:identity recover:identity logout:identity", " ")
 
-WITH idpui, idp, user, collect(exposedPermission) as exposedPermissions
+WITH idpui, idp, user, collect(exposedScope) as exposedScope
 
-FOREACH ( permission in exposedPermissions |
+FOREACH ( permission in exposedScopes |
   MERGE (user)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(permission)
   MERGE (idpui)-[:IS_CONSENTED]->(cr)
 )

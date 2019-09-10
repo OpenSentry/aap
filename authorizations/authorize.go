@@ -6,7 +6,7 @@ import (
   "github.com/gin-gonic/gin"
   hydra "github.com/charmixer/hydra/client"
 
-  . "github.com/charmixer/aap/models"
+  client "github.com/charmixer/aap/client"
   "github.com/charmixer/aap/config"
   "github.com/charmixer/aap/environment"
 )
@@ -19,7 +19,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
       "func": "PostAuthorize",
     })
 
-    var input AuthorizeRequest
+    var input client.AuthorizeRequest
     err := c.BindJSON(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -56,7 +56,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
       "func": "PostReject",
     })
 
-    var input RejectRequest
+    var input client.RejectRequest
     err := c.BindJSON(&input)
     if err != nil {
       c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -80,7 +80,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
       return
     }
 
-    rejectResponse := RejectResponse{
+    rejectResponse := client.RejectResponse{
       Authorized: false,
       RedirectTo: hydraConsentRejectResponse.RedirectTo,
     }
@@ -96,10 +96,10 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
 
 
 // helper
-func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log *logrus.Entry) (AuthorizeResponse, error) {
-  var authorizeResponse AuthorizeResponse
+func authorize(hydraClient *hydra.HydraClient, authorizeRequest client.AuthorizeRequest, log *logrus.Entry) (client.AuthorizeResponse, error) {
+  var authorizeResponse client.AuthorizeResponse
 
-  hydraConsentResponse, err := hydra.GetConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consent"), client, authorizeRequest.Challenge)
+  hydraConsentResponse, err := hydra.GetConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consent"), hydraClient, authorizeRequest.Challenge)
   if err != nil {
     return authorizeResponse, err
   }
@@ -118,12 +118,12 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log
       Remember: true, // FIXME: Mindre timeout eller flere kald mod neo?
       RememberFor: 0, // Never expire consent in hydra. Control this from aap system
     }
-    hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentAccept"), client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
+    hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentAccept"), hydraClient, authorizeRequest.Challenge, hydraConsentAcceptRequest)
     if err != nil {
       return authorizeResponse, err
     }
 
-    authorizeResponse = AuthorizeResponse{
+    authorizeResponse = client.AuthorizeResponse{
       Challenge: authorizeRequest.Challenge,
       Subject: hydraConsentResponse.Subject,
       ClientId: clientId,
@@ -138,7 +138,7 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log
 
   // Require atleast one scope to grant or this is just a masked read.
   if len(authorizeRequest.GrantScopes) <= 0 {
-    authorizeResponse = AuthorizeResponse{
+    authorizeResponse = client.AuthorizeResponse{
       Challenge: authorizeRequest.Challenge,
       Subject: hydraConsentResponse.Subject,
       ClientId: clientId,
@@ -156,12 +156,12 @@ func authorize(client *hydra.HydraClient, authorizeRequest AuthorizeRequest, log
     Remember: true,
     RememberFor: 0, // Never expire consent in hydra. Control this from aap system
   }
-  hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentAccept"), client, authorizeRequest.Challenge, hydraConsentAcceptRequest)
+  hydraConsentAcceptResponse, err := hydra.AcceptConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentAccept"), hydraClient, authorizeRequest.Challenge, hydraConsentAcceptRequest)
   if err != nil {
     return authorizeResponse, err
   }
 
-  authorizeResponse = AuthorizeResponse{
+  authorizeResponse = client.AuthorizeResponse{
     Challenge: authorizeRequest.Challenge,
     Subject: hydraConsentResponse.Subject,
     ClientId: clientId,

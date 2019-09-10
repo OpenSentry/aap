@@ -171,7 +171,6 @@ func serve(env *environment.State) {
   r.PUT(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:update:access"), access.PutCollection(env, routes["/access"]))
 
   r.PUT(routes["/access/grant"].URL, authorizationRequired(routes["/access/grant"], "aap:update:access:grant"), access.PutGrant(env, routes["/access/grant"]))
-  r.PUT(routes["/access/revoke"].URL, authorizationRequired(routes["/access/revoke"], "aap:update:access:revoke"), access.PutRevoke(env, routes["/access/revoke"]))
 
   r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "authorize:identity"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
   r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
