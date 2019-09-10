@@ -6,41 +6,43 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-type Permission struct {
-  Name string `json:"name" binding:"required"`
+type Scope struct {
+  Name string
+  Title string
+  Description string
 }
 
 type Identity struct {
-  Subject string `json:"sub" binding:"required"`
-  Password string `json:"password"`
-  Name string `json:"name"`
-  Email string `json:"email"`
+  Subject string
+  Password string
+  Name string
+  Email string
 }
 
 type Client struct {
-  ClientId     string `json:"client_id" binding:"required"`
-  ClientSecret string `json:"client_secret,omitempty"`
-  Name         string `json:"name,omitempty"`
-  Description  string `json:"description,omitempty"`
+  ClientId     string
+  ClientSecret string
+  Name         string
+  Description  string
 }
 
 type ResourceServer struct {
-  Name string `json:"name" binding:"required"`
-  Audience string `json:"aud,omitempty"`
-  Description string `json:"description,omitempty"`
+  Name string
+  Audience string
+  Description string
 }
 
 type Consent struct {
   Identity
   Client
   ResourceServer
-  Permission
+  Scope
 }
 
 // CONSENT, CONSENTED_BY, IS_CONSENTED
-func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, consentPermissions []Permission, revokePermissions []Permission) ([]Permission, error) {
-  if len(consentPermissions) <= 0 && len(revokePermissions) <= 0 {
-    return nil, errors.New("You must either consent permissions or revoke permissions or both, but it cannot be empty")
+func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, consentScopes []Scope, revokeScopes []Scope) ([]Scope, error) {
+  if len(consentScopes) <= 0 && len(revokeScopes) <= 0 {
+    return nil, errors.New("You must either consent scopes or revoke scopes or both, but it cannot be empty")
   }
 
   var err error
@@ -58,18 +60,18 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
     var scopes []string
 
     //scopes = []string{}
-    for _, permission := range consentPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range consentScopes {
+      scopes = append(scopes, scope.Name)
     }
     consentScopes := strings.Join(scopes, ",")
 
     scopes = []string{}
-    for _, permission := range revokePermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range revokeScopes {
+      scopes = append(scopes, scope.Name)
     }
     revokeScopes := strings.Join(scopes, ",")
 
-    // NOTE: Ensure that user has MayGrant to permissions they are trying to grant? No! Ensure user has permission to "use" a granted permission is up to the resource server authorization check.
+    // NOTE: Ensure that user has MayGrant to scopes they are trying to grant? No! Ensure user has scope to "use" a granted scope is up to the resource server authorization check.
     var cypher string
     var params map[string]interface{}
 
@@ -79,27 +81,27 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
 
       WITH resourceOwner, client
 
-      // Find all permission exposed by resource server that we want to consent on behalf of the user
-      OPTIONAL MATCH (consentPermission:Permission) WHERE consentPermission.name in split($consentScopes, ",")
+      // Find all scope exposed by resource server that we want to consent on behalf of the user
+      OPTIONAL MATCH (consentScope:Scope) WHERE consentScope.name in split($consentScopes, ",")
 
-      WITH resourceOwner, client, consentPermission, collect(consentPermission) as consentPermissions
+      WITH resourceOwner, client, consentScope, collect(consentScope) as consentScopes
 
       // CONSENT
-      FOREACH ( permission in consentPermissions |
-        MERGE (resourceOwner)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(permission)
+      FOREACH ( scope in consentScopes |
+        MERGE (resourceOwner)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(scope)
         MERGE (client)-[:IS_CONSENTED]->(cr)
       )
 
-      WITH resourceOwner, client, consentPermission, consentPermissions
+      WITH resourceOwner, client, consentScope, consentScopes
 
       // REVOKE CONSENT
-      // Find all permission exposed by client that we want to revoke consent on behalf of the user
-      OPTIONAL MATCH (revokePermission:Permission) WHERE revokePermission.name in split($revokeScopes, ",")
-      OPTIONAL MATCH (client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENTED_BY]->(resourceOwner) WHERE (cr)-[:CONSENT]->(revokePermission)
+      // Find all scope exposed by client that we want to revoke consent on behalf of the user
+      OPTIONAL MATCH (revokeScope:Scope) WHERE revokeScope.name in split($revokeScopes, ",")
+      OPTIONAL MATCH (client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENTED_BY]->(resourceOwner) WHERE (cr)-[:CONSENT]->(revokeScope)
       DETACH DELETE cr
 
       // Conclude
-      return consentPermission.name //, revokePermission.name
+      return consentScope.name //, revokeScope.name
     `
 
     params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId":client.ClientId, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
@@ -107,7 +109,7 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
       return nil, err
     }
 
-    var permissions []Permission
+    var resultScopes []Scope
     for result.Next() {
       record := result.Record()
 
@@ -117,10 +119,10 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
       name := record.GetByIndex(0)
       if name != nil {
-        permission := Permission{
+        scope := Scope{
           Name: name.(string),
         }
-        permissions = append(permissions, permission)
+        resultScopes = append(resultScopes, scope)
       }
     }
 
@@ -128,18 +130,18 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
     if err = result.Err(); err != nil {
       return nil, err
     }
-    return permissions, nil
+    return resultScopes, nil
   })
 
   if err != nil {
     return nil, err
   }
-  return perms.([]Permission), nil
+  return perms.([]Scope), nil
 }
 
-func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, resourceServer ResourceServer, consentPermissions []Permission, revokePermissions []Permission) ([]Permission, error) {
-  if len(consentPermissions) <= 0 && len(revokePermissions) <= 0 {
-    return nil, errors.New("You must either consent permissions or revoke permissions or both, but it cannot be empty")
+func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, resourceServer ResourceServer, consentScopes []Scope, revokeScopes []Scope) ([]Scope, error) {
+  if len(consentScopes) <= 0 && len(revokeScopes) <= 0 {
+    return nil, errors.New("You must either consent scopes or revoke scopes or both, but it cannot be empty")
   }
 
   var err error
@@ -157,18 +159,18 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
     var scopes []string
 
     //scopes = []string{}
-    for _, permission := range consentPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range consentScopes {
+      scopes = append(scopes, scope.Name)
     }
     consentScopes := strings.Join(scopes, ",")
 
     scopes = []string{}
-    for _, permission := range revokePermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range revokeScopes {
+      scopes = append(scopes, scope.Name)
     }
     revokeScopes := strings.Join(scopes, ",")
 
-    // NOTE: Ensure that user has MayGrant to permissions they are trying to grant? No! Ensure user has permission to "use" a granted permission is up to the resource server authorization check.
+    // NOTE: Ensure that user has MayGrant to scopes they are trying to grant? No! Ensure user has scope to "use" a granted scope is up to the resource server authorization check.
     var cypher string
     var params map[string]interface{}
 
@@ -179,27 +181,27 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
 
       WITH resourceOwner, client, resourceServer
 
-      // Find all permission exposed by resource server that we want to consent on behalf of the user
-      OPTIONAL MATCH (resourceServer)-[:IS_EXPOSED]->(erConsent:ExposeRule)-[:EXPOSE]->(consentPermission:Permission) WHERE consentPermission.name in split($consentScopes, ",")
+      // Find all scope exposed by resource server that we want to consent on behalf of the user
+      OPTIONAL MATCH (resourceServer)-[:IS_EXPOSED]->(erConsent:ExposeRule)-[:EXPOSE]->(consentScope:Scope) WHERE consentScope.name in split($consentScopes, ",")
 
-      WITH resourceOwner, client, resourceServer, consentPermission, collect(consentPermission) as consentPermissions
+      WITH resourceOwner, client, resourceServer, consentScope, collect(consentScope) as consentScopes
 
       // CONSENT
-      FOREACH ( permission in consentPermissions |
-        MERGE (resourceOwner)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(permission)
+      FOREACH ( scope in consentScopes |
+        MERGE (resourceOwner)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]-(scope)
         MERGE (client)-[:IS_CONSENTED]->(cr)
       )
 
-      WITH resourceOwner, client, resourceServer, consentPermission, consentPermissions
+      WITH resourceOwner, client, resourceServer, consentScope, consentScopes
 
       // REVOKE CONSENT
-      // Find all permission exposed by client that we want to revoke consent on behalf of the user
-      OPTIONAL MATCH (resourceServer)-[:IS_EXPOSED]->(erConsent:ExposeRule)-[:EXPOSE]->(revokePermission:Permission) WHERE revokePermission.name in split($revokeScopes, ",")
-      OPTIONAL MATCH (client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENTED_BY]->(resourceOwner) WHERE (cr)-[:CONSENT]->(revokePermission)
+      // Find all scope exposed by client that we want to revoke consent on behalf of the user
+      OPTIONAL MATCH (resourceServer)-[:IS_EXPOSED]->(erConsent:ExposeRule)-[:EXPOSE]->(revokeScope:Scope) WHERE revokeScope.name in split($revokeScopes, ",")
+      OPTIONAL MATCH (client)-[:IS_CONSENTED]->(cr:ConsentRule)-[:CONSENTED_BY]->(resourceOwner) WHERE (cr)-[:CONSENT]->(revokeScope)
       DETACH DELETE cr
 
       // Conclude
-      return consentPermission.name //, revokePermission.name
+      return consentScope.name //, revokeScope.name
     `
 
     params = map[string]interface{}{"sub":resourceOwner.Subject, "clientId":client.ClientId, "rsName":resourceServer.Name, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
@@ -207,7 +209,7 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
       return nil, err
     }
 
-    var permissions []Permission
+    var resultScopes []Scope
     for result.Next() {
       record := result.Record()
 
@@ -217,10 +219,10 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
       name := record.GetByIndex(0)
       if name != nil {
-        permission := Permission{
+        scope := Scope{
           Name: name.(string),
         }
-        permissions = append(permissions, permission)
+        resultScopes = append(resultScopes, scope)
       }
     }
 
@@ -228,13 +230,149 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
     if err = result.Err(); err != nil {
       return nil, err
     }
-    return permissions, nil
+    return resultScopes, nil
   })
 
   if err != nil {
     return nil, err
   }
-  return perms.([]Permission), nil
+  return perms.([]Scope), nil
+}
+
+func CreateScope(driver neo4j.Driver, scope Scope) (Scope, error) {
+  var err error
+  var session neo4j.Session
+  var neoResult interface{}
+
+  session, err = driver.Session(neo4j.AccessModeWrite);
+  if err != nil {
+    return Scope{}, err
+  }
+  defer session.Close()
+
+  neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+    var result neo4j.Result
+
+    var cypher string
+    var params map[string]interface{}
+
+    cypher = `
+      MERGE (scope:Scope {name: $name, title: $title, description: $description})
+
+      // Conclude
+      return scope.name, scope.title, scope.description
+    `
+
+    params = map[string]interface{}{
+      "name": scope.Name,
+      "title": scope.Title,
+      "description": scope.Description,
+    }
+
+    if result, err = tx.Run(cypher, params); err != nil {
+      return nil, err
+    }
+
+    var scope Scope
+    for result.Next() {
+      record := result.Record()
+
+      // NOTE: This means the statment sequence of the RETURN (possible order by)
+      // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
+      // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
+      // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
+
+      name := record.GetByIndex(0)
+      title := record.GetByIndex(1)
+      desc := record.GetByIndex(2)
+      if name != nil {
+        scope = Scope{
+          Name: name.(string),
+          Title: title.(string),
+          Description: desc.(string),
+        }
+      }
+    }
+
+    // Check if we encountered any error during record streaming
+    if err = result.Err(); err != nil {
+      return nil, err
+    }
+    return scope, nil
+  })
+
+  if err != nil {
+    return Scope{}, err
+  }
+
+  return neoResult.(Scope), nil
+}
+
+func ReadScope(driver neo4j.Driver, scope Scope) (Scope, error) {
+  var err error
+  var session neo4j.Session
+  var neoResult interface{}
+
+  session, err = driver.Session(neo4j.AccessModeWrite);
+  if err != nil {
+    return Scope{}, err
+  }
+  defer session.Close()
+
+  neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+    var result neo4j.Result
+
+    var cypher string
+    var params map[string]interface{}
+
+    cypher = `
+      MATCH (scope:Scope {name: $name})
+
+      // Conclude
+      return scope.name, scope.title, scope.description
+    `
+
+    params = map[string]interface{}{
+      "name": scope.Name,
+    }
+
+    if result, err = tx.Run(cypher, params); err != nil {
+      return nil, err
+    }
+
+    var scope Scope
+    for result.Next() {
+      record := result.Record()
+
+      // NOTE: This means the statment sequence of the RETURN (possible order by)
+      // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
+      // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
+      // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
+
+      name := record.GetByIndex(0)
+      title := record.GetByIndex(1)
+      desc := record.GetByIndex(2)
+      if name != nil {
+        scope = Scope{
+          Name: name.(string),
+          Title: title.(string),
+          Description: desc.(string),
+        }
+      }
+    }
+
+    // Check if we encountered any error during record streaming
+    if err = result.Err(); err != nil {
+      return nil, err
+    }
+    return scope, nil
+  })
+
+  if err != nil {
+    return Scope{}, err
+  }
+
+  return neoResult.(Scope), nil
 }
 
 func FetchResourceServerByAudience(driver neo4j.Driver, aud string) (*ResourceServer, error) {
@@ -293,7 +431,7 @@ func FetchResourceServerByAudience(driver neo4j.Driver, aud string) (*ResourceSe
 }
 
 // IS_CONSENTED, CONSENT, CONSENTED_BY
-func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, requestedPermissions []Permission) ([]Consent, error) {
+func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, requestedScopes []Scope) ([]Consent, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -308,8 +446,8 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
     var result neo4j.Result
 
     var scopes []string
-    for _, permission := range requestedPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range requestedScopes {
+      scopes = append(scopes, scope.Name)
     }
     requestedScopes := strings.Join(scopes, ",")
 
@@ -319,7 +457,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
     if (requestedScopes == "") {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -328,7 +466,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -351,10 +489,10 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
-      permissionName := record.GetByIndex(4).(string)
+      scopeName := record.GetByIndex(4).(string)
 
-      permission := Permission{
-        Name: permissionName,
+      scope := Scope{
+        Name: scopeName,
       }
       identity := Identity{
         Subject: sub,
@@ -371,7 +509,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
         Identity: identity,
         Client: client,
         ResourceServer: rs,
-        Permission: permission,
+        Scope: scope,
       })
     }
 
@@ -387,7 +525,7 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
   return perms.([]Consent), nil
 }
 
-func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver, resourceOwner Identity, client Client, resourceServer ResourceServer, requestedPermissions []Permission) ([]Consent, error) {
+func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver, resourceOwner Identity, client Client, resourceServer ResourceServer, requestedScopes []Scope) ([]Consent, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -402,8 +540,8 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
     var result neo4j.Result
 
     var scopes []string
-    for _, permission := range requestedPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range requestedScopes {
+      scopes = append(scopes, scope.Name)
     }
     requestedScopes := strings.Join(scopes, ",")
 
@@ -413,7 +551,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
     if (requestedScopes == "") {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -422,7 +560,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -445,10 +583,10 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
-      permissionName := record.GetByIndex(4).(string)
+      scopeName := record.GetByIndex(4).(string)
 
-      permission := Permission{
-        Name: permissionName,
+      scope := Scope{
+        Name: scopeName,
       }
       identity := Identity{
         Subject: sub,
@@ -465,7 +603,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
         Identity: identity,
         Client: client,
         ResourceServer: rs,
-        Permission: permission,
+        Scope: scope,
       })
     }
 
@@ -481,7 +619,7 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
   return perms.([]Consent), nil
 }
 
-func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resourceOwner Identity, resourceServer ResourceServer, requestedPermissions []Permission) ([]Consent, error) {
+func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resourceOwner Identity, resourceServer ResourceServer, requestedScopes []Scope) ([]Consent, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -496,8 +634,8 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
     var result neo4j.Result
 
     var scopes []string
-    for _, permission := range requestedPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range requestedScopes {
+      scopes = append(scopes, scope.Name)
     }
     requestedScopes := strings.Join(scopes, ",")
 
@@ -507,7 +645,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
     if (requestedScopes == "") {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -516,7 +654,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client)-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -539,10 +677,10 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
-      permissionName := record.GetByIndex(4).(string)
+      scopeName := record.GetByIndex(4).(string)
 
-      permission := Permission{
-        Name: permissionName,
+      scope := Scope{
+        Name: scopeName,
       }
       identity := Identity{
         Subject: sub,
@@ -559,7 +697,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
         Identity: identity,
         Client: client,
         ResourceServer: rs,
-        Permission: permission,
+        Scope: scope,
       })
     }
 
@@ -576,7 +714,7 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
 }
 
 
-func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Identity, client Client, requestedPermissions []Permission) ([]Consent, error) {
+func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Identity, client Client, requestedScopes []Scope) ([]Consent, error) {
   var err error
   var session neo4j.Session
   var perms interface{}
@@ -591,8 +729,8 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
     var result neo4j.Result
 
     var scopes []string
-    for _, permission := range requestedPermissions {
-      scopes = append(scopes, permission.Name)
+    for _, scope := range requestedScopes {
+      scopes = append(scopes, scope.Name)
     }
     requestedScopes := strings.Join(scopes, ",")
 
@@ -602,7 +740,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
     if (requestedScopes == "") {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission)
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -611,7 +749,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
     } else {
       cypher = `
         MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Permission) WHERE p.name in split($requestedScopes, ",")
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
         MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
         return i.sub, c.client_id, rs.name, p.name
@@ -634,10 +772,10 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
       clientId := record.GetByIndex(1).(string)
       resourceServerName := record.GetByIndex(2).(string)
       resourceServerAudience := record.GetByIndex(3).(string)
-      permissionName := record.GetByIndex(4).(string)
+      scopeName := record.GetByIndex(4).(string)
 
-      permission := Permission{
-        Name: permissionName,
+      scope := Scope{
+        Name: scopeName,
       }
       identity := Identity{
         Subject: sub,
@@ -654,7 +792,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         Identity: identity,
         Client: client,
         ResourceServer: rs,
-        Permission: permission,
+        Scope: scope,
       })
     }
 
