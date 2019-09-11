@@ -1,4 +1,4 @@
-package access
+package exposes
 
 import (
   "net/http"
@@ -7,18 +7,20 @@ import (
 
   "github.com/charmixer/aap/environment"
   _ "github.com/charmixer/aap/gateway/aap"
+  _ "github.com/charmixer/aap/client"
 )
 
-func PutGrant(env *environment.State, route environment.Route) gin.HandlerFunc {
+func GetExposes(env *environment.State, route environment.Route) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PutCollection",
+      "func": "GetConsents",
     })
 
     c.JSON(http.StatusOK, gin.H{
-      "message": "pong put",
+      "message": "pong",
     })
+    c.Abort()
   }
   return gin.HandlerFunc(fn)
 }

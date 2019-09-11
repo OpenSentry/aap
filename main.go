@@ -18,8 +18,12 @@ import (
 
   "github.com/charmixer/aap/config"
   "github.com/charmixer/aap/environment"
+
   "github.com/charmixer/aap/authorizations"
-  "github.com/charmixer/aap/access"
+  "github.com/charmixer/aap/scopes"
+  "github.com/charmixer/aap/grants"
+  "github.com/charmixer/aap/exposes"
+  "github.com/charmixer/aap/consents"
   "github.com/charmixer/aap/migration"
 )
 
@@ -141,9 +145,13 @@ func serve(env *environment.State) {
     "/authorizations":           environment.Route{URL: "/authorizations",           LogId: "aap://authorizations"},
     "/authorizations/authorize": environment.Route{URL: "/authorizations/authorize", LogId: "aap://authorizations/authorize"},
     "/authorizations/reject":    environment.Route{URL: "/authorizations/reject",    LogId: "aap://authorizations/reject"},
-    "/access":                   environment.Route{URL: "/access",                   LogId: "aap://access"},
-    "/access/grant":             environment.Route{URL: "/access/grant",             LogId: "aap://access/grant"},
-    "/access/revoke":            environment.Route{URL: "/access/revoke",            LogId: "aap://access/revoke"},
+    "/scopes":                   environment.Route{URL: "/scopes",                   LogId: "aap://scopes"},
+    "/scopes/grant":             environment.Route{URL: "/scopes/grant",             LogId: "aap://scopes/grant"},
+    "/scopes/consent":           environment.Route{URL: "/scopes/consent",           LogId: "aap://scopes/consent"},
+    "/scopes/expose":            environment.Route{URL: "/scopes/expose",            LogId: "aap://scopes/expose"},
+    "/exposes":                  environment.Route{URL: "/exposes",                  LogId: "aap://exposes"},
+    "/consents":                 environment.Route{URL: "/consents",                 LogId: "aap://consents"},
+    "/grants":                   environment.Route{URL: "/grants",                   LogId: "aap://grants"},
   }
 
   r := gin.New() // Clean gin to take control with logging.
@@ -166,11 +174,22 @@ func serve(env *environment.State) {
   r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
   r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
 
-  r.GET(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:read:access"), access.GetCollection(env, routes["/access"]))
-  r.POST(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:create:access"), access.PostCollection(env, routes["/access"]))
-  r.PUT(routes["/access"].URL, authorizationRequired(routes["/access"], "aap:update:access"), access.PutCollection(env, routes["/access"]))
+  r.GET(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:read:scopes"), scopes.GetScopes(env, routes["/scopes"]))
+  r.POST(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:create:scopes"), scopes.PostScopes(env, routes["/scopes"]))
+  r.PUT(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:update:scopes"), scopes.PutScopes(env, routes["/scopes"]))
 
-  r.PUT(routes["/access/grant"].URL, authorizationRequired(routes["/access/grant"], "aap:update:access:grant"), access.PutGrant(env, routes["/access/grant"]))
+  r.POST(routes["/scopes/grant"].URL, authorizationRequired(routes["/scopes/grant"], "aap:create:scopes:grant"), scopes.PostScopesGrant(env, routes["/scopes/grant"]))
+  r.DELETE(routes["/scopes/grant"].URL, authorizationRequired(routes["/scopes/grant"], "aap:delete:scopes:grant"), scopes.DeleteScopesGrant(env, routes["/scopes/grant"]))
+
+  r.POST(routes["/scopes/consent"].URL, authorizationRequired(routes["/scopes/consent"], "aap:create:scopes:consent"), scopes.PostScopesConsent(env, routes["/scopes/consent"]))
+  r.DELETE(routes["/scopes/consent"].URL, authorizationRequired(routes["/scopes/consent"], "aap:delete:scopes:consent"), scopes.DeleteScopesConsent(env, routes["/scopes/consent"]))
+
+  r.POST(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:create:scopes:expose"), scopes.PostScopesExpose(env, routes["/scopes/expose"]))
+  r.DELETE(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:delete:scopes:expose"), scopes.DeleteScopesExpose(env, routes["/scopes/expose"]))
+
+  r.GET(routes["/exposes"].URL, authorizationRequired(routes["/exposes"], "aap:read:exposes"), exposes.GetExposes(env, routes["/exposes"]))
+  r.GET(routes["/consents"].URL, authorizationRequired(routes["/consents"], "aap:read:consents"), consents.GetConsents(env, routes["/consents"]))
+  r.GET(routes["/grants"].URL, authorizationRequired(routes["/grants"], "aap:read:grants"), grants.GetGrants(env, routes["/grants"]))
 
   r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "authorize:identity"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
   r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))

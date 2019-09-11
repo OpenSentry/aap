@@ -375,6 +375,73 @@ func ReadScope(driver neo4j.Driver, scope Scope) (Scope, error) {
   return neoResult.(Scope), nil
 }
 
+func ReadScopesCreatedByIdentity(driver neo4j.Driver, identity Identity) ([]Scope, error) {
+  var err error
+  var session neo4j.Session
+  var neoResult interface{}
+
+  session, err = driver.Session(neo4j.AccessModeWrite);
+  if err != nil {
+    return []Scope{}, err
+  }
+  defer session.Close()
+
+  neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+    var result neo4j.Result
+
+    var cypher string
+    var params map[string]interface{}
+
+    cypher = `
+      MATCH (scope:Scope {name: $name})
+
+      // Conclude
+      return scope.name, scope.title, scope.description
+    `
+
+    params = map[string]interface{}{
+      "name": identity.Id,
+    }
+
+    if result, err = tx.Run(cypher, params); err != nil {
+      return nil, err
+    }
+
+    var scope Scope
+    for result.Next() {
+      record := result.Record()
+
+      // NOTE: This means the statment sequence of the RETURN (possible order by)
+      // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
+      // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
+      // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
+
+      name := record.GetByIndex(0)
+      title := record.GetByIndex(1)
+      desc := record.GetByIndex(2)
+      if name != nil {
+        scope = Scope{
+          Name: name.(string),
+          Title: title.(string),
+          Description: desc.(string),
+        }
+      }
+    }
+
+    // Check if we encountered any error during record streaming
+    if err = result.Err(); err != nil {
+      return nil, err
+    }
+    return scope, nil
+  })
+
+  if err != nil {
+    return []Scope{}, err
+  }
+
+  return neoResult.([]Scope), nil
+}
+
 func FetchResourceServerByAudience(driver neo4j.Driver, aud string) (*ResourceServer, error) {
   var err error
   var session neo4j.Session
