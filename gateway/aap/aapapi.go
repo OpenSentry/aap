@@ -76,8 +76,8 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
     var params map[string]interface{}
 
     cypher = `
-      MATCH (resourceOwner:Identity {id:$id})
-      MATCH (client:Client {client_id:$clientId})
+    MATCH (resourceOwner:Human:Identity {id:$id})
+      MATCH (client:Client:Identity {client_id:$clientId})
 
       WITH resourceOwner, client
 
@@ -175,9 +175,9 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
     var params map[string]interface{}
 
     cypher = `
-      MATCH (resourceOwner:Identity {id:$id})
-      MATCH (client:Client {client_id:$clientId})
-      MATCH (resourceServer:ResourceServer {name:$rsName})
+      MATCH (resourceOwner:Human:Identity {id:$id})
+      MATCH (client:Client:Identity {client_id:$clientId})
+      MATCH (resourceServer:ResourceServer:Identity {name:$rsName})
 
       WITH resourceOwner, client, resourceServer
 
@@ -459,7 +459,7 @@ func FetchResourceServerByAudience(driver neo4j.Driver, aud string) (*ResourceSe
     var cypher string
     var params map[string]interface{}
     cypher = `
-      MATCH (rs:ResourceServer {aud:$aud}) return rs.name, rs.aud, rs.description
+    MATCH (rs:ResourceServer:Identity {aud:$aud}) return rs.name, rs.aud, rs.description
     `
     params = map[string]interface{}{"aud":aud}
     if result, err = tx.Run(cypher, params); err != nil {
@@ -523,19 +523,19 @@ func FetchConsentsForResourceOwner(driver neo4j.Driver, resourceOwner Identity, 
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
-        MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope)
+        MATCH (c:Client:Identity)-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, s.name
       `
       params = map[string]interface{}{"id": resourceOwner.Id}
     } else {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
-        MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope) WHERE s.name in split($requestedScopes, ",")
+        MATCH (c:Client:Identity)-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
         return i.id, c.client_id, rs.name, p.name
       `
       params = map[string]interface{}{"id":resourceOwner.Id, "requestedScopes":requestedScopes}
@@ -617,20 +617,20 @@ func FetchConsentsForResourceOwnerToClientAndResourceServer(driver neo4j.Driver,
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
-        MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope)
+        MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, s.name
       `
       params = map[string]interface{}{"id": resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name}
     } else {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
-        MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope) WHERE p.name in split($requestedScopes, ",")
+        MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, s.name
       `
       params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name, "requestedScopes":requestedScopes}
     }
@@ -711,20 +711,20 @@ func FetchConsentsForResourceOwnerToResourceServer(driver neo4j.Driver, resource
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
-        MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope)
+        MATCH (c:Client:Identity)-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, s.name
       `
       params = map[string]interface{}{"id": resourceOwner.Id, "rsName":resourceServer.Name}
     } else {
       cypher = `
-        MATCH (i:Identity {sub:$sub})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
-        MATCH (c:Client)-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, p.name
+        MATCH (i:Human:Identity {sub:$sub})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope) WHERE p.name in split($requestedScopes, ",")
+        MATCH (c:Client:Identity)-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity {name:$rsName})-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, s.name
       `
       params = map[string]interface{}{"id":resourceOwner.Id, "rsName":resourceServer.Name, "requestedScopes":requestedScopes,}
     }
@@ -806,20 +806,20 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
     var params map[string]interface{}
     if (requestedScopes == "") {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope)
-        MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, rs.aud, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope)
+        MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, rs.aud, s.name
       `
       params = map[string]interface{}{"id": resourceOwner.Id, "clientId": client.ClientId}
     } else {
       cypher = `
-        MATCH (i:Identity {id:$id})
-        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(p:Scope) WHERE p.name in split($requestedScopes, ",")
-        MATCH (c:Client {client_id:$clientId})-[:IS_CONSENTED]->(cr)
-        MATCH (rs:ResourceServer)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(p)
-        return i.id, c.client_id, rs.name, rs.aud, p.name
+        MATCH (i:Human:Identity {id:$id})
+        MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope) WHERE s.name in split($requestedScopes, ",")
+        MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
+        MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
+        return i.id, c.client_id, rs.name, rs.aud, s.name
       `
       params = map[string]interface{}{"id":resourceOwner.Id, "clientId": client.ClientId, "requestedScopes":requestedScopes}
     }
