@@ -32,17 +32,28 @@ func PostScopes(env *environment.State, route environment.Route) gin.HandlerFunc
       Description: input.Description,
     }
 
-    _, err = aap.CreateScope(env.Driver, scope)
+    var createdByIdentity aap.Identity
+    createdByIdentity = aap.Identity{
+      Id: input.CreatedByIdentityId,
+    }
+
+    scope, identity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+
+    log.Println(scope, identity)
 
     if err != nil {
       log.Println(err)
     }
 
-    c.JSON(http.StatusOK, gin.H{
-      "scope": scope.Name,
-      "title": scope.Title,
-      "description": scope.Description,
-    })
+    var output client.CreateScopesResponse
+    output = client.CreateScopesResponse{
+      CreatedByIdentityId: identity.Id,
+      Scope: scope.Name,
+      Title: scope.Title,
+      Description: scope.Description,
+    }
+
+    c.JSON(http.StatusOK, output)
     c.Abort()
   }
   return gin.HandlerFunc(fn)
