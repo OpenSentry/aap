@@ -4,14 +4,14 @@
 
 // ### Scopes, IDPAPI
 
-MERGE (:Scope {name:"openid"})
-MERGE (:Scope {name:"offline"})
-MERGE (:Scope {name:"authenticate:identity"})
-MERGE (:Scope {name:"read:identity"})
-MERGE (:Scope {name:"update:identity"})
-MERGE (:Scope {name:"delete:identity"})
-MERGE (:Scope {name:"recover:identity"})
-MERGE (:Scope {name:"logout:identity"})
+MERGE (:Scope {name:"openid", title:"Login to the IDP system", description:"Allows access to login to the IDP system"})
+MERGE (:Scope {name:"offline", title:"Remember me", description:"Allows access to remember your login session over a longer period of time"})
+MERGE (:Scope {name:"authenticate:identity", title:"Authenticate and manage your password", description:"Allows access to authenticate you and update your password"})
+MERGE (:Scope {name:"read:identity", title:"Read your identity", description:"Allows access to your profile information, such as email, name and profile picture"})
+MERGE (:Scope {name:"update:identity", title:"Update your identity", description:"Allows access to update your profile information, such as email, name and profile picture"})
+MERGE (:Scope {name:"delete:identity", title:"Delete your identity", description:"Allows access to delete your profile from the system"})
+MERGE (:Scope {name:"recover:identity", title:"Recovering of password", description:"Allows access to initialize recover password process"})
+MERGE (:Scope {name:"logout:identity", title:"Logout from the IDP system", description:"Allows access to log you out from the IDP system"})
 ;
 
 // ### Expose scopes for IDPAPI

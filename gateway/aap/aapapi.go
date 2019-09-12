@@ -4,19 +4,20 @@ import (
   "strings"
   "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
+  log "github.com/sirupsen/logrus"
 )
-
-type Scope struct {
-  Name string
-  Title string
-  Description string
-}
 
 type Identity struct {
   Id string
   Password string
   Name string
   Email string
+}
+
+type Scope struct {
+  Name string
+  Title string
+  Description string
 }
 
 type Client struct {
@@ -239,34 +240,45 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
   return perms.([]Scope), nil
 }
 
-func CreateScope(driver neo4j.Driver, scope Scope) (Scope, error) {
+func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (Scope, Identity, error) {
   var err error
   var session neo4j.Session
   var neoResult interface{}
+  type NeoReturnType struct{
+    Scope Scope
+    Identity Identity
+  }
+
+  log.Println(scope, createdByIdentity)
 
   session, err = driver.Session(neo4j.AccessModeWrite);
   if err != nil {
-    return Scope{}, err
+    return Scope{}, Identity{}, err
   }
   defer session.Close()
 
   neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
     var result neo4j.Result
-
     var cypher string
     var params map[string]interface{}
 
     cypher = `
-      MERGE (scope:Scope {name: $name, title: $title, description: $description})
+      // FIXME ensure user exists and return errors
+      // find out who created it
+      MATCH (createdByIdentity:Human:Identity {id: $createdByIdentityId})
+
+      // create scope and match it to the identity who created it
+      MERGE (scope:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
 
       // Conclude
-      return scope.name, scope.title, scope.description
+      return scope.name, scope.title, scope.description, createdByIdentity.id, createdByIdentity.name, createdByIdentity.email
     `
 
     params = map[string]interface{}{
       "name": scope.Name,
       "title": scope.Title,
       "description": scope.Description,
+      "createdByIdentityId": createdByIdentity.Id,
     }
 
     if result, err = tx.Run(cypher, params); err != nil {
@@ -274,38 +286,50 @@ func CreateScope(driver neo4j.Driver, scope Scope) (Scope, error) {
     }
 
     var scope Scope
-    for result.Next() {
+    var identity Identity
+    if result.Next() {
       record := result.Record()
 
-      // NOTE: This means the statment sequence of the RETURN (possible order by)
-      // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
-      // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
-      // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
+      scopeName := record.GetByIndex(0)
+      scopeTitle := record.GetByIndex(1)
+      scopeDesc := record.GetByIndex(2)
+      identityId := record.GetByIndex(3)
+      identityName := record.GetByIndex(4)
+      identityEmail := record.GetByIndex(5)
 
-      name := record.GetByIndex(0)
-      title := record.GetByIndex(1)
-      desc := record.GetByIndex(2)
-      if name != nil {
-        scope = Scope{
-          Name: name.(string),
-          Title: title.(string),
-          Description: desc.(string),
-        }
+      scope = Scope{
+        Name: scopeName.(string),
+        Title: scopeTitle.(string),
+        Description: scopeDesc.(string),
       }
+
+      identity = Identity{
+        Id: identityId.(string),
+        Name: identityName.(string),
+        Email: identityEmail.(string),
+      }
+
     }
 
     // Check if we encountered any error during record streaming
     if err = result.Err(); err != nil {
       return nil, err
     }
-    return scope, nil
+
+    log.Println(scope, identity)
+
+    return NeoReturnType{Scope: scope, Identity: identity}, nil
   })
 
   if err != nil {
-    return Scope{}, err
+    return Scope{}, Identity{}, err
   }
 
-  return neoResult.(Scope), nil
+  log.Println("=====================")
+  log.Println(neoResult)
+  log.Println("=====================")
+
+  return Scope{}, Identity{}, nil //neoResult.scope, neoResult.identity, nil
 }
 
 func ReadScope(driver neo4j.Driver, scope Scope) (Scope, error) {

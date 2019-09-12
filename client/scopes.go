@@ -15,14 +15,14 @@ import (
 
 type CreateScopesRequest struct {
   CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
-  Scope                     string    `json:"scope" binding:"required" binding:"required"`
+  Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
 
 type CreateScopesResponse struct {
   CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
-  Scope                     string    `json:"scope" binding:"required" binding:"required"`
+  Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
@@ -50,7 +50,7 @@ type ReadScopesResponse struct {
   CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
-  Description               string    `json:"description" binding:"required"`
+  Description               string    `json:"description"`
 }
 
 // /scopes/grant
