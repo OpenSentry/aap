@@ -25,6 +25,8 @@ import (
   "github.com/charmixer/aap/exposes"
   "github.com/charmixer/aap/consents"
   "github.com/charmixer/aap/migration"
+
+  "fmt"
 )
 
 const app = "aap"
@@ -155,10 +157,12 @@ func serve(env *environment.State) {
   }
 
   r := gin.New() // Clean gin to take control with logging.
+  r.Use(processMethodOverride(r))
   r.Use(gin.Recovery())
 
   r.Use(requestId())
   r.Use(RequestLogger(env))
+
 
   // ## QTNA - Questions that need answering before granting access to a protected resource
   // 1. Is the user or client authenticated? Answered by the process of obtaining an access token.
@@ -187,6 +191,9 @@ func serve(env *environment.State) {
   r.POST(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:create:scopes:expose"), scopes.PostScopesExpose(env, routes["/scopes/expose"]))
   r.DELETE(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:delete:scopes:expose"), scopes.DeleteScopesExpose(env, routes["/scopes/expose"]))
 
+  // r.POST("/scopes", authorizationRequired(), Route(GetScopes(), input, output))
+  // r.POST("/scopes", authorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))
+
   r.GET(routes["/exposes"].URL, authorizationRequired(routes["/exposes"], "aap:read:exposes"), exposes.GetExposes(env, routes["/exposes"]))
   r.GET(routes["/consents"].URL, authorizationRequired(routes["/consents"], "aap:read:consents"), consents.GetConsents(env, routes["/consents"]))
   r.GET(routes["/grants"].URL, authorizationRequired(routes["/grants"], "aap:read:grants"), grants.GetGrants(env, routes["/grants"]))
@@ -195,6 +202,56 @@ func serve(env *environment.State) {
   r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
+}
+
+func processMethodOverride(r *gin.Engine) gin.HandlerFunc {
+  return func(c *gin.Context) {
+
+    // only need to check POST method
+    if c.Request.Method != "POST" {
+      c.JSON(http.StatusBadRequest, gin.H{"error": "Only POST method supported with X-HTTP-Method-Override header"})
+      c.Abort()
+      return
+    }
+
+    method := c.Request.Header.Get("X-HTTP-Method-Override")
+    method = strings.ToLower(method)
+    method = strings.TrimSpace(method)
+
+    if method == "" {
+      c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or empty X-HTTP-Method-Override header"})
+      c.Abort()
+      return
+    }
+
+    if method == "post" {
+      // if HandleContext is called you will make an infinite loop
+      c.Next()
+      return
+    }
+
+    if method == "get" {
+      c.Request.Method = "GET"
+      r.HandleContext(c)
+      return
+    }
+
+    if method == "put" {
+      c.Request.Method = "PUT"
+      r.HandleContext(c)
+      return
+    }
+
+    if method == "delete" {
+      c.Request.Method = "DELETE"
+      r.HandleContext(c)
+      return
+    }
+
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported method"})
+    c.Abort()
+    return
+  }
 }
 
 func RequestLogger(env *environment.State) gin.HandlerFunc {
