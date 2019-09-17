@@ -10,19 +10,18 @@ import (
   "github.com/charmixer/aap/gateway/aap"
 )
 
-func GetCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
+func GetAuthorizations(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "GetCollection",
+      "func": "GetAuthorizations",
     })
 
     var input client.ConsentRequest
-    err := c.Bind(&input)
+    err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
@@ -42,20 +41,18 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
     if len(input.RequestedAudiences) > 0 {
       if ( len(input.RequestedAudiences) ) > 1 {
         log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
-        c.JSON(http.StatusNotFound, gin.H{
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
           "error": "More than one audience not supported yet Hint: Try only to use audience per token request one for now",
         })
-        c.Abort()
         return
       }
 
       resourceServer, err = aap.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
       if err != nil {
         log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
-        c.JSON(http.StatusNotFound, gin.H{
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
           "error": "Not found. Hint: Maybe audience does not exist.",
         })
-        c.Abort()
         return
       }
     }
@@ -69,10 +66,9 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
 
     if err != nil {
       log.WithFields(logrus.Fields{"id":resourceOwner.Id, "client_id":client.ClientId, "scope":input.RequestedScopes}).Debug(err.Error())
-      c.JSON(http.StatusInternalServerError, gin.H{
+      c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
         "error": "Unable to fetch consents",
       })
-      c.Abort()
       return
     }
 
@@ -81,12 +77,12 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
       for _, consent := range consentList {
         consentedPermissions = append(consentedPermissions, consent.Scope.Name)
       }
-      c.JSON(http.StatusOK, consentedPermissions)
+      c.AbortWithStatusJSON(http.StatusOK, consentedPermissions)
       return
     //}
 
     // Deny by default
-    /*c.JSON(http.StatusNotFound, gin.H{
+    /*c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
       "error": "Not found",
     })
     c.Abort()*/
@@ -94,25 +90,23 @@ func GetCollection(env *environment.State, route environment.Route) gin.HandlerF
   return gin.HandlerFunc(fn)
 }
 
-func PostCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PostAuthorizations(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PostCollection",
+      "func": "PostAuthorizations",
     })
 
     var input client.ConsentRequest
     err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
     if len(input.RequestedScopes) <= 0 {
-      c.JSON(http.StatusBadRequest, gin.H{"error": "Missing granted_scopes"})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Missing granted_scopes"})
       return
     }
 
@@ -137,20 +131,18 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
     if len(input.RequestedAudiences) > 0 {
       if ( len(input.RequestedAudiences) ) > 1 {
         log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
-        c.JSON(http.StatusNotFound, gin.H{
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
           "error": "More than one audience not supported yet Hint: Try only to use audience per token request one for now",
         })
-        c.Abort()
         return
       }
 
       resourceServer, err := aap.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
       if err != nil {
         log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
-        c.JSON(http.StatusNotFound, gin.H{
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
           "error": "Not found. Hint: Maybe audience does not exist.",
         })
-        c.Abort()
         return
       }
       permissionList, err = aap.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, *resourceServer, grantPermissions, revokePermissions)
@@ -167,27 +159,26 @@ func PostCollection(env *environment.State, route environment.Route) gin.Handler
         grantedPermissions = append(grantedPermissions, permission.Name)
       }
 
-      c.JSON(http.StatusOK, grantedPermissions)
+      c.AbortWithStatusJSON(http.StatusOK, grantedPermissions)
       return
     }
 
     // Deny by default
-    c.JSON(http.StatusNotFound, gin.H{
+    c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
       "error": "Not found. Hint does the client exists?",
     })
-    c.Abort()
   }
   return gin.HandlerFunc(fn)
 }
 
-func PutCollection(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PutAuthorizations(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PutCollection",
+      "func": "PutAuthorizations",
     })
 
-    c.JSON(http.StatusOK, gin.H{
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
       "message": "pong",
     })
   }

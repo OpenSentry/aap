@@ -1,32 +1,26 @@
 package main
 
 import (
-  "strings"
-  "net/http"
   "net/url"
   "os"
-  "time"
   "golang.org/x/net/context"
-  "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
   "github.com/sirupsen/logrus"
   oidc "github.com/coreos/go-oidc"
   "github.com/gin-gonic/gin"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "github.com/pborman/getopt"
-  "github.com/gofrs/uuid"
 
   "github.com/charmixer/aap/config"
   "github.com/charmixer/aap/environment"
 
-  "github.com/charmixer/aap/authorizations"
-  "github.com/charmixer/aap/scopes"
-  "github.com/charmixer/aap/grants"
-  "github.com/charmixer/aap/exposes"
-  "github.com/charmixer/aap/consents"
+  "github.com/charmixer/aap/endpoints/authorizations"
+  "github.com/charmixer/aap/endpoints/scopes"
+  "github.com/charmixer/aap/endpoints/grants"
+  "github.com/charmixer/aap/endpoints/exposes"
+  "github.com/charmixer/aap/endpoints/consents"
   "github.com/charmixer/aap/migration"
-
-  "fmt"
+  "github.com/charmixer/aap/utils"
 )
 
 const app = "aap"
@@ -142,26 +136,12 @@ func migrate(driver neo4j.Driver) {
 }
 
 func serve(env *environment.State) {
-  // Setup routes to use, this defines log for debug log
-  routes := map[string]environment.Route{
-    "/authorizations":           environment.Route{URL: "/authorizations",           LogId: "aap://authorizations"},
-    "/authorizations/authorize": environment.Route{URL: "/authorizations/authorize", LogId: "aap://authorizations/authorize"},
-    "/authorizations/reject":    environment.Route{URL: "/authorizations/reject",    LogId: "aap://authorizations/reject"},
-    "/scopes":                   environment.Route{URL: "/scopes",                   LogId: "aap://scopes"},
-    "/scopes/grant":             environment.Route{URL: "/scopes/grant",             LogId: "aap://scopes/grant"},
-    "/scopes/consent":           environment.Route{URL: "/scopes/consent",           LogId: "aap://scopes/consent"},
-    "/scopes/expose":            environment.Route{URL: "/scopes/expose",            LogId: "aap://scopes/expose"},
-    "/exposes":                  environment.Route{URL: "/exposes",                  LogId: "aap://exposes"},
-    "/consents":                 environment.Route{URL: "/consents",                 LogId: "aap://consents"},
-    "/grants":                   environment.Route{URL: "/grants",                   LogId: "aap://grants"},
-  }
-
   r := gin.New() // Clean gin to take control with logging.
-  r.Use(processMethodOverride(r))
+  r.Use(utils.ProcessMethodOverride(r))
   r.Use(gin.Recovery())
 
-  r.Use(requestId())
-  r.Use(RequestLogger(env))
+  r.Use(utils.RequestId())
+  r.Use(utils.RequestLogger(environment.LogKey, environment.RequestIdKey, appFields))
 
 
   // ## QTNA - Questions that need answering before granting access to a protected resource
@@ -172,255 +152,43 @@ func serve(env *environment.State) {
   // 5. Is the access token revoked?
 
   // All requests need to be authenticated.
-  r.Use(authenticationRequired())
+  r.Use(utils.AuthenticationRequired(environment.LogKey, environment.AccessTokenKey))
 
-  r.GET(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.get"), authorizations.GetCollection(env, routes["/authorizations"]))
-  r.POST(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.post"), authorizations.PostCollection(env, routes["/authorizations"]))
-  r.PUT(routes["/authorizations"].URL, authorizationRequired(routes["/authorizations"], "aap.authorizations.update"), authorizations.PutCollection(env, routes["/authorizations"]))
+  hydraIntrospectUrl := config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.introspect")
 
-  r.GET(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:read:scopes"), scopes.GetScopes(env, routes["/scopes"]))
-  r.POST(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:create:scopes"), scopes.PostScopes(env, routes["/scopes"]))
-  r.PUT(routes["/scopes"].URL, authorizationRequired(routes["/scopes"], "aap:update:scopes"), scopes.PutScopes(env, routes["/scopes"]))
+  aconf := utils.AuthorizationConfig{
+    LogKey:             environment.LogKey,
+    AccessTokenKey:     environment.AccessTokenKey,
+    HydraConfig:        env.HydraConfig,
+    HydraIntrospectUrl: hydraIntrospectUrl,
+  }
 
-  r.POST(routes["/scopes/grant"].URL, authorizationRequired(routes["/scopes/grant"], "aap:create:scopes:grant"), scopes.PostScopesGrant(env, routes["/scopes/grant"]))
-  r.DELETE(routes["/scopes/grant"].URL, authorizationRequired(routes["/scopes/grant"], "aap:delete:scopes:grant"), scopes.DeleteScopesGrant(env, routes["/scopes/grant"]))
+  r.GET("/authorizations",            utils.AuthorizationRequired(aconf, "aap:authorizations:get"),    authorizations.GetAuthorizations(env))
+  r.POST("/authorizations",           utils.AuthorizationRequired(aconf, "aap:authorizations:post"),   authorizations.PostAuthorizations(env))
+  r.PUT("/authorizations",            utils.AuthorizationRequired(aconf, "aap:authorizations:update"), authorizations.PutAuthorizations(env))
 
-  r.POST(routes["/scopes/consent"].URL, authorizationRequired(routes["/scopes/consent"], "aap:create:scopes:consent"), scopes.PostScopesConsent(env, routes["/scopes/consent"]))
-  r.DELETE(routes["/scopes/consent"].URL, authorizationRequired(routes["/scopes/consent"], "aap:delete:scopes:consent"), scopes.DeleteScopesConsent(env, routes["/scopes/consent"]))
+  r.GET("/scopes",                    utils.AuthorizationRequired(aconf, "aap:read:scopes"),           scopes.GetScopes(env))
+  r.POST("/scopes",                   utils.AuthorizationRequired(aconf, "aap:create:scopes"),         scopes.PostScopes(env))
+  r.PUT("/scopes",                    utils.AuthorizationRequired(aconf, "aap:update:scopes"),         scopes.PutScopes(env))
 
-  r.POST(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:create:scopes:expose"), scopes.PostScopesExpose(env, routes["/scopes/expose"]))
-  r.DELETE(routes["/scopes/expose"].URL, authorizationRequired(routes["/scopes/expose"], "aap:delete:scopes:expose"), scopes.DeleteScopesExpose(env, routes["/scopes/expose"]))
+  r.POST("/scopes/grant",             utils.AuthorizationRequired(aconf, "aap:create:scopes:grant"),   scopes.PostScopesGrant(env))
+  r.DELETE("/scopes/grant",           utils.AuthorizationRequired(aconf, "aap:delete:scopes:grant"),   scopes.DeleteScopesGrant(env))
 
-  // r.POST("/scopes", authorizationRequired(), Route(GetScopes(), input, output))
-  // r.POST("/scopes", authorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))
+  r.POST("/scopes/consent",           utils.AuthorizationRequired(aconf, "aap:create:scopes:consent"), scopes.PostScopesConsent(env))
+  r.DELETE("/scopes/consent",         utils.AuthorizationRequired(aconf, "aap:delete:scopes:consent"), scopes.DeleteScopesConsent(env))
 
-  r.GET(routes["/exposes"].URL, authorizationRequired(routes["/exposes"], "aap:read:exposes"), exposes.GetExposes(env, routes["/exposes"]))
-  r.GET(routes["/consents"].URL, authorizationRequired(routes["/consents"], "aap:read:consents"), consents.GetConsents(env, routes["/consents"]))
-  r.GET(routes["/grants"].URL, authorizationRequired(routes["/grants"], "aap:read:grants"), grants.GetGrants(env, routes["/grants"]))
+  r.POST("/scopes/expose",            utils.AuthorizationRequired(aconf, "aap:create:scopes:expose"),  scopes.PostScopesExpose(env))
+  r.DELETE("/scopes/expose",          utils.AuthorizationRequired(aconf, "aap:delete:scopes:expose"),  scopes.DeleteScopesExpose(env))
 
-  r.POST(routes["/authorizations/authorize"].URL, authorizationRequired(routes["/authorizations/authorize"], "authorize:identity"), authorizations.PostAuthorize(env, routes["/authorizations/authorize"]))
-  r.POST(routes["/authorizations/reject"].URL, authorizationRequired(routes["/authorizations/reject"], "aap.reject"), authorizations.PostReject(env, routes["/authorizations/reject"]))
+  r.GET("/exposes",                   utils.AuthorizationRequired(aconf, "aap:read:exposes"),          exposes.GetExposes(env))
+  r.GET("/consents",                  utils.AuthorizationRequired(aconf, "aap:read:consents"),         consents.GetConsents(env))
+  r.GET("/grants",                    utils.AuthorizationRequired(aconf, "aap:read:grants"),           grants.GetGrants(env))
+
+  r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identity"),    authorizations.PostAuthorize(env))
+  r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identity"),       authorizations.PostReject(env))
+
+  // r.POST("/scopes", utils.AuthorizationRequired(), Route(GetScopes(), input, output))
+  // r.POST("/scopes", utils.AuthorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
-}
-
-func processMethodOverride(r *gin.Engine) gin.HandlerFunc {
-  return func(c *gin.Context) {
-
-    // only need to check POST method
-    if c.Request.Method != "POST" {
-      c.JSON(http.StatusBadRequest, gin.H{"error": "Only POST method supported with X-HTTP-Method-Override header"})
-      c.Abort()
-      return
-    }
-
-    method := c.Request.Header.Get("X-HTTP-Method-Override")
-    method = strings.ToLower(method)
-    method = strings.TrimSpace(method)
-
-    if method == "" {
-      c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or empty X-HTTP-Method-Override header"})
-      c.Abort()
-      return
-    }
-
-    if method == "post" {
-      // if HandleContext is called you will make an infinite loop
-      c.Next()
-      return
-    }
-
-    if method == "get" {
-      c.Request.Method = "GET"
-      r.HandleContext(c)
-      return
-    }
-
-    if method == "put" {
-      c.Request.Method = "PUT"
-      r.HandleContext(c)
-      return
-    }
-
-    if method == "delete" {
-      c.Request.Method = "DELETE"
-      r.HandleContext(c)
-      return
-    }
-
-    c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported method"})
-    c.Abort()
-    return
-  }
-}
-
-func RequestLogger(env *environment.State) gin.HandlerFunc {
-  fn := func(c *gin.Context) {
-
-    // Start timer
-    start := time.Now()
-    path := c.Request.URL.Path
-    raw := c.Request.URL.RawQuery
-
-    var requestId string = c.MustGet(environment.RequestIdKey).(string)
-    requestLog := log.WithFields(appFields).WithFields(logrus.Fields{
-      "request.id": requestId,
-    })
-    c.Set(environment.LogKey, requestLog)
-
-    c.Next() // Give control to the controllers
-
-    // Stop timer
-    stop := time.Now()
-    latency := stop.Sub(start)
-
-    ipData, err := getRequestIpData(c.Request)
-    if err != nil {
-      log.WithFields(appFields).WithFields(logrus.Fields{
-        "func": "RequestLogger",
-      }).Debug(err.Error())
-    }
-
-    forwardedForIpData, err := getForwardedForIpData(c.Request)
-    if err != nil {
-      log.WithFields(appFields).WithFields(logrus.Fields{
-        "func": "RequestLogger",
-      }).Debug(err.Error())
-    }
-
-    method := c.Request.Method
-    statusCode := c.Writer.Status()
-    errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
-
-    bodySize := c.Writer.Size()
-
-    var fullpath string = path
-    if raw != "" {
-      fullpath = path + "?" + raw
-    }
-
-    log.WithFields(appFields).WithFields(logrus.Fields{
-      "latency": latency,
-      "forwarded_for.ip": forwardedForIpData.Ip,
-      "forwarded_for.port": forwardedForIpData.Port,
-      "ip": ipData.Ip,
-      "port": ipData.Port,
-      "method": method,
-      "status": statusCode,
-      "error": errorMessage,
-      "body_size": bodySize,
-      "path": fullpath,
-      "request.id": requestId,
-    }).Info("")
-  }
-  return gin.HandlerFunc(fn)
-}
-
-func authenticationRequired() gin.HandlerFunc {
-  fn := func(c *gin.Context) {
-
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
-    log = log.WithFields(logrus.Fields{
-      "func": "authenticationRequired",
-    })
-
-    log = log.WithFields(logrus.Fields{"authorization": "bearer"})
-    log.Debug("Looking for access token")
-    var token *oauth2.Token
-    auth := c.Request.Header.Get("Authorization")
-    split := strings.SplitN(auth, " ", 2)
-    if len(split) == 2 || strings.EqualFold(split[0], "bearer") {
-
-      log.Debug("Found access token")
-
-      token = &oauth2.Token{
-        AccessToken: split[1],
-        TokenType: split[0],
-      }
-
-      // See #2 of QTNA
-      // https://godoc.org/golang.org/x/oauth2#Token.Valid
-      if token.Valid() == true {
-        log.Debug("Valid access token")
-
-        // See #5 of QTNA
-        log.WithFields(logrus.Fields{"fixme": 1, "qtna": 5}).Debug("Missing check against token-revoked-list to check if token is revoked")
-
-        c.Set(environment.AccessTokenKey, token)
-        c.Next() // Authentication successful, continue.
-        return;
-      }
-
-      // Deny by default
-      log.Debug("Invalid access token")
-      c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid access token."})
-      c.Abort()
-      return
-    }
-
-    // Deny by default
-    log.Debug("Missing access token")
-    c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization: Bearer <token> not found in request."})
-    c.Abort()
-  }
-  return gin.HandlerFunc(fn)
-}
-
-func authorizationRequired(route environment.Route, requiredScopes ...string) gin.HandlerFunc {
-  fn := func(c *gin.Context) {
-
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
-    log = log.WithFields(logrus.Fields{"func": "authorizationRequired"})
-
-    // This is required to be here but should be garantueed by the authenticationRequired function.
-    _ /*accessToken*/, accessTokenExists := c.Get(environment.AccessTokenKey)
-    if accessTokenExists == false {
-      c.JSON(http.StatusUnauthorized, gin.H{"error": "No access token found. Hint: Is bearer token missing?"})
-      c.Abort()
-      return
-    }
-
-    strRequiredScopes := strings.Join(requiredScopes, ",")
-    log.WithFields(logrus.Fields{"scopes": strRequiredScopes}).Debug("Checking required scopes");
-
-    // See #3 of QTNA
-    log.WithFields(logrus.Fields{"fixme": 1, "qtna": 3}).Debug("Missing check if access token is granted the required scopes")
-
-    // See #4 of QTNA
-    log.WithFields(logrus.Fields{"fixme": 1, "qtna": 4}).Debug("Missing check if the user or client giving the grants in the access token authorized to use the scopes granted")
-
-    foundRequiredScopes := true
-    if foundRequiredScopes {
-      log.WithFields(logrus.Fields{"scopes": strRequiredScopes}).Debug("Found required scopes")
-      c.Next() // Authentication successful, continue.
-      return;
-    }
-
-    // Deny by default
-    log.WithFields(logrus.Fields{"fixme": 1}).Debug("Calculate missing scopes and only log those");
-    log.WithFields(logrus.Fields{"scopes": strRequiredScopes}).Debug("Missing required scopes. Hint: Some required scopes are missing, invalid or not granted")
-    c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing required scopes. Hint: Some required scopes are missing, invalid or not granted"})
-    c.Abort()
-  }
-  return gin.HandlerFunc(fn)
-}
-
-func requestId() gin.HandlerFunc {
-  return func(c *gin.Context) {
-    // Check for incoming header, use it if exists
-    requestID := c.Request.Header.Get("X-Request-Id")
-
-    // Create request id with UUID4
-    if requestID == "" {
-      uuid4, _ := uuid.NewV4()
-      requestID = uuid4.String()
-    }
-
-    // Expose it for use in the application
-    c.Set("RequestId", requestID)
-
-    // Set X-Request-Id header
-    c.Writer.Header().Set("X-Request-Id", requestID)
-    c.Next()
-  }
 }

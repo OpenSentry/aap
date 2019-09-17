@@ -1,4 +1,4 @@
-package exposes
+package consents
 
 import (
   "net/http"
@@ -10,17 +10,16 @@ import (
   _ "github.com/charmixer/aap/client"
 )
 
-func GetExposes(env *environment.State, route environment.Route) gin.HandlerFunc {
+func GetConsents(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetConsents",
     })
 
-    c.JSON(http.StatusOK, gin.H{
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
       "message": "pong",
     })
-    c.Abort()
   }
   return gin.HandlerFunc(fn)
 }

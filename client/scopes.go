@@ -14,40 +14,34 @@ import (
 // /scopes
 
 type CreateScopesRequest struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
 
 type CreateScopesResponse struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
 
 type UpdateScopesRequest struct {
-  UpdatedByIdentityId       string    `json:"updated_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
 
 type UpdateScopesResponse struct {
-  UpdatedByIdentityId       string    `json:"updated_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
 }
 
 type ReadScopesRequest struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id"`
-  Scope                     string    `json:"scope"`
+  Scope                     string    `json:"scope,omitempty"`
 }
 
 type ReadScopesResponse struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description"`
@@ -56,28 +50,24 @@ type ReadScopesResponse struct {
 // /scopes/grant
 
 type CreateScopesGrantRequest struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type CreateScopesGrantResponse struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesGrantRequest struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesGrantResponse struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
@@ -86,59 +76,71 @@ type DeleteScopesGrantResponse struct {
 // /scopes/expose
 
 type CreateScopesExposeRequest struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
-  ResourceServerId          string    `json:"resource_server_id" binding:"required"`
+  IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type CreateScopesExposeResponse struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
-  ResourceServerId          string    `json:"resource_server_id" binding:"required"`
+  IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesExposeRequest struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
-  ResourceServerId          string    `json:"resource_server_id" binding:"required"`
+  IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesExposeResponse struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
-  ResourceServerId          string    `json:"resource_server_id" binding:"required"`
+  IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 // /scopes/consent
 
 type CreateScopesConsentRequest struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type CreateScopesConsentResponse struct {
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesConsentRequest struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
 type DeleteScopesConsentResponse struct {
-  DeletedByIdentityId       string    `json:"deleted_by_identity_id" binding:"required"`
   IdentityId                string    `json:"identity_id" binding:"required"`
   ResourceServerId          string    `json:"resource_server_id" binding:"required"`
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
+func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]ReadScopesResponse, error) {
+  var response []ReadScopesResponse
+
+  body, err := json.Marshal(requests)
+  if err != nil {
+    return nil, err
+  }
+
+  responseData, err := callService(client, "GET", url, bytes.NewBuffer(body))
+  if err != nil {
+    return nil, err
+  }
+
+  err = json.Unmarshal(responseData, &response)
+  if err != nil {
+    return nil, err
+  }
+
+  return response, nil
+}
 
 func CreateScopes(scopesUrl string, client *AapClient, createScopesRequest CreateScopesRequest) (*CreateScopesResponse, error) {
 
@@ -153,6 +155,8 @@ func CreateScopes(scopesUrl string, client *AapClient, createScopesRequest Creat
   if err != nil {
     return nil, err
   }
+
+  request.Header.Set("X-HTTP-Method-Override", "POST")
 
   response, err := client.Do(request)
   if err != nil {
@@ -186,10 +190,12 @@ func UpdateScopes(scopesUrl string, client *AapClient, updateScopesRequest Updat
 
   var data = bytes.NewBuffer(body)
 
-  request, err := http.NewRequest("PUT", scopesUrl, data)
+  request, err := http.NewRequest("POST", scopesUrl, data)
   if err != nil {
     return nil, err
   }
+
+  request.Header.Set("X-HTTP-Method-Override", "PUT")
 
   response, err := client.Do(request)
   if err != nil {
