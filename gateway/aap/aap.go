@@ -334,11 +334,7 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
     return Scope{}, Identity{}, err
   }
 
-  log.Println("=====================")
-  log.Println(neoResult)
-  log.Println("=====================")
-
-  return Scope{}, Identity{}, nil //neoResult.scope, neoResult.identity, nil
+  return neoResult.(NeoReturnType).Scope, neoResult.(NeoReturnType).Identity, nil
 }
 
 func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
@@ -363,7 +359,7 @@ func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
       WHERE scope.name in split($requestedScopes, ",")
 
       // Conclude
-      return scope.name, scope.title, scope.description
+      return scope // scope.name, scope.title, scope.description
     `
 
     neoScopes := []string{}
