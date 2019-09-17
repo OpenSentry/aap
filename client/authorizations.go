@@ -1,15 +1,10 @@
 package client
 
 import (
-  "net/http"
   "encoding/json"
-  "io/ioutil"
   "bytes"
-  "strings"
-  "errors"
   _ "golang.org/x/net/context"
   _ "golang.org/x/oauth2/clientcredentials"
-  "fmt"
 )
 
 // authorizations
@@ -54,161 +49,86 @@ type RejectResponse struct {
   RedirectTo                  string            `json:"redirect_to" binding:"required"`
 }
 
-func CreateConsents(authorizationsUrl string, client *AapClient, consentRequest ConsentRequest) ([]string, error) {
+func CreateConsents(url string, client *AapClient, request ConsentRequest) ([]string, error) {
+  var response []string
 
-  body, err := json.Marshal(consentRequest)
+  body, err := json.Marshal(request)
   if err != nil {
     return nil, err
   }
 
-  var data = bytes.NewBuffer(body)
-
-  request, err := http.NewRequest("POST", authorizationsUrl, data)
+  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
     return nil, err
   }
 
-  response, err := client.Do(request)
-  if err != nil {
-     return nil, err
-  }
-
-  responseData, err := ioutil.ReadAll(response.Body)
+  err = json.Unmarshal(responseData, &response)
   if err != nil {
     return nil, err
   }
 
-  if response.StatusCode != 200 {
-    return nil, errors.New("Failed to create consents, status: " + string(response.StatusCode) + ", error="+string(responseData))
-  }
-
-  var grantedConsents []string
-  err = json.Unmarshal(responseData, &grantedConsents)
-  if err != nil {
-    return nil, err
-  }
-
-  return grantedConsents, nil
+  return response, nil
 }
 
-func FetchConsents(authorizationsUrl string, client *AapClient, consentRequest ConsentRequest) ([]string, error) {
+func FetchConsents(url string, client *AapClient, request ConsentRequest) ([]string, error) {
+  var response []string
 
-  request, err := http.NewRequest("GET", authorizationsUrl, nil)
+  body, err := json.Marshal(request)
   if err != nil {
     return nil, err
   }
 
-  query := request.URL.Query()
-  query.Add("sub", consentRequest.Subject)
-  query.Add("client_id", consentRequest.ClientId)
-
-  if len(consentRequest.RequestedScopes) > 0 {
-    query.Add("requested_scopes", strings.Join(consentRequest.RequestedScopes, ","))
-  }
-
-  if len(consentRequest.RequestedAudiences) > 0 {
-    query.Add("requested_audiences", strings.Join(consentRequest.RequestedAudiences, ","))
-  }
-
-  request.URL.RawQuery = query.Encode()
-
-  response, err := client.Do(request)
+  responseData, err := callService(client, "GET", url, bytes.NewBuffer(body))
   if err != nil {
     return nil, err
   }
 
-  responseData, err := ioutil.ReadAll(response.Body)
+  err = json.Unmarshal(responseData, &response)
   if err != nil {
     return nil, err
   }
 
-  if response.StatusCode != 200 {
-    return nil, errors.New("Failed to fetch consents, status: " + string(response.StatusCode) + ", error="+string(responseData))
-  }
-
-  fmt.Println("=== idpui.aap.FetchConsents ===")
-  fmt.Println(string(responseData))
-
-  var grantedConsents []string
-  err = json.Unmarshal(responseData, &grantedConsents)
-  if err != nil {
-    return nil, err
-  }
-  return grantedConsents, nil
+  return response, nil
 }
 
-func Authorize(authorizeUrl string, client *AapClient, authorizeRequest AuthorizeRequest) (AuthorizeResponse, error) {
-  var authorizeResponse AuthorizeResponse
+func Authorize(url string, client *AapClient, request AuthorizeRequest) (*AuthorizeResponse, error) {
+  var response AuthorizeResponse
 
-  body, err := json.Marshal(authorizeRequest)
+  body, err := json.Marshal(request)
   if err != nil {
-    return authorizeResponse, err
+    return nil, err
   }
 
-  var data = bytes.NewBuffer(body)
-
-  request, err := http.NewRequest("POST", authorizeUrl, data)
+  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
-    return authorizeResponse, err
+    return nil, err
   }
 
-  response, err := client.Do(request)
+  err = json.Unmarshal(responseData, &response)
   if err != nil {
-     return authorizeResponse, err
+    return nil, err
   }
 
-  responseData, err := ioutil.ReadAll(response.Body)
-  if err != nil {
-    return authorizeResponse, err
-  }
-
-  if response.StatusCode != 200 {
-    return authorizeResponse, errors.New("Failed to authorize, status: " + string(response.StatusCode) + ", error="+string(responseData))
-  }
-
-  fmt.Println("=== idpui.aap.Authorize ===")
-  fmt.Println(string(responseData))
-
-  err = json.Unmarshal(responseData, &authorizeResponse)
-  if err != nil {
-    return authorizeResponse, err
-  }
-
-  return authorizeResponse, nil
+  return &response, nil
 }
 
-func Reject(authorizeUrl string, client *AapClient, rejectRequest RejectRequest) (RejectResponse, error) {
-  var rejectResponse RejectResponse
+func Reject(url string, client *AapClient, request RejectRequest) (*RejectResponse, error) {
+  var response RejectResponse
 
-  body, err := json.Marshal(rejectRequest)
+  body, err := json.Marshal(request)
   if err != nil {
-    return rejectResponse, err
+    return nil, err
   }
-  var data = bytes.NewBuffer(body)
 
-  request, err := http.NewRequest("POST", authorizeUrl, data)
+  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
-    return rejectResponse, err
+    return nil, err
   }
 
-  response, err := client.Do(request)
+  err = json.Unmarshal(responseData, &response)
   if err != nil {
-     return rejectResponse, err
+    return nil, err
   }
 
-  responseData, err := ioutil.ReadAll(response.Body)
-  if err != nil {
-    return rejectResponse, err
-  }
-
-  if response.StatusCode != 200 {
-    return rejectResponse, errors.New("Failed to reject, status: " + string(response.StatusCode) + ", error="+string(responseData))
-  }
-
-  err = json.Unmarshal(responseData, &rejectResponse)
-  if err != nil {
-    return rejectResponse, err
-  }
-
-  return rejectResponse, nil
+  return &response, nil
 }

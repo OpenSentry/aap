@@ -10,28 +10,28 @@ import (
   _ "github.com/charmixer/aap/gateway/aap"
 )
 
-func PostScopesExpose(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PostScopesConsent(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PostScopesExpose",
+      "func": "PostScopesConsent",
     })
 
-    c.JSON(http.StatusOK, gin.H{
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
 
     })
   }
   return gin.HandlerFunc(fn)
 }
 
-func DeleteScopesExpose(env *environment.State, route environment.Route) gin.HandlerFunc {
+func DeleteScopesConsent(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "DeleteScopesExpose",
+      "func": "DeleteScopesConsent",
     })
 
-    c.JSON(http.StatusOK, gin.H{
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
 
     })
   }

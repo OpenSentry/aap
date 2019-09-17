@@ -10,18 +10,17 @@ import (
   "github.com/charmixer/aap/client"
 )
 
-func PostScopes(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PostScopes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "GetScopes",
+      "func": "PostScopes",
     })
 
     var input client.CreateScopesRequest
     err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
@@ -34,7 +33,7 @@ func PostScopes(env *environment.State, route environment.Route) gin.HandlerFunc
 
     var createdByIdentity aap.Identity
     createdByIdentity = aap.Identity{
-      Id: input.CreatedByIdentityId,
+      Id: "root", // TODO FIXME
     }
 
     scope, identity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
@@ -47,62 +46,65 @@ func PostScopes(env *environment.State, route environment.Route) gin.HandlerFunc
 
     var output client.CreateScopesResponse
     output = client.CreateScopesResponse{
-      CreatedByIdentityId: identity.Id,
       Scope: scope.Name,
       Title: scope.Title,
       Description: scope.Description,
     }
 
-    c.JSON(http.StatusOK, output)
-    c.Abort()
+    c.AbortWithStatusJSON(http.StatusOK, output)
   }
   return gin.HandlerFunc(fn)
 }
 
-func GetScopes(env *environment.State, route environment.Route) gin.HandlerFunc {
+func GetScopes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PostScopes",
+      "func": "GetScopes",
     })
 
-    var input client.ReadScopesRequest
+    var input []client.ReadScopesRequest
     err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
-    var scope aap.Scope
-    scope = aap.Scope{
-      Name: input.Scope,
+    var scopes []aap.Scope
+    for _, e := range input {
+      v := aap.Scope{
+        Name: e.Scope,
+      }
+      scopes = append(scopes, v)
     }
 
-    _, err = aap.ReadScope(env.Driver, scope)
+    dbScopes, err := aap.ReadScopes(env.Driver, scopes)
 
     if err != nil {
       log.Println(err)
     }
 
-    c.JSON(http.StatusOK, gin.H{
-      "scope": scope.Name,
-      "title": scope.Title,
-      "description": scope.Description,
-    })
-    c.Abort()
+    var output []client.ReadScopesResponse
+    for _, dbScope := range dbScopes {
+      v := client.ReadScopesResponse{
+        Scope: dbScope.Name,
+      }
+      output = append(output, v)
+    }
+
+    c.AbortWithStatusJSON(http.StatusOK, output)
   }
   return gin.HandlerFunc(fn)
 }
 
-func PutScopes(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PutScopes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PutScopes",
     })
 
-    c.JSON(http.StatusOK, gin.H{
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
 
     })
   }

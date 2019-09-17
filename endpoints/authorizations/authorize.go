@@ -11,7 +11,7 @@ import (
   "github.com/charmixer/aap/environment"
 )
 
-func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PostAuthorize(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
@@ -22,8 +22,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
     var input client.AuthorizeRequest
     err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
@@ -32,8 +31,7 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
 
     authorizeResponse, err := authorize(hydraClient, input, log)
     if err != nil {
-      c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
       return
     }
 
@@ -43,12 +41,12 @@ func PostAuthorize(env *environment.State, route environment.Route) gin.HandlerF
       "authorized": authorizeResponse.Authorized,
       "redirect_to": authorizeResponse.RedirectTo,
     }).Debug("Authorized authorization")
-    c.JSON(http.StatusOK, authorizeResponse)
+    c.AbortWithStatusJSON(http.StatusOK, authorizeResponse)
   }
   return gin.HandlerFunc(fn)
 }
 
-func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc {
+func PostReject(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
@@ -59,8 +57,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
     var input client.RejectRequest
     err := c.BindJSON(&input)
     if err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
@@ -75,8 +72,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
     }
     hydraConsentRejectResponse, err := hydra.RejectConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentReject"), hydraClient, input.Challenge, hydraConsentRejectRequest)
     if err != nil {
-      c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
       return
     }
 
@@ -89,7 +85,7 @@ func PostReject(env *environment.State, route environment.Route) gin.HandlerFunc
       "authorized": rejectResponse.Authorized,
       "redirect_to": rejectResponse.RedirectTo,
     }).Debug("Rejected authorization")
-    c.JSON(http.StatusOK, rejectResponse)
+    c.AbortWithStatusJSON(http.StatusOK, rejectResponse)
   }
   return gin.HandlerFunc(fn)
 }
