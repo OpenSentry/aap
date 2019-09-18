@@ -9,24 +9,30 @@ import (
 
 type Identity struct {
   Id       string
+}
+func marshalNodeToIdentity(node neo4j.Node) (Identity) {
+  p := node.Props()
+
+  return Identity{
+    Id:       p["id"].(string),
+  }
+}
+
+type Human struct {
+  Id       string
   Password string
   Name     string
   Email    string
 }
+func marshalNodeToHuman(node neo4j.Node) (Human) {
+  p := node.Props()
 
-type Scope struct {
-  Name        string
-  Title       string
-  Description string
-}
-func marshalScope(name string, title string, description string) (Scope) {
-  var response Scope
-  response = Scope{
-    Name: name,
-    Title: title,
-    Description: description,
+  return Human{
+    Id:       p["id"].(string),
+    Password: p["password"].(string),
+    Name:     p["name"].(string),
+    Email:    p["email"].(string),
   }
-  return response
 }
 
 type Client struct {
@@ -35,11 +41,45 @@ type Client struct {
   Name         string
   Description  string
 }
+func marshalNodeToClient(node neo4j.Node) (Client) {
+  p := node.Props()
+
+  return Client{
+    ClientId:     p["client_id"].(string),
+    ClientSecret: p["client_secret"].(string),
+    Name:         p["name"].(string),
+    Description:  p["description"].(string),
+  }
+}
 
 type ResourceServer struct {
   Name        string
   Audience    string
   Description string
+}
+func marshalNodeToResourceServer(node neo4j.Node) (ResourceServer) {
+  p := node.Props()
+
+  return ResourceServer{
+    Name:        p["name"].(string),
+    Audience:    p["audience"].(string),
+    Description: p["description"].(string),
+  }
+}
+
+type Scope struct {
+  Name        string
+  Title       string
+  Description string
+}
+func marshalNodeToScope(node neo4j.Node) (Scope) {
+  p := node.Props()
+
+  return Scope{
+    Name:        p["name"].(string),
+    Title:       p["title"].(string),
+    Description: p["description"].(string),
+  }
 }
 
 type Consent struct {
@@ -48,6 +88,7 @@ type Consent struct {
   ResourceServer
   Scope
 }
+
 
 // CONSENT, CONSENTED_BY, IS_CONSENTED
 func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, consentScopes []Scope, revokeScopes []Scope) ([]Scope, error) {
@@ -111,7 +152,7 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
       DETACH DELETE cr
 
       // Conclude
-      return consentScope.name //, revokeScope.name
+      return consentScope //, revokeScope
     `
 
     params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
@@ -127,11 +168,9 @@ func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourc
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      name := record.GetByIndex(0)
-      if name != nil {
-        scope := Scope{
-          Name: name.(string),
-        }
+      consentScopeNode := record.GetByIndex(0)
+      if consentScopeNode != nil {
+        scope := marshalNodeToScope(consentScopeNode.(neo4j.Node))
         resultScopes = append(resultScopes, scope)
       }
     }
@@ -211,7 +250,7 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
       DETACH DELETE cr
 
       // Conclude
-      return consentScope.name //, revokeScope.name
+      return consentScope //, revokeScope
     `
 
     params = map[string]interface{}{"id":resourceOwner.Id, "clientId":client.ClientId, "rsName":resourceServer.Name, "consentScopes":consentScopes, "revokeScopes":revokeScopes,}
@@ -227,11 +266,9 @@ func CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(driver neo4j
       // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
       // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
       // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
-      name := record.GetByIndex(0)
-      if name != nil {
-        scope := Scope{
-          Name: name.(string),
-        }
+      consentScopeNode := record.GetByIndex(0)
+      if consentScopeNode != nil {
+        scope := marshalNodeToScope(consentScopeNode.(neo4j.Node))
         resultScopes = append(resultScopes, scope)
       }
     }
@@ -258,8 +295,6 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
     Identity Identity
   }
 
-  log.Println(scope, createdByIdentity)
-
   session, err = driver.Session(neo4j.AccessModeWrite);
   if err != nil {
     return Scope{}, Identity{}, err
@@ -280,13 +315,13 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
       MERGE (scope:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
 
       // Conclude
-      return scope.name, scope.title, scope.description, createdByIdentity.id, createdByIdentity.name, createdByIdentity.email
+      return scope, createdByIdentity
     `
 
     params = map[string]interface{}{
-      "name": scope.Name,
-      "title": scope.Title,
-      "description": scope.Description,
+      "name":                scope.Name,
+      "title":               scope.Title,
+      "description":         scope.Description,
       "createdByIdentityId": createdByIdentity.Id,
     }
 
@@ -299,24 +334,11 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
     if result.Next() {
       record := result.Record()
 
-      scopeName := record.GetByIndex(0)
-      scopeTitle := record.GetByIndex(1)
-      scopeDesc := record.GetByIndex(2)
-      identityId := record.GetByIndex(3)
-      identityName := record.GetByIndex(4)
-      identityEmail := record.GetByIndex(5)
+      scopeNode := record.GetByIndex(0).(neo4j.Node)
+      identityNode := record.GetByIndex(0).(neo4j.Node)
 
-      scope = Scope{
-        Name: scopeName.(string),
-        Title: scopeTitle.(string),
-        Description: scopeDesc.(string),
-      }
-
-      identity = Identity{
-        Id: identityId.(string),
-        Name: identityName.(string),
-        Email: identityEmail.(string),
-      }
+      scope = marshalNodeToScope(scopeNode)
+      identity = marshalNodeToIdentity(identityNode)
 
     }
 
@@ -337,7 +359,7 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
   return neoResult.(NeoReturnType).Scope, neoResult.(NeoReturnType).Identity, nil
 }
 
-func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
+func FetchScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
   var err error
   var session neo4j.Session
   var neoResult interface{}
@@ -354,21 +376,29 @@ func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
     var cypher string
     var params map[string]interface{}
 
-    cypher = `
-      MATCH (scope:Scope)
-      WHERE scope.name in split($requestedScopes, ",")
-
-      // Conclude
-      return scope // scope.name, scope.title, scope.description
-    `
-
     neoScopes := []string{}
     for _, scope := range inputScopes {
       neoScopes = append(neoScopes, scope.Name)
     }
 
-    params = map[string]interface{}{
-      "name": strings.Join(neoScopes, ","),
+    if inputScopes == nil {
+      cypher = `
+        MATCH (scope:Scope)
+
+        // Conclude
+        return scope // scope.name, scope.title, scope.description
+      `
+    } else {
+      cypher = `
+        MATCH (scope:Scope)
+        WHERE scope.name in split($requestedScopes, ",")
+
+        // Conclude
+        return scope // scope.name, scope.title, scope.description
+      `
+      params = map[string]interface{}{
+        "requestedScopes": strings.Join(neoScopes, ","),
+      }
     }
 
     if result, err = tx.Run(cypher, params); err != nil {
@@ -379,11 +409,12 @@ func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
     for result.Next() {
       record := result.Record()
 
-      outputScopes = append(
-        outputScopes,
-        marshalScope(record.GetByIndex(0).(string), record.GetByIndex(1).(string), record.GetByIndex(2).(string)),
-      )
+      scopeNode := record.GetByIndex(0)
 
+      if scopeNode != nil {
+        scope := marshalNodeToScope(scopeNode.(neo4j.Node))
+        outputScopes = append(outputScopes, scope)
+      }
     }
 
     // Check if we encountered any error during record streaming
@@ -400,14 +431,14 @@ func ReadScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
   return neoResult.([]Scope), nil
 }
 
-func ReadScopesCreatedByIdentity(driver neo4j.Driver, identity Identity) ([]Scope, error) {
+func ReadScopesCreatedByIdentity(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
   var err error
   var session neo4j.Session
   var neoResult interface{}
 
   session, err = driver.Session(neo4j.AccessModeWrite);
   if err != nil {
-    return []Scope{}, err
+    return nil, err
   }
   defer session.Close()
 
@@ -417,39 +448,44 @@ func ReadScopesCreatedByIdentity(driver neo4j.Driver, identity Identity) ([]Scop
     var cypher string
     var params map[string]interface{}
 
-    cypher = `
-      MATCH (scope:Scope {name: $name})
+    neoScopes := []string{}
+    for _, scope := range inputScopes {
+      neoScopes = append(neoScopes, scope.Name)
+    }
 
-      // Conclude
-      return scope.name, scope.title, scope.description
-    `
+    if inputScopes == nil {
+      cypher = `
+        MATCH (scope:Scope)
 
-    params = map[string]interface{}{
-      "name": identity.Id,
+        // Conclude
+        return scope // scope.name, scope.title, scope.description
+      `
+    } else {
+      cypher = `
+        MATCH (scope:Scope)
+        WHERE scope.name in split($requestedScopes, ",")
+
+        // Conclude
+        return scope // scope.name, scope.title, scope.description
+      `
+      params = map[string]interface{}{
+        "requestedScopes": strings.Join(neoScopes, ","),
+      }
     }
 
     if result, err = tx.Run(cypher, params); err != nil {
       return nil, err
     }
 
-    var scope Scope
+    var outputScopes []Scope
     for result.Next() {
       record := result.Record()
 
-      // NOTE: This means the statment sequence of the RETURN (possible order by)
-      // https://neo4j.com/docs/driver-manual/current/cypher-values/index.html
-      // If results are consumed in the same order as they are produced, records merely pass through the buffer; if they are consumed out of order, the buffer will be utilized to retain records until
-      // they are consumed by the application. For large results, this may require a significant amount of memory and impact performance. For this reason, it is recommended to consume results in order wherever possible.
+      scopeNode := record.GetByIndex(0)
 
-      name := record.GetByIndex(0)
-      title := record.GetByIndex(1)
-      desc := record.GetByIndex(2)
-      if name != nil {
-        scope = Scope{
-          Name: name.(string),
-          Title: title.(string),
-          Description: desc.(string),
-        }
+      if scopeNode != nil {
+        scope := marshalNodeToScope(scopeNode.(neo4j.Node))
+        outputScopes = append(outputScopes, scope)
       }
     }
 
@@ -457,11 +493,11 @@ func ReadScopesCreatedByIdentity(driver neo4j.Driver, identity Identity) ([]Scop
     if err = result.Err(); err != nil {
       return nil, err
     }
-    return scope, nil
+    return outputScopes, nil
   })
 
   if err != nil {
-    return []Scope{}, err
+    return nil, err
   }
 
   return neoResult.([]Scope), nil
