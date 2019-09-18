@@ -78,7 +78,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       scopes = append(scopes, v)
     }
 
-    dbScopes, err := aap.ReadScopes(env.Driver, scopes)
+    dbScopes, err := aap.FetchScopes(env.Driver, scopes)
 
     if err != nil {
       log.Println(err)
