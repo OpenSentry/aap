@@ -8,6 +8,7 @@ import (
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
+  "fmt"
 )
 
 func PostScopes(env *environment.State) gin.HandlerFunc {
@@ -17,41 +18,45 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       "func": "PostScopes",
     })
 
-    var input client.CreateScopesRequest
-    err := c.BindJSON(&input)
+    var requests []client.CreateScopesRequest
+    err := c.BindJSON(&requests)
     if err != nil {
       c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
-    var scope aap.Scope
-    scope = aap.Scope{
-      Name: input.Scope,
-      Title: input.Title,
-      Description: input.Description,
-    }
-
+    fmt.Println(c.Request.Header)
     var createdByIdentity aap.Identity
     createdByIdentity = aap.Identity{
-      Id: "root", // TODO FIXME
+      Id: c.MustGet("sub").(string),
     }
 
-    scope, identity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+    var responses []client.CreateScopesResponse
+    for _, request := range requests {
+      scope := aap.Scope{
+        Name:        request.Scope,
+        Title:       request.Title,
+        Description: request.Description,
+      }
 
-    log.Println(scope, identity)
+      rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+      fmt.Println(rScope, rIdentity, err)
 
-    if err != nil {
-      log.Println(err)
+      if err != nil {
+        log.Println(err)
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
+        return
+      }
+
+      responses = append(responses, client.CreateScopesResponse{
+        Scope:       rScope.Name,
+        Title:       rScope.Title,
+        Description: rScope.Description,
+        CreatedBy:   rIdentity.Id,
+      })
     }
 
-    var output client.CreateScopesResponse
-    output = client.CreateScopesResponse{
-      Scope: scope.Name,
-      Title: scope.Title,
-      Description: scope.Description,
-    }
-
-    c.AbortWithStatusJSON(http.StatusOK, output)
+    c.AbortWithStatusJSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
@@ -63,15 +68,15 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       "func": "GetScopes",
     })
 
-    var input []client.ReadScopesRequest
-    err := c.BindJSON(&input)
+    var requests []client.ReadScopesRequest
+    err := c.BindJSON(&requests)
     if err != nil {
       c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
     var scopes []aap.Scope
-    for _, e := range input {
+    for _, e := range requests {
       v := aap.Scope{
         Name: e.Scope,
       }
@@ -88,6 +93,8 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
     for _, dbScope := range dbScopes {
       v := client.ReadScopesResponse{
         Scope: dbScope.Name,
+        Title: dbScope.Title,
+        Description: dbScope.Description,
       }
       output = append(output, v)
     }
@@ -101,12 +108,48 @@ func PutScopes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PutScopes",
+      "func": "PostScopes",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
+    var requests []client.UpdateScopesRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
 
-    })
+    fmt.Println(c.Request.Header)
+    var createdByIdentity aap.Identity
+    createdByIdentity = aap.Identity{
+      Id: c.MustGet("sub").(string),
+    }
+
+    var responses []client.UpdateScopesResponse
+    for _, request := range requests {
+      scope := aap.Scope{
+        Name:        request.Scope,
+        Title:       request.Title,
+        Description: request.Description,
+      }
+
+      rScope, rIdentity, err := aap.UpdateScope(env.Driver, scope, createdByIdentity)
+      fmt.Println(rScope, rIdentity, err)
+
+      if err != nil {
+        log.Println(err)
+        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
+        return
+      }
+
+      responses = append(responses, client.UpdateScopesResponse{
+        Scope:       rScope.Name,
+        Title:       rScope.Title,
+        Description: rScope.Description,
+        CreatedBy:   rIdentity.Id,
+      })
+    }
+
+    c.AbortWithStatusJSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }

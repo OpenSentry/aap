@@ -5,6 +5,7 @@ import (
   "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   // log "github.com/sirupsen/logrus"
+  // "fmt"
 )
 
 type Identity struct {
@@ -19,10 +20,11 @@ func marshalNodeToIdentity(node neo4j.Node) (Identity) {
 }
 
 type Human struct {
-  Id       string
-  Password string
-  Name     string
-  Email    string
+  Id        string
+  Password  string
+  Name      string
+  Email     string
+  CreatedBy Identity
 }
 func marshalNodeToHuman(node neo4j.Node) (Human) {
   p := node.Props()
@@ -40,6 +42,7 @@ type Client struct {
   ClientSecret string
   Name         string
   Description  string
+  CreatedBy    Identity
 }
 func marshalNodeToClient(node neo4j.Node) (Client) {
   p := node.Props()
@@ -56,6 +59,7 @@ type ResourceServer struct {
   Name        string
   Audience    string
   Description string
+  CreatedBy   Identity
 }
 func marshalNodeToResourceServer(node neo4j.Node) (ResourceServer) {
   p := node.Props()
@@ -71,6 +75,7 @@ type Scope struct {
   Name        string
   Title       string
   Description string
+  CreatedBy   Identity
 }
 func marshalNodeToScope(node neo4j.Node) (Scope) {
   p := node.Props()
@@ -334,12 +339,97 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
     if result.Next() {
       record := result.Record()
 
-      scopeNode := record.GetByIndex(0).(neo4j.Node)
-      identityNode := record.GetByIndex(0).(neo4j.Node)
+      scopeNode := record.GetByIndex(0)
+      identityNode := record.GetByIndex(1)
 
-      scope = marshalNodeToScope(scopeNode)
-      identity = marshalNodeToIdentity(identityNode)
+      if scopeNode != nil {
+        scope = marshalNodeToScope(scopeNode.(neo4j.Node))
+      }
 
+      if identityNode != nil {
+        identity = marshalNodeToIdentity(identityNode.(neo4j.Node))
+      }
+
+    } else {
+      return nil, errors.New("Unable to create scope")
+    }
+
+    // Check if we encountered any error during record streaming
+    if err = result.Err(); err != nil {
+      return nil, err
+    }
+
+    return NeoReturnType{Scope: scope, Identity: identity}, nil
+  })
+
+  if err != nil {
+    return Scope{}, Identity{}, err
+  }
+
+  return neoResult.(NeoReturnType).Scope, neoResult.(NeoReturnType).Identity, nil
+}
+
+func UpdateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (Scope, Identity, error) {
+  var err error
+  var session neo4j.Session
+  var neoResult interface{}
+  type NeoReturnType struct{
+    Scope Scope
+    Identity Identity
+  }
+
+  session, err = driver.Session(neo4j.AccessModeWrite);
+  if err != nil {
+    return Scope{}, Identity{}, err
+  }
+  defer session.Close()
+
+  neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+    var result neo4j.Result
+    var cypher string
+    var params map[string]interface{}
+
+    cypher = `
+      // FIXME ensure user exists and return errors
+      // find out who created it
+      MATCH (createdByIdentity:Human:Identity {id: $createdByIdentityId})
+
+      // create scope and match it to the identity who created it
+      MERGE (scope:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
+
+      // Conclude
+      return scope, createdByIdentity
+    `
+
+    params = map[string]interface{}{
+      "name":                scope.Name,
+      "title":               scope.Title,
+      "description":         scope.Description,
+      "createdByIdentityId": createdByIdentity.Id,
+    }
+
+    if result, err = tx.Run(cypher, params); err != nil {
+      return nil, err
+    }
+
+    var scope Scope
+    var identity Identity
+    if result.Next() {
+      record := result.Record()
+
+      scopeNode := record.GetByIndex(0)
+      identityNode := record.GetByIndex(1)
+
+      if scopeNode != nil {
+        scope = marshalNodeToScope(scopeNode.(neo4j.Node))
+      }
+
+      if identityNode != nil {
+        identity = marshalNodeToIdentity(identityNode.(neo4j.Node))
+      }
+
+    } else {
+      return nil, errors.New("Unable to create scope")
     }
 
     // Check if we encountered any error during record streaming
@@ -383,16 +473,21 @@ func FetchScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
       cypher = `
         MATCH (scope:Scope)
 
+        OPTIONAL MATCH (scope)-[:CREATED_BY]->(identity:Identity)
+
         // Conclude
-        return scope // scope.name, scope.title, scope.description
+        return scope, identity
       `
     } else {
       cypher = `
-        MATCH (scope:Scope)
+      //unwind $requestedScopes as scopes
+      MATCH (scope:Scope)
         WHERE scope.name in split($requestedScopes, ",")
 
+        OPTIONAL MATCH (scope)-[:CREATED_BY]->(identity:Identity)
+
         // Conclude
-        return scope // scope.name, scope.title, scope.description
+        return scope, identity
       `
       params = map[string]interface{}{
         "requestedScopes": strings.Join(neoScopes, ","),
@@ -408,11 +503,18 @@ func FetchScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
       record := result.Record()
 
       scopeNode := record.GetByIndex(0)
+      identityNode := record.GetByIndex(1)
 
       if scopeNode != nil {
         scope := marshalNodeToScope(scopeNode.(neo4j.Node))
+
+        if identityNode != nil {
+          scope.CreatedBy = marshalNodeToIdentity(identityNode.(neo4j.Node))
+        }
+
         outputScopes = append(outputScopes, scope)
       }
+
     }
 
     // Check if we encountered any error during record streaming

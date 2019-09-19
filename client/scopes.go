@@ -23,6 +23,7 @@ type CreateScopesResponse struct {
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
+  CreatedBy                 string    `json:"created_by" binding:"required"`
 }
 
 type UpdateScopesRequest struct {
@@ -35,6 +36,7 @@ type UpdateScopesResponse struct {
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
+  CreatedBy                 string    `json:"created_by" binding:"required"`
 }
 
 type ReadScopesRequest struct {
@@ -45,6 +47,7 @@ type ReadScopesResponse struct {
   Scope                     string    `json:"scope" binding:"required"`
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description"`
+  CreatedBy                 string    `json:"created_by" binding:"required"`
 }
 
 // /scopes/grant
@@ -142,43 +145,25 @@ func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]
   return response, nil
 }
 
-func CreateScopes(scopesUrl string, client *AapClient, createScopesRequest CreateScopesRequest) (*CreateScopesResponse, error) {
+func CreateScopes(url string, client *AapClient, requests []CreateScopesRequest) ([]CreateScopesResponse, error) {
+  var response []CreateScopesResponse
 
-  body, err := json.Marshal(createScopesRequest)
+  body, err := json.Marshal(requests)
   if err != nil {
     return nil, err
   }
 
-  var data = bytes.NewBuffer(body)
-
-  request, err := http.NewRequest("POST", scopesUrl, data)
+  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
     return nil, err
   }
 
-  request.Header.Set("X-HTTP-Method-Override", "POST")
-
-  response, err := client.Do(request)
-  if err != nil {
-     return nil, err
-  }
-
-  responseData, err := ioutil.ReadAll(response.Body)
+  err = json.Unmarshal(responseData, &response)
   if err != nil {
     return nil, err
   }
 
-  if response.StatusCode != 200 {
-    return nil, errors.New("Failed to create scopes, status: " + string(response.StatusCode) + ", error="+string(responseData))
-  }
-
-  var createdScopesResponse CreateScopesResponse
-  err = json.Unmarshal(responseData, &createdScopesResponse)
-  if err != nil {
-    return nil, err
-  }
-
-  return &createdScopesResponse, nil
+  return response, nil
 }
 
 func UpdateScopes(scopesUrl string, client *AapClient, updateScopesRequest UpdateScopesRequest) (*UpdateScopesResponse, error) {
