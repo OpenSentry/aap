@@ -90,17 +90,3 @@ MATCH (s:Scope {name:"authenticate:identity"})
 MERGE (idpui)-[:IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(s)
 MERGE (gr)-[:GRANTED_BY]->(i)
 ;
-
-
-// # AAP
-MERGE (:Identity:Client {client_id:"aap",  client_secret:"", name: "AAP hydra client", description:"Used by the Access and Authorization Provider api to call Hydra"})
-MERGE (:Identity:Client {client_id:"aapui",  client_secret:"",  name: "AAP api client",   description:"Used by the Access and Authorization Provider UI to call the Access and Authorization API"})
-;
-
-// AAP API
-MERGE (:Identity:ResourceServer {name:"aap", description:"Access and Authorization provider"})
-;
-
-// HYDRA API
-MERGE (:Identity:ResourceServer {name:"hydra",  description:"OAuth2 API"})
-;

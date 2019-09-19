@@ -8,6 +8,8 @@ import (
   "golang.org/x/net/context"
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
+  "fmt"
+  "encoding/json"
 )
 
 type AapClient struct {
@@ -27,6 +29,7 @@ func NewAapClientWithUserAccessToken(config *oauth2.Config, token *oauth2.Token)
 }
 
 func callService(client *AapClient, method string, url string, data *bytes.Buffer) ([]byte, error) {
+
   req, err := http.NewRequest("POST", url, data)
   if err != nil {
     return nil, err
@@ -35,9 +38,20 @@ func callService(client *AapClient, method string, url string, data *bytes.Buffe
   req.Header.Set("X-HTTP-Method-Override", method)
 
   res, err := client.Do(req)
+
+  defer res.Body.Close()
+
   if err != nil {
     return nil, err
   }
+
+  fmt.Println("=====================================")
+  fmt.Println("=====================================")
+  var prettyJSON bytes.Buffer
+  json.Indent(&prettyJSON, data.Bytes(), "", "  ")
+  fmt.Println(string(prettyJSON.Bytes()))
+  fmt.Println("=====================================")
+  fmt.Println("=====================================")
 
   return parseResponse(res)
 }
