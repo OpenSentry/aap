@@ -202,7 +202,7 @@ func ProcessMethodOverride(r *gin.Engine) gin.HandlerFunc {
 }
 
 
-func RequestLogger(logKey string, requestIdKey string, appFields logrus.Fields) gin.HandlerFunc {
+func RequestLogger(logKey string, requestIdKey string, log *logrus.Logger, appFields logrus.Fields) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
     // Start timer
@@ -211,7 +211,7 @@ func RequestLogger(logKey string, requestIdKey string, appFields logrus.Fields) 
     raw := c.Request.URL.RawQuery
 
     var requestId string = c.MustGet(requestIdKey).(string)
-    requestLog := logrus.WithFields(appFields).WithFields(logrus.Fields{
+    requestLog := log.WithFields(appFields).WithFields(logrus.Fields{
       "request.id": requestId,
     })
     c.Set(logKey, requestLog)
@@ -224,14 +224,14 @@ func RequestLogger(logKey string, requestIdKey string, appFields logrus.Fields) 
 
     ipData, err := GetRequestIpData(c.Request)
     if err != nil {
-      logrus.WithFields(appFields).WithFields(logrus.Fields{
+      log.WithFields(appFields).WithFields(logrus.Fields{
         "func": "RequestLogger",
       }).Debug(err.Error())
     }
 
     forwardedForIpData, err := GetForwardedForIpData(c.Request)
     if err != nil {
-      logrus.WithFields(appFields).WithFields(logrus.Fields{
+      log.WithFields(appFields).WithFields(logrus.Fields{
         "func": "RequestLogger",
       }).Debug(err.Error())
     }
@@ -247,12 +247,7 @@ func RequestLogger(logKey string, requestIdKey string, appFields logrus.Fields) 
       fullpath = path + "?" + raw
     }
 
-    // if public data is requested successfully, then dont log it since its just spam when debugging
-    if strings.Contains(path, "/public/") && ( statusCode == http.StatusOK || statusCode == http.StatusNotModified ) {
-     return
-    }
-
-    logrus.WithFields(appFields).WithFields(logrus.Fields{
+    log.WithFields(appFields).WithFields(logrus.Fields{
       "latency": latency,
       "forwarded_for.ip": forwardedForIpData.Ip,
       "forwarded_for.port": forwardedForIpData.Port,
@@ -324,8 +319,7 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
     // This is required to be here but should be garantueed by the authenticationRequired function.
     t, accessTokenExists := c.Get(aconf.AccessTokenKey)
     if accessTokenExists == false {
-      c.JSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_BEARER_TOKEN, Error: "No access token found. Hint: Is bearer token missing?"})
-      c.Abort()
+      c.AbortWithStatusJSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_BEARER_TOKEN, Error: "No access token found. Hint: Is bearer token missing?"})
       return
     }
     var accessToken *oauth2.Token = t.(*oauth2.Token)
@@ -341,29 +335,27 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
 
     introspectRequest := hydra.IntrospectRequest{
       Token: accessToken.AccessToken,
-      Scope: strRequiredScopes,
+      Scope: strRequiredScopes, // This will make hydra check that all scopes are present else introspect.active will be false.
     }
     introspectResponse, err := hydra.IntrospectToken(aconf.HydraIntrospectUrl, hydraClient, introspectRequest)
     if err != nil {
       log.WithFields(logrus.Fields{"scope": strRequiredScopes}).Debug(err.Error())
-      c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to inspect token"})
-      c.Abort()
+      c.AbortWithStatus(http.StatusInternalServerError)
       return
     }
+    log.Debug(introspectResponse)
 
     if introspectResponse.Active == true {
 
       // Check scopes. (is done by hydra according to doc)
       // https://www.ory.sh/docs/hydra/sdk/api#introspect-oauth2-tokens
 
-      log.Debug(introspectResponse)
-
       // See #4 of QTNA
       log.WithFields(logrus.Fields{"fixme": 1, "qtna": 4}).Debug("Missing check if the user or client giving the grants in the access token authorized to use the scopes granted")
 
       foundRequiredScopes := true
       if foundRequiredScopes {
-        log.WithFields(logrus.Fields{"scope": strRequiredScopes}).Debug("Authorized")
+        log.WithFields(logrus.Fields{"sub": introspectResponse.Sub, "scope": strRequiredScopes}).Debug("Authorized")
         c.Set("sub", introspectResponse.Sub)
         c.Next() // Authentication successful, continue.
         return;
@@ -372,9 +364,7 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
 
     // Deny by default
     log.WithFields(logrus.Fields{"fixme": 1}).Debug("Calculate missing scopes and only log those");
-    log.WithFields(logrus.Fields{"scope": strRequiredScopes}).Debug("Missing required scopes. Hint: Some required scopes are missing, invalid or not granted")
-    c.JSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_REQUIRED_SCOPES, Error: "Missing required scopes. Hint: Some required scopes are missing, invalid or not granted"})
-    c.Abort()
+    c.AbortWithStatusJSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_REQUIRED_SCOPES, Error: "Missing required scopes. Hint: Some required scopes are missing, invalid or not granted"})
     return
 
   }
