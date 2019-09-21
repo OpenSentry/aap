@@ -73,36 +73,58 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var scopes []aap.Scope
-    for _, e := range requests {
-      v := aap.Scope{
-        Name: e.Scope,
+    var prepare = func(requests []client.ReadScopesRequest) ([]aap.Scope) {
+      var scopes []aap.Scope
+      for _, request := range requests {
+        v := aap.Scope{
+          Name: request.Scope,
+        }
+        scopes = append(scopes, v)
       }
-      scopes = append(scopes, v)
+
+      dbScopes, _ := aap.FetchScopes(env.Driver, scopes)
+
+      return dbScopes
     }
 
-    dbScopes, err := aap.FetchScopes(env.Driver, scopes)
+    var handleRequest = func(index int, request *client.ReadScopesRequest, data []aap.Scope) (response []client.Scope){
+      var r []client.Scope
 
-    if err != nil {
-      log.Println(err)
-    }
-
-    var output []client.ReadScopesBulkResponse
-    for i, dbScope := range dbScopes {
-      v := client.ReadScopesResponse{
-        Scope: dbScope.Name,
-        Title: dbScope.Title,
-        Description: dbScope.Description,
-        CreatedBy:   dbScope.CreatedBy.Id,
+      if request == nil {
+        for _, d := range data {
+          r = append(r, client.Scope{
+            Scope: d.Name,
+            Title: d.Title,
+            Description: d.Description,
+            CreatedBy: d.CreatedBy.Id,
+          })
+        }
       }
-      output = append(output, client.ReadScopesBulkResponse{
-        Ok: v,
-        Index: i,
-        Status: http.StatusOK,
-      })
+
+      return r
     }
 
-    c.AbortWithStatusJSON(http.StatusOK, output)
+    data := prepare(requests)
+
+    var responses []client.ReadScopesResponse
+    if requests == nil {
+      // handle the empty request
+      var response client.ReadScopesResponse
+      response.Index = 0
+      response.Status = http.StatusOK
+      response.Ok = handleRequest(0, nil, data)
+      responses = append(responses, response)
+    } else {
+      for index, request := range requests {
+        var response client.ReadScopesResponse
+        response.Index = index
+        response.Status = http.StatusOK
+        response.Ok = handleRequest(index, &request, data)
+        responses = append(responses, response)
+      }
+    }
+
+    c.AbortWithStatusJSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }

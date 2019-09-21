@@ -17,12 +17,19 @@ type ErrorResponse struct {
 }
 
 type BulkResponse struct {
-  Index  int             `json:"index"`
-  Status int             `json:"status"`
-  Errors []ErrorResponse `json:"errors"`
+  Index  int             `json:"index" binding:"required"`
+  Status int             `json:"status" binding:"required"`
+  Errors []ErrorResponse `json:"errors,omitempty"`
 }
 
 // /scopes
+
+type Scope struct {
+  Scope       string    `json:"scope" binding:"required"`
+  Title       string    `json:"title" binding:"required"`
+  Description string    `json:"description" binding:"required"`
+  CreatedBy   string    `json:"created_by" binding:"required"`
+}
 
 type CreateScopesRequest struct {
   Scope                     string    `json:"scope" binding:"required"`
@@ -31,14 +38,10 @@ type CreateScopesRequest struct {
 }
 
 type CreateScopesResponse struct {
-  Scope                     string    `json:"scope" binding:"required"`
-  Title                     string    `json:"title" binding:"required"`
-  Description               string    `json:"description" binding:"required"`
-  CreatedBy                 string    `json:"created_by" binding:"required"`
-}
-type CreateScopesBulkResponse struct {
-  *BulkResponse
-  Ok CreateScopesResponse `json:"ok"`
+  Scope       string    `json:"scope" binding:"required"`
+  Title       string    `json:"title" binding:"required"`
+  Description string    `json:"description" binding:"required"`
+  CreatedBy   string    `json:"created_by" binding:"required"`
 }
 
 type UpdateScopesRequest struct {
@@ -48,10 +51,10 @@ type UpdateScopesRequest struct {
 }
 
 type UpdateScopesResponse struct {
-  Scope                     string    `json:"scope" binding:"required"`
-  Title                     string    `json:"title" binding:"required"`
-  Description               string    `json:"description" binding:"required"`
-  CreatedBy                 string    `json:"created_by" binding:"required"`
+  Scope       string    `json:"scope" binding:"required"`
+  Title       string    `json:"title" binding:"required"`
+  Description string    `json:"description" binding:"required"`
+  CreatedBy   string    `json:"created_by" binding:"required"`
 }
 
 type ReadScopesRequest struct {
@@ -59,14 +62,8 @@ type ReadScopesRequest struct {
 }
 
 type ReadScopesResponse struct {
-  Scope                     string    `json:"scope" binding:"required"`
-  Title                     string    `json:"title" binding:"required"`
-  Description               string    `json:"description"`
-  CreatedBy                 string    `json:"created_by" binding:"required"`
-}
-type ReadScopesBulkResponse struct {
-  *BulkResponse
-  Ok []ReadScopesResponse `json:"ok"`
+  BulkResponse
+  Ok []Scope `json:"ok,omitempty"`
 }
 
 // /scopes/grant
@@ -143,8 +140,8 @@ type DeleteScopesConsentResponse struct {
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
-func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]ReadScopesBulkResponse, error) {
-  var response []ReadScopesBulkResponse // []ReadScopesResponse
+func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]ReadScopesResponse, error) {
+  var response []ReadScopesResponse // []ReadScopesResponse
 
   body, err := json.Marshal(requests)
   if err != nil {
