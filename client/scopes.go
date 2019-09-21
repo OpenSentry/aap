@@ -11,6 +11,17 @@ import (
   _ "golang.org/x/oauth2/clientcredentials"
 )
 
+type ErrorResponse struct {
+  Code  int    `json:"code" binding:"required"`
+  Error string `json:"error" binding:"required"`
+}
+
+type BulkResponse struct {
+  Index  int             `json:"index"`
+  Status int             `json:"status"`
+  Errors []ErrorResponse `json:"errors"`
+}
+
 // /scopes
 
 type CreateScopesRequest struct {
@@ -24,6 +35,10 @@ type CreateScopesResponse struct {
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description" binding:"required"`
   CreatedBy                 string    `json:"created_by" binding:"required"`
+}
+type CreateScopesBulkResponse struct {
+  *BulkResponse
+  Ok CreateScopesResponse `json:"ok"`
 }
 
 type UpdateScopesRequest struct {
@@ -40,7 +55,7 @@ type UpdateScopesResponse struct {
 }
 
 type ReadScopesRequest struct {
-  Scope                     string    `json:"scope,omitempty"`
+  Scope                     string    `json:"scope" binding:"required"`
 }
 
 type ReadScopesResponse struct {
@@ -48,6 +63,10 @@ type ReadScopesResponse struct {
   Title                     string    `json:"title" binding:"required"`
   Description               string    `json:"description"`
   CreatedBy                 string    `json:"created_by" binding:"required"`
+}
+type ReadScopesBulkResponse struct {
+  *BulkResponse
+  Ok []ReadScopesResponse `json:"ok"`
 }
 
 // /scopes/grant
@@ -124,8 +143,8 @@ type DeleteScopesConsentResponse struct {
   Scopes                    []string  `json:"scopes" binding:"required"`
 }
 
-func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]ReadScopesResponse, error) {
-  var response []ReadScopesResponse
+func ReadScopes(url string, client *AapClient, requests []ReadScopesRequest) ([]ReadScopesBulkResponse, error) {
+  var response []ReadScopesBulkResponse // []ReadScopesResponse
 
   body, err := json.Marshal(requests)
   if err != nil {
