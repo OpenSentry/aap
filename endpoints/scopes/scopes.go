@@ -25,7 +25,6 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    fmt.Println(c.Request.Header)
     var createdByIdentity aap.Identity
     createdByIdentity = aap.Identity{
       Id: c.MustGet("sub").(string),
@@ -40,7 +39,6 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       }
 
       rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
-      fmt.Println(rScope, rIdentity, err)
 
       if err != nil {
         log.Println(err)
@@ -89,14 +87,19 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       log.Println(err)
     }
 
-    var output []client.ReadScopesResponse
-    for _, dbScope := range dbScopes {
+    var output []client.ReadScopesBulkResponse
+    for i, dbScope := range dbScopes {
       v := client.ReadScopesResponse{
         Scope: dbScope.Name,
         Title: dbScope.Title,
         Description: dbScope.Description,
+        CreatedBy:   dbScope.CreatedBy.Id,
       }
-      output = append(output, v)
+      output = append(output, client.ReadScopesBulkResponse{
+        Ok: v,
+        Index: i,
+        Status: http.StatusOK,
+      })
     }
 
     c.AbortWithStatusJSON(http.StatusOK, output)

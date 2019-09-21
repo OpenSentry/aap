@@ -480,8 +480,7 @@ func FetchScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {
       `
     } else {
       cypher = `
-      //unwind $requestedScopes as scopes
-      MATCH (scope:Scope)
+        MATCH (scope:Scope)
         WHERE scope.name in split($requestedScopes, ",")
 
         OPTIONAL MATCH (scope)-[:CREATED_BY]->(identity:Identity)

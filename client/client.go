@@ -29,6 +29,8 @@ func NewAapClientWithUserAccessToken(config *oauth2.Config, token *oauth2.Token)
 }
 
 func callService(client *AapClient, method string, url string, data *bytes.Buffer) ([]byte, error) {
+  // for logging only
+  reqData := (*data).Bytes()
 
   req, err := http.NewRequest("POST", url, data)
   if err != nil {
@@ -45,15 +47,36 @@ func callService(client *AapClient, method string, url string, data *bytes.Buffe
     return nil, err
   }
 
-  fmt.Println("=====================================")
-  fmt.Println("=====================================")
-  var prettyJSON bytes.Buffer
-  json.Indent(&prettyJSON, data.Bytes(), "", "  ")
-  fmt.Println(string(prettyJSON.Bytes()))
-  fmt.Println("=====================================")
-  fmt.Println("=====================================")
+  response, err := parseResponse(res)
 
-  return parseResponse(res)
+  logRequestResponse(method, url, reqData, res.Status, response, err)
+
+  return response, nil
+}
+
+func logRequestResponse(method string, url string, reqData []byte, resStatus string, resData []byte, err error) {
+  var prettyJsonRequest bytes.Buffer
+  e := json.Indent(&prettyJsonRequest, reqData, "", "  ")
+
+  if e != nil {
+    fmt.Println(e.Error())
+  }
+
+  var response string
+  if err == nil {
+    var prettyJsonResponse bytes.Buffer
+    json.Indent(&prettyJsonResponse, resData, "", "  ")
+    response = string(prettyJsonResponse.Bytes())
+  } else {
+    response = "Error: " + err.Error()
+  }
+
+  request := string(prettyJsonRequest.Bytes())
+  if request == "" {
+    request = "Ø"
+  }
+
+  fmt.Println("\n============== REST DEBUGGING ===============\n" + method + " " + url + " " + request + " -> [" + resStatus + "] " + response + "\n\n")
 }
 
 func parseResponse(res *http.Response) ([]byte, error) {
