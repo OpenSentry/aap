@@ -5,10 +5,13 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
+
+  "github.com/charmixer/aap/utils"
+  "fmt"
+
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
-  "fmt"
 )
 
 func PostScopes(env *environment.State) gin.HandlerFunc {
@@ -69,11 +72,14 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
     var requests []client.ReadScopesRequest
     err := c.BindJSON(&requests)
     if err != nil {
+      log.Debug(err.Error())
       c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
       return
     }
 
-    var prepare = func(requests []client.ReadScopesRequest) ([]aap.Scope) {
+    var handleData = func(iRequests interface{}) (interface{}) {
+      requests := iRequests.([]client.ReadScopesRequest)
+
       var scopes []aap.Scope
       for _, request := range requests {
         v := aap.Scope{
@@ -87,44 +93,40 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       return dbScopes
     }
 
-    var handleRequest = func(index int, request *client.ReadScopesRequest, data []aap.Scope) (response []client.Scope){
-      var r []client.Scope
-
-      if request == nil {
-        for _, d := range data {
-          r = append(r, client.Scope{
-            Scope: d.Name,
-            Title: d.Title,
-            Description: d.Description,
-            CreatedBy: d.CreatedBy.Id,
-          })
-        }
-      }
-
-      return r
-    }
-
-    data := prepare(requests)
-
-    var responses []client.ReadScopesResponse
-    if requests == nil {
-      // handle the empty request
+    var handleRequest = func(index int, iRequest interface{}, iData interface{}) (interface{}){
+      var request client.ReadScopesRequest
       var response client.ReadScopesResponse
-      response.Index = 0
-      response.Status = http.StatusOK
-      response.Ok = handleRequest(0, nil, data)
-      responses = append(responses, response)
-    } else {
-      for index, request := range requests {
-        var response client.ReadScopesResponse
-        response.Index = index
-        response.Status = http.StatusOK
-        response.Ok = handleRequest(index, &request, data)
-        responses = append(responses, response)
+
+      if iRequest != nil {
+        request = iRequest.(client.ReadScopesRequest)
       }
+
+      scopes := iData.([]aap.Scope)
+
+      var r []client.Scope
+      for _, d := range scopes {
+        if iRequest != nil && d.Name != request.Scope {
+          continue
+        }
+
+        r = append(r, client.Scope{
+          Scope: d.Name,
+          Title: d.Title,
+          Description: d.Description,
+          CreatedBy: d.CreatedBy.Id,
+        })
+      }
+
+      response.Index = index
+      response.Status = http.StatusOK
+      response.Ok = r
+
+      return response
     }
 
-    c.AbortWithStatusJSON(http.StatusOK, responses)
+    responses := utils.HandleBulkRestRequest(requests, true /* allow Ø */, handleData, handleRequest)
+
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }

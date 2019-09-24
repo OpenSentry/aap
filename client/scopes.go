@@ -11,17 +11,6 @@ import (
   _ "golang.org/x/oauth2/clientcredentials"
 )
 
-type ErrorResponse struct {
-  Code  int    `json:"code" binding:"required"`
-  Error string `json:"error" binding:"required"`
-}
-
-type BulkResponse struct {
-  Index  int             `json:"index" binding:"required"`
-  Status int             `json:"status" binding:"required"`
-  Errors []ErrorResponse `json:"errors,omitempty"`
-}
-
 // /scopes
 
 type Scope struct {
@@ -58,7 +47,7 @@ type UpdateScopesResponse struct {
 }
 
 type ReadScopesRequest struct {
-  Scope                     string    `json:"scope" binding:"required"`
+  Scope                     string    `json:"scope" binding:"required" validate:"required"`
 }
 
 type ReadScopesResponse struct {
