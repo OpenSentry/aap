@@ -14,6 +14,13 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/gofrs/uuid"
   hydra "github.com/charmixer/hydra/client"
+
+  // HandleRestBulkRequests ->
+  "reflect"
+  "gopkg.in/go-playground/validator.v9"
+  "github.com/charmixer/aap/client"
+  // <-
+
 )
 
 const ERROR_INVALID_ACCESS_TOKEN = 1
@@ -389,4 +396,72 @@ func RequestId() gin.HandlerFunc {
     c.Writer.Header().Set("X-Request-Id", requestID)
     c.Next()
   }
+}
+
+type IHandleData func(requests interface{}) (data interface{})
+type IHandleRequest func(index int, request interface{}, data interface{}) (response interface{})
+func HandleBulkRestRequest(iRequests interface{}, allowEmptySet bool, iHandleData IHandleData, iHandleRequest IHandleRequest) (responses []interface{}) {
+  requests := reflect.ValueOf(iRequests)
+
+  handleEmptyRequest := false
+  if requests.Len() == 0 {
+    handleEmptyRequest = true
+  }
+
+  // TODO this should come from main init or something
+  validate := validator.New()
+
+  var data interface{}
+
+  for index := 0; index < requests.Len() || handleEmptyRequest; index++ {
+
+    isEmptyRequest := false
+    if handleEmptyRequest {
+      isEmptyRequest = true
+      handleEmptyRequest = false // break inifinte loop
+
+      // if we dont allow the empty set, return an error to the user
+      if !allowEmptySet {
+        responses = append(responses, client.BulkResponse{
+          Index: index,
+          Status: http.StatusNotFound,
+          Errors: []client.ErrorResponse{client.ErrorResponse{Code: -2, Error: "The empty request is not allowed for this endpoint"}},
+        })
+        continue
+      }
+    }
+
+    var request interface{}
+    if !isEmptyRequest {
+      request = requests.Index(index).Interface()
+    }
+
+    // validate requests
+    if !isEmptyRequest { // if not the empty set, then validate
+      err := validate.Struct(request)
+      if err != nil {
+        responses = append(responses, client.BulkResponse{
+          Index: index,
+          Status: http.StatusNotFound,
+          Errors: []client.ErrorResponse{client.ErrorResponse{Code: -1, Error: err.Error()}},
+        })
+        continue
+      }
+    }
+
+    // If another call didnt already request data from iHandleData, then do it here
+    if iHandleData != nil && data == nil {
+      data = iHandleData(requests.Interface())
+    }
+
+    // handle request
+    response := iHandleRequest(index, request, data)
+
+    // validate output
+    //...
+
+    responses = append(responses, response)
+  }
+
+  return responses
 }

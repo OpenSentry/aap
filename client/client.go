@@ -10,6 +10,7 @@ import (
   "golang.org/x/oauth2/clientcredentials"
   "fmt"
   "encoding/json"
+  "reflect"
 )
 
 type AapClient struct {
@@ -26,6 +27,17 @@ func NewAapClientWithUserAccessToken(config *oauth2.Config, token *oauth2.Token)
   ctx := context.Background()
   client := config.Client(ctx, token)
   return &AapClient{client}
+}
+
+type ErrorResponse struct {
+  Code  int    `json:"code" binding:"required"`
+  Error string `json:"error" binding:"required"`
+}
+
+type BulkResponse struct {
+  Index  int             `json:"index" binding:"required"`
+  Status int             `json:"status" binding:"required"`
+  Errors []ErrorResponse `json:"errors,omitempty"`
 }
 
 func callService(client *AapClient, method string, url string, data *bytes.Buffer) ([]byte, error) {
@@ -72,9 +84,6 @@ func logRequestResponse(method string, url string, reqData []byte, resStatus str
   }
 
   request := string(prettyJsonRequest.Bytes())
-  if request == "" {
-    request = "Ø"
-  }
 
   fmt.Println("\n============== REST DEBUGGING ===============\n" + method + " " + url + " " + request + " -> [" + resStatus + "] " + response + "\n\n")
 }
@@ -102,4 +111,35 @@ func parseResponse(res *http.Response) ([]byte, error) {
   default:
     return nil, errors.New("Unhandled error")
   }
+}
+
+
+func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk interface{}, rErr []ErrorResponse) {
+  responses := reflect.ValueOf(iResponses)
+  for index := 0; index < responses.Len(); index++ {
+    response := responses.Index(index)
+
+    i := response.FieldByName("Index").Interface().(int)
+
+    if i == iIndex {
+      // found response with given index
+
+      rStatus := response.FieldByName("Status").Interface().(int)
+      err    := response.FieldByName("Errors")
+      ok     := response.FieldByName("Ok")
+
+      if !ok.IsNil() {
+        rOk = ok.Interface()
+      }
+
+      if !err.IsNil() {
+        rErr = err.Interface().([]ErrorResponse)
+      }
+
+      return rStatus, rOk, rErr
+    }
+
+  }
+
+  panic("Given index not found")
 }
