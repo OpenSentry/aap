@@ -457,13 +457,16 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
       // validate requests
       if request.Request != nil { // if not the empty set, then validate
-        err := validate.Struct(request)
+        fmt.Println(request.Request)
+        err := validate.Struct(request.Request)
         if err != nil {
-          request.Response = client.BulkResponse{
-            Index: request.Index,
-            Status: http.StatusNotFound,
-            Errors: []client.ErrorResponse{client.ErrorResponse{Code: -1, Error: err.Error()}},
+
+          var errorResponses []client.ErrorResponse
+          for _, e := range err.(validator.ValidationErrors) {
+            errorResponses = append(errorResponses, client.ErrorResponse{Code: -1, Error: e.Translate(nil)})
           }
+
+          request.Response = NewClientErrorResponse(request.Index, errorResponses)
 
           errorsFound = true
           continue
@@ -476,21 +479,15 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
     // make sure if something fails, others will fail too
     if errorsFound {
-      start = time.Now()
       // fail all
       for _,request := range requests {
         if request.Response == nil {
-          request.Response = client.BulkResponse{
-            Index: request.Index,
-            Status: http.StatusNotFound,
-            Errors: []client.ErrorResponse{client.ErrorResponse{Code: -3, Error: "Failed due to other errors"}},
-          }
+          request.Response = NewClientErrorResponse(request.Index, []client.ErrorResponse{client.ErrorResponse{Code: -3, Error: "Failed due to other errors"}})
         }
 
         responses = append(responses, request.Response)
       }
 
-      fmt.Printf("%s took %v\n", "fail all requests", time.Since(start))
       return responses
     }
   }
@@ -513,15 +510,25 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
         o, _ := json.MarshalIndent(request.Response, "", "  ")
         fmt.Printf("ATTENTION! Response validation failed. \nErrors:\n%s\n\nRequest: %s\n\nResponse: %s\n", err.Error(), i, o)
 
-        request.Response = client.BulkResponse{
-          Index: request.Index,
-          Status: http.StatusInternalServerError,
-          Errors: []client.ErrorResponse{client.ErrorResponse{Code: 500, Error: "Internal server error occured. Please wait until fixed before you try again."}},
-        }
+        request.Response = NewInternalErrorResponse(request.Index)
       }
     }
     responses = append(responses, request.Response)
   }
 
   return responses
+}
+func NewInternalErrorResponse(index int) (client.BulkResponse) {
+  return client.BulkResponse{
+    Index: index,
+    Status: http.StatusInternalServerError,
+    Errors: []client.ErrorResponse{client.ErrorResponse{Code: 500, Error: "Internal server error occured. Please wait until fixed before you try again."}},
+  }
+}
+func NewClientErrorResponse(index int, data []client.ErrorResponse) (client.BulkResponse) {
+  return client.BulkResponse{
+    Index: index,
+    Status: http.StatusNotFound,
+    Errors: data,
+  }
 }
