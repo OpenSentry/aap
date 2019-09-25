@@ -43,7 +43,13 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
         }
 
         // TODO handle error
-        rScope, rIdentity, _ := aap.CreateScope(env.Driver, scope, createdByIdentity)
+        rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+
+        if err != nil {
+          request.Response = utils.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          continue
+        }
 
         ok := client.Scope{
           Scope: rScope.Name,
@@ -52,10 +58,9 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
           CreatedBy: rIdentity.Id,
         }
 
-        var response client.CreateScopesResponse
+        response := client.CreateScopesResponse{Ok: ok}
         response.Index = request.Index
         response.Status = http.StatusOK
-        response.Ok = ok
         request.Response = response
       }
     }

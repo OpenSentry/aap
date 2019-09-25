@@ -28,7 +28,7 @@ type CreateScopesRequest struct {
 
 type CreateScopesResponse struct {
   BulkResponse
-  Ok Scope `json:"ok,omitempty"`
+  Ok Scope `json:"ok,omitempty" validate:"dive"`
 }
 
 type UpdateScopesRequest struct {
@@ -45,7 +45,7 @@ type UpdateScopesResponse struct {
 }
 
 type ReadScopesRequest struct {
-  Scope                     string    `json:"scope" binding:"required" validate:"required"`
+  Scope                     string    `json:"scope" validate:"required"`
 }
 
 type ReadScopesResponse struct {

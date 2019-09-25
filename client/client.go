@@ -128,11 +128,11 @@ func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk int
       err    := response.FieldByName("Errors")
       ok     := response.FieldByName("Ok")
 
-      if !ok.IsNil() {
+      if ok.CanInterface() {
         rOk = ok.Interface()
       }
 
-      if !err.IsNil() {
+      if err.CanInterface() {
         rErr = err.Interface().([]ErrorResponse)
       }
 
