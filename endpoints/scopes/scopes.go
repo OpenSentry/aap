@@ -28,36 +28,41 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var createdByIdentity aap.Identity
-    createdByIdentity = aap.Identity{
-      Id: c.MustGet("sub").(string),
-    }
-
-    var responses []client.CreateScopesResponse
-    for _, request := range requests {
-      scope := aap.Scope{
-        Name:        request.Scope,
-        Title:       request.Title,
-        Description: request.Description,
+    var handleRequest = func(iRequests []*utils.Request){
+      createdByIdentity := aap.Identity{
+        Id: c.MustGet("sub").(string),
       }
 
-      rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+      for _, request := range iRequests {
+        r := request.Request.(client.CreateScopesRequest)
 
-      if err != nil {
-        log.Println(err)
-        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
-        return
+        scope := aap.Scope{
+          Name: r.Scope,
+          Title: r.Title,
+          Description: r.Description,
+        }
+
+        // TODO handle error
+        rScope, rIdentity, _ := aap.CreateScope(env.Driver, scope, createdByIdentity)
+
+        ok := client.Scope{
+          Scope: rScope.Name,
+          Title: rScope.Title,
+          Description: rScope.Description,
+          CreatedBy: rIdentity.Id,
+        }
+
+        var response client.CreateScopesResponse
+        response.Index = request.Index
+        response.Status = http.StatusOK
+        response.Ok = ok
+        request.Response = response
       }
-
-      responses = append(responses, client.CreateScopesResponse{
-        Scope:       rScope.Name,
-        Title:       rScope.Title,
-        Description: rScope.Description,
-        CreatedBy:   rIdentity.Id,
-      })
     }
 
-    c.AbortWithStatusJSON(http.StatusOK, responses)
+    responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{})
+
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
@@ -77,54 +82,52 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleData = func(iRequests interface{}) (interface{}) {
-      requests := iRequests.([]client.ReadScopesRequest)
-
+    var handleRequests = func(iRequests []*utils.Request){
       var scopes []aap.Scope
-      for _, request := range requests {
-        v := aap.Scope{
-          Name: request.Scope,
+
+      for _, request := range iRequests {
+        if request.Request != nil {
+          var r client.CreateScopesRequest
+          r = request.Request.(client.CreateScopesRequest)
+
+          v := aap.Scope{
+            Name: r.Scope,
+          }
+          scopes = append(scopes, v)
         }
-        scopes = append(scopes, v)
       }
 
       dbScopes, _ := aap.FetchScopes(env.Driver, scopes)
 
-      return dbScopes
-    }
-
-    var handleRequest = func(index int, iRequest interface{}, iData interface{}) (interface{}){
-      var request client.ReadScopesRequest
-      var response client.ReadScopesResponse
-
-      if iRequest != nil {
-        request = iRequest.(client.ReadScopesRequest)
-      }
-
-      scopes := iData.([]aap.Scope)
-
-      var r []client.Scope
-      for _, d := range scopes {
-        if iRequest != nil && d.Name != request.Scope {
-          continue
+      for _, request := range iRequests {
+        var r client.CreateScopesRequest
+        if request.Request != nil {
+          r = request.Request.(client.CreateScopesRequest)
         }
 
-        r = append(r, client.Scope{
-          Scope: d.Name,
-          Title: d.Title,
-          Description: d.Description,
-          CreatedBy: d.CreatedBy.Id,
-        })
+        var ok []client.Scope
+        for _, d := range dbScopes {
+          if request.Request != nil && d.Name != r.Scope {
+            continue
+          }
+
+          ok = append(ok, client.Scope{
+            Scope:       d.Name,
+            Title:       d.Title,
+            Description: d.Description,
+            CreatedBy:   d.CreatedBy.Id,
+          })
+        }
+
+        var response client.ReadScopesResponse
+        response.Index = request.Index
+        response.Status = http.StatusOK
+        response.Ok = ok
+        request.Response = response
       }
-
-      response.Index = index
-      response.Status = http.StatusOK
-      response.Ok = r
-
-      return response
     }
 
-    responses := utils.HandleBulkRestRequest(requests, true /* allow Ø */, handleData, handleRequest)
+    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
 
     c.JSON(http.StatusOK, responses)
   }

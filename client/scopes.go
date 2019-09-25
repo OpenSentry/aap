@@ -14,10 +14,10 @@ import (
 // /scopes
 
 type Scope struct {
-  Scope       string    `json:"scope" binding:"required"`
-  Title       string    `json:"title" binding:"required"`
-  Description string    `json:"description" binding:"required"`
-  CreatedBy   string    `json:"created_by" binding:"required"`
+  Scope       string    `json:"scope" validate:"required"`
+  Title       string    `json:"title" validate:"required"`
+  Description string    `json:"description" validate:"required"`
+  CreatedBy   string    `json:"created_by"` // should be required.. right?
 }
 
 type CreateScopesRequest struct {
@@ -27,10 +27,8 @@ type CreateScopesRequest struct {
 }
 
 type CreateScopesResponse struct {
-  Scope       string    `json:"scope" binding:"required"`
-  Title       string    `json:"title" binding:"required"`
-  Description string    `json:"description" binding:"required"`
-  CreatedBy   string    `json:"created_by" binding:"required"`
+  BulkResponse
+  Ok Scope `json:"ok,omitempty"`
 }
 
 type UpdateScopesRequest struct {
@@ -52,7 +50,7 @@ type ReadScopesRequest struct {
 
 type ReadScopesResponse struct {
   BulkResponse
-  Ok []Scope `json:"ok,omitempty"`
+  Ok []Scope `json:"ok,omitempty" validate:"dive"`
 }
 
 // /scopes/grant

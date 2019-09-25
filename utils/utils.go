@@ -7,6 +7,7 @@ import (
   "net/http"
   "crypto/rand"
   "encoding/base64"
+  "encoding/json"
   "time"
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
@@ -15,6 +16,7 @@ import (
   "github.com/gofrs/uuid"
   hydra "github.com/charmixer/hydra/client"
 
+  "fmt"
   // HandleRestBulkRequests ->
   "reflect"
   "gopkg.in/go-playground/validator.v9"
@@ -398,69 +400,127 @@ func RequestId() gin.HandlerFunc {
   }
 }
 
-type IHandleData func(requests interface{}) (data interface{})
-type IHandleRequest func(index int, request interface{}, data interface{}) (response interface{})
-func HandleBulkRestRequest(iRequests interface{}, allowEmptySet bool, iHandleData IHandleData, iHandleRequest IHandleRequest) (responses []interface{}) {
-  requests := reflect.ValueOf(iRequests)
+type Request struct {
+  Index int
+  Request interface{}
+  Response interface{}
+}
+type HandleBulkRequestParams struct {
+  EnableEmptyRequest bool
+  DisableInputValidation bool
+  DisableOutputValidation bool
+}
+type IHandleRequests func(requests []*Request)
+func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequests, params HandleBulkRequestParams) (responses []interface{}) {
+  var requests []*Request
 
-  handleEmptyRequest := false
-  if requests.Len() == 0 {
-    handleEmptyRequest = true
+  var start time.Time
+
+  // initialize structs
+  tmpRequests := reflect.ValueOf(iRequests)
+  for index := 0; index < tmpRequests.Len() || (tmpRequests.Len() == 0 && index == 0); index++ {
+    var request interface{}
+    if tmpRequests.Len() > 0 {
+      request = tmpRequests.Index(index).Interface()
+    }
+    requests = append(requests, &Request{
+      Index: index,
+      Request: request,
+      Response: nil, // someone needs to fill this
+    })
   }
+
+  start = time.Now()
 
   // TODO this should come from main init or something
   validate := validator.New()
 
-  var data interface{}
+  if !params.DisableInputValidation {
 
-  for index := 0; index < requests.Len() || handleEmptyRequest; index++ {
+    var errorsFound = false
 
-    isEmptyRequest := false
-    if handleEmptyRequest {
-      isEmptyRequest = true
-      handleEmptyRequest = false // break inifinte loop
+    for _,request := range requests {
 
-      // if we dont allow the empty set, return an error to the user
-      if !allowEmptySet {
-        responses = append(responses, client.BulkResponse{
-          Index: index,
-          Status: http.StatusNotFound,
-          Errors: []client.ErrorResponse{client.ErrorResponse{Code: -2, Error: "The empty request is not allowed for this endpoint"}},
-        })
-        continue
+      if request.Request == nil {
+        // if we dont allow the empty set, return an error to the user
+        if !params.EnableEmptyRequest {
+          request.Response = client.BulkResponse{
+            Index: request.Index,
+            Status: http.StatusNotFound,
+            Errors: []client.ErrorResponse{client.ErrorResponse{Code: -2, Error: "The empty request is not allowed for this endpoint"}},
+          }
+
+          errorsFound = true
+          continue
+        }
       }
+
+      // validate requests
+      if request.Request != nil { // if not the empty set, then validate
+        err := validate.Struct(request)
+        if err != nil {
+          request.Response = client.BulkResponse{
+            Index: request.Index,
+            Status: http.StatusNotFound,
+            Errors: []client.ErrorResponse{client.ErrorResponse{Code: -1, Error: err.Error()}},
+          }
+
+          errorsFound = true
+          continue
+        }
+      }
+
     }
 
-    var request interface{}
-    if !isEmptyRequest {
-      request = requests.Index(index).Interface()
+    fmt.Printf("%s took %v\n", "input validation", time.Since(start))
+
+    // make sure if something fails, others will fail too
+    if errorsFound {
+      start = time.Now()
+      // fail all
+      for _,request := range requests {
+        if request.Response == nil {
+          request.Response = client.BulkResponse{
+            Index: request.Index,
+            Status: http.StatusNotFound,
+            Errors: []client.ErrorResponse{client.ErrorResponse{Code: -3, Error: "Failed due to other errors"}},
+          }
+        }
+
+        responses = append(responses, request.Response)
+      }
+
+      fmt.Printf("%s took %v\n", "fail all requests", time.Since(start))
+      return responses
+    }
+  }
+
+  // handle requests
+  start = time.Now()
+  iHandleRequests(requests)
+  fmt.Printf("%s took %v\n", "iHandleRequests", time.Since(start))
+
+  for _,request := range requests {
+    if request.Response == nil {
+      panic("Not all requests have been handled")
     }
 
-    // validate requests
-    if !isEmptyRequest { // if not the empty set, then validate
-      err := validate.Struct(request)
+    if !params.DisableOutputValidation {
+      // output validation
+      err := validate.Struct(request.Response)
       if err != nil {
-        responses = append(responses, client.BulkResponse{
-          Index: index,
-          Status: http.StatusNotFound,
-          Errors: []client.ErrorResponse{client.ErrorResponse{Code: -1, Error: err.Error()}},
-        })
-        continue
+        i, _ := json.MarshalIndent(request.Request, "", "  ")
+        o, _ := json.MarshalIndent(request.Response, "", "  ")
+        fmt.Printf("ATTENTION! Response validation failed. \nErrors:\n%s\n\nRequest: %s\n\nResponse: %s\n", err.Error(), i, o)
+
+        request.Response = client.BulkResponse{
+          Index: request.Index,
+          Status: http.StatusInternalServerError,
+          Errors: []client.ErrorResponse{client.ErrorResponse{Code: 500, Error: "Internal server error occured. Please wait until fixed before you try again."}},
+        }
       }
     }
-
-    // If another call didnt already request data from iHandleData, then do it here
-    if iHandleData != nil && data == nil {
-      data = iHandleData(requests.Interface())
-    }
-
-    // handle request
-    response := iHandleRequest(index, request, data)
-
-    // validate output
-    //...
-
-    responses = append(responses, response)
+    responses = append(responses, request.Response)
   }
 
   return responses
