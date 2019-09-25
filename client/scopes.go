@@ -17,7 +17,7 @@ type Scope struct {
   Scope       string    `json:"scope" validate:"required"`
   Title       string    `json:"title" validate:"required"`
   Description string    `json:"description" validate:"required"`
-  CreatedBy   string    `json:"created_by"` // should be required.. right?
+  CreatedBy   string    `json:"created_by" validate:"required,uuid"`
 }
 
 type CreateScopesRequest struct {
