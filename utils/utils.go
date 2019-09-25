@@ -322,6 +322,7 @@ func AuthenticationRequired(logKey string, accessTokenKey string) gin.HandlerFun
 func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
+
     log := c.MustGet(aconf.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{"func": "AuthorizationRequired"})
 
@@ -342,6 +343,7 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
 
     log.WithFields(logrus.Fields{"token": accessToken.AccessToken}).Debug("Introspecting token")
 
+
     introspectRequest := hydra.IntrospectRequest{
       Token: accessToken.AccessToken,
       Scope: strRequiredScopes, // This will make hydra check that all scopes are present else introspect.active will be false.
@@ -353,6 +355,7 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
       return
     }
     log.Debug(introspectResponse)
+
 
     if introspectResponse.Active == true {
 
