@@ -94,6 +94,48 @@ type Consent struct {
   Scope
 }
 
+func fetchRecord(result neo4j.Result) (neo4j.Record, error) {
+  var err error
+
+  if result.Next() {
+    return result.Record(), nil
+  }
+
+  if err = result.Err(); err != nil {
+    return nil, err
+  }
+
+  return nil, errors.New("No records found")
+}
+
+func fetchByIdentityId(id string, tx neo4j.Transaction) (identity Identity, err error) {
+  var result neo4j.Result
+
+  cypher := `MATCH (i:Identity {id:$id}) return i`
+  params := map[string]interface{}{
+    "id": id,
+  }
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return Identity{}, err
+  }
+
+  record, err := fetchRecord(result)
+
+  if err != nil || record != nil {
+    return Identity{}, errors.New("Identity not found")
+  }
+
+  identityNode := record.GetByIndex(0)
+
+  if identityNode != nil {
+    identity = marshalNodeToIdentity(identityNode.(neo4j.Node))
+  } else {
+    return Identity{}, errors.New("Identity not found")
+  }
+
+  return identity, nil
+}
 
 // CONSENT, CONSENTED_BY, IS_CONSENTED
 func CreateConsentsForClientOnBehalfOfResourceOwner(driver neo4j.Driver, resourceOwner Identity, client Client, consentScopes []Scope, revokeScopes []Scope) ([]Scope, error) {

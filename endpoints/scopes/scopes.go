@@ -132,7 +132,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       }
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true, MaxRequests: 1})
+    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
 
     c.JSON(http.StatusOK, responses)
   }
