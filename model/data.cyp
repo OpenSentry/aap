@@ -18,63 +18,63 @@ MERGE (i)<-[:CREATED_BY]-(:Scope {name:"logout:identity", title:"Logout from the
 // ### Expose scopes for IDPAPI
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"openid"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"offline"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"read:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"update:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"delete:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"recover:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"logout:identity"})
 MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
 MERGE (er)-[:EXPOSED_BY]->(i)
@@ -86,7 +86,7 @@ MERGE (er)-[:EXPOSED_BY]->(i)
 // Grant IDPUI access to authenticate:identity in IDPAPI
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idpui:Identity:Client {client_id:"idpui"})
-MATCH (idp:Identity:ResourceServer {username:"idprs"})
+MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
 MERGE (idpui)-[:IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(s)
 MERGE (gr)-[:GRANTED_BY]->(i)
