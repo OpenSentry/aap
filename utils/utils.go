@@ -412,6 +412,7 @@ type HandleBulkRequestParams struct {
   EnableEmptyRequest bool
   DisableInputValidation bool
   DisableOutputValidation bool
+  MaxRequests int64
 }
 type IHandleRequests func(requests []*Request)
 func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequests, params HandleBulkRequestParams) (responses []interface{}) {
@@ -434,6 +435,19 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
   }
 
   start = time.Now()
+
+  if params.MaxRequests != 0 && int64(len(requests)) > params.MaxRequests { // deny all requests if too many was given
+    // fail all
+    for _,request := range requests {
+      if request.Response == nil {
+        request.Response = NewClientErrorResponse(request.Index, []client.ErrorResponse{client.ErrorResponse{Code: -6, Error: "Failed due to too many requests"}})
+      }
+
+      responses = append(responses, request.Response)
+    }
+
+    return responses
+  }
 
   // TODO this should come from main init or something
   validate := validator.New()
@@ -480,8 +494,7 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
     fmt.Printf("%s took %v\n", "input validation", time.Since(start))
 
-    // make sure if something fails, others will fail too
-    if errorsFound {
+    if errorsFound { // make sure if something fails, others will fail too
       // fail all
       for _,request := range requests {
         if request.Response == nil {
