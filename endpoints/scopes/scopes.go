@@ -92,8 +92,8 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
 
       for _, request := range iRequests {
         if request.Request != nil {
-          var r client.CreateScopesRequest
-          r = request.Request.(client.CreateScopesRequest)
+          var r client.ReadScopesRequest
+          r = request.Request.(client.ReadScopesRequest)
 
           v := aap.Scope{
             Name: r.Scope,
@@ -105,9 +105,9 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       dbScopes, _ := aap.FetchScopes(env.Driver, scopes)
 
       for _, request := range iRequests {
-        var r client.CreateScopesRequest
+        var r client.ReadScopesRequest
         if request.Request != nil {
-          r = request.Request.(client.CreateScopesRequest)
+          r = request.Request.(client.ReadScopesRequest)
         }
 
         var ok []client.Scope
@@ -132,7 +132,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       }
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
+    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true, MaxRequests: 1})
 
     c.JSON(http.StatusOK, responses)
   }
