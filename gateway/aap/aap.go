@@ -66,7 +66,7 @@ func marshalNodeToResourceServer(node neo4j.Node) (ResourceServer) {
 
   return ResourceServer{
     Name:        p["name"].(string),
-    Audience:    p["audience"].(string),
+    Audience:    p["aud"].(string),
     Description: p["description"].(string),
   }
 }
@@ -409,6 +409,79 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
   }
 
   return neoResult.(NeoReturnType).Scope, neoResult.(NeoReturnType).Identity, nil
+}
+
+func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish Identity, iRequest Identity) (rScope Scope, rPublisher Identity, rGranted Identity, rGranter Identity, err error) {
+  var result neo4j.Result
+  var cypher string
+  var params map[string]interface{}
+
+  cypher = `
+    // FIXME ensure users exists and return errors
+    MATCH (granter:Identity {id: $granterId})
+    MATCH (granted:Identity {id: $grantedId})
+    MATCH (publisher:Identity {id: $publisherId})
+    MATCH (scope:Scope {name: $scopeName})
+    MATCH (publisher)-[:IS_PUBLISHING]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
+
+    // create scope and match it to the identity who created it
+    MERGE (granted)-[:IS_GRANTED]->(grantRule:Grant:Rule)-[:GRANTS]->(publishRule)
+    MERGE (grantRule)-[:GRANTED_BY]->(granter)
+
+    // Conclude
+    return scope, publisher, granted, granter
+  `
+
+  params = map[string]interface{}{
+    "scopeName":   iScope.Name,
+    "granterId":   iGrant.Id,
+    "grantedId":   iRequest.Id,
+    "publisherId": iPublish.Id,
+  }
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return rScope, rPublisher, rGranted, rGranter, err
+  }
+
+  if result.Next() {
+    record := result.Record()
+
+    scopeNode := record.GetByIndex(0)
+    publisherNode := record.GetByIndex(1)
+    grantedNode := record.GetByIndex(2)
+    granterNode := record.GetByIndex(3)
+
+    if scopeNode != nil {
+      rScope = marshalNodeToScope(scopeNode.(neo4j.Node))
+    }
+
+    if publisherNode != nil {
+      rPublisher = marshalNodeToIdentity(publisherNode.(neo4j.Node))
+    }
+
+    if grantedNode != nil {
+      rGranted = marshalNodeToIdentity(grantedNode.(neo4j.Node))
+    }
+
+    if granterNode != nil {
+      rGranter = marshalNodeToIdentity(granterNode.(neo4j.Node))
+    }
+
+  }
+
+  logCypher(cypher, params)
+
+
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return rScope, rPublisher, rGranted, rGranter, err
+  }
+
+  if err != nil {
+    return rScope, rPublisher, rGranted, rGranter, err
+  }
+
+  return rScope, rPublisher, rGranted, rGranter, nil
 }
 
 func UpdateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (Scope, Identity, error) {
@@ -1016,7 +1089,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope)
         MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
-        return i, c.client_id, rs, s
+        return i, c, rs, s
       `
       params = map[string]interface{}{"id": resourceOwner.Id, "clientId": client.ClientId}
     } else {
@@ -1025,7 +1098,7 @@ func FetchConsentsForResourceOwnerToClient(driver neo4j.Driver, resourceOwner Id
         MATCH (i)<-[:CONSENTED_BY]-(cr:ConsentRule)-[:CONSENT]->(s:Scope) WHERE s.name in split($requestedScopes, ",")
         MATCH (c:Client:Identity {client_id:$clientId})-[:IS_CONSENTED]->(cr)
         MATCH (rs:ResourceServer:Identity)-[:IS_EXPOSED]->(:ExposeRule)-[:EXPOSE]->(s)
-        return i, c, rs.name, rs, s
+        return i, c, rs, s
       `
       params = map[string]interface{}{"id":resourceOwner.Id, "clientId": client.ClientId, "requestedScopes":requestedScopes}
     }

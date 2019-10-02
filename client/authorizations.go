@@ -49,86 +49,78 @@ type RejectResponse struct {
   RedirectTo                  string            `json:"redirect_to" binding:"required"`
 }
 
-func CreateConsents(url string, client *AapClient, request ConsentRequest) ([]string, error) {
-  var response []string
-
+func CreateConsents(url string, client *AapClient, request ConsentRequest) (status int, response []string, err error) {
   body, err := json.Marshal(request)
   if err != nil {
-    return nil, err
+    return 999, nil, err
   }
 
-  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
+  status, responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
-    return nil, err
+    return status, nil, err
   }
 
   err = json.Unmarshal(responseData, &response)
   if err != nil {
-    return nil, err
+    return 999, nil, err
   }
 
-  return response, nil
+  return status, response, nil
 }
 
-func FetchConsents(url string, client *AapClient, request ConsentRequest) ([]string, error) {
-  var response []string
-
+func FetchConsents(url string, client *AapClient, request ConsentRequest) (status int, response []string, err error) {
   body, err := json.Marshal(request)
   if err != nil {
-    return nil, err
+    return 999, nil, err
   }
 
-  responseData, err := callService(client, "GET", url, bytes.NewBuffer(body))
+  status, responseData, err := callService(client, "GET", url, bytes.NewBuffer(body))
   if err != nil {
-    return nil, err
+    return status, nil, err
   }
 
   err = json.Unmarshal(responseData, &response)
   if err != nil {
-    return nil, err
+    return 666, nil, err
   }
 
-  return response, nil
+  return status, response, nil
 }
 
-func Authorize(url string, client *AapClient, request AuthorizeRequest) (*AuthorizeResponse, error) {
-  var response AuthorizeResponse
-
+func Authorize(url string, client *AapClient, request AuthorizeRequest) (status int, response *AuthorizeResponse, err error) {
   body, err := json.Marshal(request)
   if err != nil {
-    return nil, err
+    return 999, nil, err
   }
 
-  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
+  status, responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
-    return nil, err
+    return status, nil, err
   }
 
   err = json.Unmarshal(responseData, &response)
   if err != nil {
-    return nil, err
+    return 666, nil, err
   }
 
-  return &response, nil
+  return status, response, nil
 }
 
-func Reject(url string, client *AapClient, request RejectRequest) (*RejectResponse, error) {
-  var response RejectResponse
-
+func Reject(url string, client *AapClient, request RejectRequest) (status int, response *RejectResponse, err error) {
   body, err := json.Marshal(request)
   if err != nil {
-    return nil, err
+    return 999, nil, err
   }
 
-  responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
+  status, responseData, err := callService(client, "POST", url, bytes.NewBuffer(body))
   if err != nil {
-    return nil, err
+    return status, nil, err
   }
 
   err = json.Unmarshal(responseData, &response)
   if err != nil {
-    return nil, err
+    return 666, nil, err
   }
 
-  return &response, nil
+  return status, response, nil
 }

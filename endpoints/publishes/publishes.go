@@ -1,34 +1,48 @@
-package scopes
+package publishes
 
 import (
   "net/http"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  _ "github.com/charmixer/aap/client"
   "github.com/charmixer/aap/environment"
   _ "github.com/charmixer/aap/gateway/aap"
+  _ "github.com/charmixer/aap/client"
 )
 
-func PostScopesGrant(env *environment.State) gin.HandlerFunc {
+func PostPublishes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PostGrant",
+      "func": "PostScopesExpose",
     })
 
     c.AbortWithStatusJSON(http.StatusOK, gin.H{
-      "message": "pong",
+
     })
   }
   return gin.HandlerFunc(fn)
 }
 
-func DeleteScopesGrant(env *environment.State) gin.HandlerFunc {
+func DeletePublishes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PutGrant",
+      "func": "DeleteScopesExpose",
+    })
+
+    c.AbortWithStatusJSON(http.StatusOK, gin.H{
+
+    })
+  }
+  return gin.HandlerFunc(fn)
+}
+
+func GetPublishes(env *environment.State) gin.HandlerFunc {
+  fn := func(c *gin.Context) {
+    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log = log.WithFields(logrus.Fields{
+      "func": "GetConsents",
     })
 
     c.AbortWithStatusJSON(http.StatusOK, gin.H{
