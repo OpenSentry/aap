@@ -9,6 +9,7 @@ const EMPTY_REQUEST_NOT_ALLOWED  = 2
 const MAX_REQUESTS_EXCEEDED      = 3
 const FAILED_DUE_TO_OTHER_ERRORS = 4
 const INTERNAL_SERVER_ERROR      = 5
+const OPERATION_ABORTED          = 6
 
 // keep em' static
 var ERRORS = map[int]map[int]string{
@@ -19,7 +20,7 @@ var ERRORS = map[int]map[int]string{
     },
   EMPTY_REQUEST_NOT_ALLOWED:
     {
-      EN:  "Empty request not allowed"
+      EN:  "Empty request not allowed",
       DEV: "This endpoint does not allow the empty request - each request must be defined separately",
     },
   MAX_REQUESTS_EXCEEDED:
@@ -36,6 +37,11 @@ var ERRORS = map[int]map[int]string{
     {
       EN:  "Internal server error occured. Please wait until it has been fixed, before you try again",
       DEV: "Internal server error occured. Please wait until it has been fixed, before you try again",
+    },
+  OPERATION_ABORTED:
+    {
+      EN:  "Operation aborted due to other internal server errors",
+      DEV: "Operation aborted due to other internal server errors",
     },
 }
 

@@ -18,6 +18,7 @@ import (
 
   // HandleRestBulkRequests ->
   "fmt"
+  "errors"
   "reflect"
   "gopkg.in/go-playground/validator.v9"
   "github.com/charmixer/aap/client"
@@ -471,7 +472,6 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
       // validate requests
       if request.Request != nil { // if not the empty set, then validate
-        fmt.Println(request.Request)
         err := validate.Struct(request.Request)
         if err != nil {
 
@@ -482,7 +482,7 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
           request.Response = client.BulkResponse{
             Index: request.Index,
-            Status: http.StatusNotFound,
+            Status: http.StatusBadRequest,
             Errors: errorResponses,
           }
 
@@ -492,8 +492,6 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
       }
 
     }
-
-    fmt.Printf("%s took %v\n", "input validation", time.Since(start))
 
     if errorsFound { // make sure if something fails, others will fail too
       // fail all
@@ -507,44 +505,88 @@ func HandleBulkRestRequest(iRequests interface{}, iHandleRequests IHandleRequest
 
       return responses
     }
+
   }
+  fmt.Printf("%s took %v\n", "input validation", time.Since(start))
 
   // handle requests
   start = time.Now()
   iHandleRequests(requests)
   fmt.Printf("%s took %v\n", "iHandleRequests", time.Since(start))
 
+  if !params.DisableOutputValidation {
+    start = time.Now()
+    _ = OutputValidateRequests(requests)
+    fmt.Printf("%s took %v\n", "output validation took", time.Since(start))
+  }
+
   for _,request := range requests {
     if request.Response == nil {
       panic("Not all requests have been handled")
-    }
-
-    if !params.DisableOutputValidation {
-      // output validation
-      err := validate.Struct(request.Response)
-      if err != nil {
-        i, _ := json.MarshalIndent(request.Request, "", "  ")
-        o, _ := json.MarshalIndent(request.Response, "", "  ")
-        fmt.Printf("ATTENTION! Response validation failed. \nErrors:\n%s\n\nRequest: %s\n\nResponse: %s\n", err.Error(), i, o)
-
-        request.Response = NewInternalErrorResponse(request.Index)
-      }
     }
     responses = append(responses, request.Response)
   }
 
   return responses
 }
-func NewInternalErrorResponse(index int) (client.BulkResponse) {
-  c := E.INTERNAL_SERVER_ERROR
-  e := E.ERRORS[c][E.DEFAULT_LANG]
+func OutputValidateRequests(requests []*Request) (error){
+  // TODO this should come from main init or something
+  validate := validator.New()
+
+  var passedRequests []*Request
+
+  for _,request := range requests {
+    if request.Response == nil {
+      panic("Not all requests have been handled")
+    }
+
+    // output validation
+    err := validate.Struct(request.Response)
+    if err != nil {
+      i, _ := json.MarshalIndent(request.Request, "", "  ")
+      o, _ := json.MarshalIndent(request.Response, "", "  ")
+      fmt.Printf("ATTENTION! Response validation failed. \nErrors:\n%s\n\nRequest: %s\n\nResponse: %s\n", err.Error(), i, o)
+
+      request.Response = NewInternalErrorResponse(request.Index)
+      continue;
+    }
+
+    passedRequests = append(passedRequests, request)
+  }
+
+  if len(passedRequests) != len(requests) {
+    for _,request := range passedRequests {
+      request.Response = NewInternalErrorResponse(request.Index, E.OPERATION_ABORTED)
+    }
+
+    return errors.New("Output validation failed")
+  }
+
+  return nil
+}
+func NewInternalErrorResponse(index int, code... int) (client.BulkResponse) {
+
+  if code == nil {
+    code = append(code, E.INTERNAL_SERVER_ERROR)
+  }
+
+  var data []client.ErrorResponse
+  for _, c := range code {
+    e := E.ERRORS[c][E.DEFAULT_LANG]
+    data = append(data, client.ErrorResponse{Code: c, Error: e})
+  }
+
   return client.BulkResponse{
     Index: index,
     Status: http.StatusInternalServerError,
-    Errors: []client.ErrorResponse{{Code: c, Error: e}},
+    Errors: data,
   }
 }
 func NewClientErrorResponse(index int, code... int) (client.BulkResponse) {
+  if code == nil {
+    panic("No errors defined for client error response")
+  }
+
   var data []client.ErrorResponse
   for _, c := range code {
     e := E.ERRORS[c][E.DEFAULT_LANG]
@@ -555,5 +597,24 @@ func NewClientErrorResponse(index int, code... int) (client.BulkResponse) {
     Index: index,
     Status: http.StatusNotFound,
     Errors: data,
+  }
+}
+func NewOkResponse(data interface{}) (interface{}) {
+  r := reflect.ValueOf(data)
+
+  fmt.Println("==========================")
+  fmt.Println(reflect.TypeOf(data))
+  fmt.Println(r)
+  fmt.Println("==========================")
+  return nil
+}
+func FailAllRequestsWithClientErrorResponse(requests []*Request, code... int) {
+  for _,r := range requests {
+    r.Response = NewClientErrorResponse(r.Index, code...)
+  }
+}
+func FailAllRequestsWithInternalErrorResponse(requests []*Request, code... int) {
+  for _,r := range requests {
+    r.Response = NewInternalErrorResponse(r.Index, code...)
   }
 }

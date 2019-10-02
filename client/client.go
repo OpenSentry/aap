@@ -40,13 +40,34 @@ type BulkResponse struct {
   Errors []ErrorResponse `json:"errors,omitempty"`
 }
 
-func callService(client *AapClient, method string, url string, data *bytes.Buffer) ([]byte, error) {
+func handleRequest(client *AapClient, request interface{}, method string, url string, response interface{}) (status int, err error) {
+  body, err := json.Marshal(request)
+  if err != nil {
+    return 999, err
+  }
+
+  status, responseData, err := callService(client, method, url, bytes.NewBuffer(body))
+  if err != nil {
+    return status, err
+  }
+
+  if status == 200 {
+    err = json.Unmarshal(responseData, &response)
+    if err != nil {
+      return 666, err
+    }
+  }
+
+  return status, nil
+}
+
+func callService(client *AapClient, method string, url string, data *bytes.Buffer) (int, []byte, error) {
   // for logging only
   reqData := (*data).Bytes()
 
   req, err := http.NewRequest("POST", url, data)
   if err != nil {
-    return nil, err
+    return http.StatusBadRequest, nil, err
   }
 
   req.Header.Set("X-HTTP-Method-Override", method)
@@ -56,14 +77,22 @@ func callService(client *AapClient, method string, url string, data *bytes.Buffe
   defer res.Body.Close()
 
   if err != nil {
-    return nil, err
+    return res.StatusCode, nil, err
   }
 
-  response, err := parseResponse(res)
+  resData, err := ioutil.ReadAll(res.Body)
+  if err != nil {
+    return http.StatusInternalServerError, nil, err
+  }
 
-  logRequestResponse(method, url, reqData, res.Status, response, err)
+  err = parseStatusCode(res.StatusCode)
+  if err != nil {
+    return res.StatusCode, nil, err
+  }
 
-  return response, nil
+  logRequestResponse(method, url, reqData, res.Status, resData, err)
+
+  return res.StatusCode, resData, nil
 }
 
 func logRequestResponse(method string, url string, reqData []byte, resStatus string, resData []byte, err error) {
@@ -88,31 +117,19 @@ func logRequestResponse(method string, url string, reqData []byte, resStatus str
   fmt.Println("\n============== REST DEBUGGING ===============\n" + method + " " + url + " " + request + " -> [" + resStatus + "] " + response + "\n\n")
 }
 
-func parseResponse(res *http.Response) ([]byte, error) {
-
-  resData, err := ioutil.ReadAll(res.Body)
-  if err != nil {
-    return nil, err
+func parseStatusCode(statusCode int) (error) {
+  switch statusCode {
+    case http.StatusOK,
+         http.StatusBadRequest,
+         http.StatusUnauthorized,
+         http.StatusForbidden,
+         http.StatusNotFound,
+         http.StatusInternalServerError,
+         http.StatusServiceUnavailable:
+         return nil
   }
-
-  switch (res.StatusCode) {
-  case 200:
-    return resData, nil
-  case 400:
-    return nil, errors.New("Bad Request: " + string(resData))
-  case 401:
-    return nil, errors.New("Unauthorized: " + string(resData))
-  case 403:
-    return nil, errors.New("Forbidden: " + string(resData))
-  case 404:
-    return nil, errors.New("Not Found: " + string(resData))
-  case 500:
-    return nil, errors.New("Internal Server Error")
-  default:
-    return nil, errors.New("Unhandled error")
-  }
+  return errors.New(fmt.Sprintf("Unsupported status code: '%d'", statusCode))
 }
-
 
 func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk interface{}, rErr []ErrorResponse) {
   responses := reflect.ValueOf(iResponses)

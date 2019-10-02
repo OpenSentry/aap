@@ -15,69 +15,69 @@ MERGE (i)<-[:CREATED_BY]-(:Scope {name:"recover:identity", title:"Recovering of 
 MERGE (i)<-[:CREATED_BY]-(:Scope {name:"logout:identity", title:"Logout from the IDP system", description:"Allows access to log you out from the IDP system"})
 ;
 
-// ### Expose scopes for IDPAPI
+// ### Publish scopes for IDPAPI
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"openid"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"offline"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"read:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"update:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"delete:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"recover:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"logout:identity"})
-MERGE (idp)-[:IS_EXPOSED]->(er:ExposeRule)-[:EXPOSE]->(s)
-MERGE (er)-[:EXPOSED_BY]->(i)
+MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (er)-[:PUBLISHED_BY]->(i)
 ;
 
 

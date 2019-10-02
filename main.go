@@ -17,7 +17,7 @@ import (
   "github.com/charmixer/aap/endpoints/authorizations"
   "github.com/charmixer/aap/endpoints/scopes"
   "github.com/charmixer/aap/endpoints/grants"
-  "github.com/charmixer/aap/endpoints/exposes"
+  "github.com/charmixer/aap/endpoints/publishes"
   "github.com/charmixer/aap/endpoints/consents"
   "github.com/charmixer/aap/migration"
   "github.com/charmixer/aap/utils"
@@ -170,18 +170,17 @@ func serve(env *environment.State) {
   r.POST("/scopes",                   utils.AuthorizationRequired(aconf, "aap:create:scopes"),         scopes.PostScopes(env))
   r.PUT("/scopes",                    utils.AuthorizationRequired(aconf, "aap:update:scopes"),         scopes.PutScopes(env))
 
-  r.POST("/scopes/grant",             utils.AuthorizationRequired(aconf, "aap:create:scopes:grant"),   scopes.PostScopesGrant(env))
-  r.DELETE("/scopes/grant",           utils.AuthorizationRequired(aconf, "aap:delete:scopes:grant"),   scopes.DeleteScopesGrant(env))
+  r.POST("/grants",                   utils.AuthorizationRequired(aconf, "aap:create:grants"),          grants.PostGrants(env))
+  r.GET("/grants",                    utils.AuthorizationRequired(aconf, "aap:read:grants"),            grants.GetGrants(env))
+  r.DELETE("/grants",                 utils.AuthorizationRequired(aconf, "aap:delete:grants"),          grants.DeleteGrants(env))
 
-  r.POST("/scopes/consent",           utils.AuthorizationRequired(aconf, "aap:create:scopes:consent"), scopes.PostScopesConsent(env))
-  r.DELETE("/scopes/consent",         utils.AuthorizationRequired(aconf, "aap:delete:scopes:consent"), scopes.DeleteScopesConsent(env))
+  r.POST("/consents",                 utils.AuthorizationRequired(aconf, "aap:create:consents"),        consents.PostConsents(env))
+  r.GET("/consents",                  utils.AuthorizationRequired(aconf, "aap:read:consents"),          consents.GetConsents(env))
+  r.DELETE("/consents",               utils.AuthorizationRequired(aconf, "aap:delete:consents"),        consents.DeleteConsents(env))
 
-  r.POST("/scopes/expose",            utils.AuthorizationRequired(aconf, "aap:create:scopes:expose"),  scopes.PostScopesExpose(env))
-  r.DELETE("/scopes/expose",          utils.AuthorizationRequired(aconf, "aap:delete:scopes:expose"),  scopes.DeleteScopesExpose(env))
-
-  r.GET("/exposes",                   utils.AuthorizationRequired(aconf, "aap:read:exposes"),          exposes.GetExposes(env))
-  r.GET("/consents",                  utils.AuthorizationRequired(aconf, "aap:read:consents"),         consents.GetConsents(env))
-  r.GET("/grants",                    utils.AuthorizationRequired(aconf, "aap:read:grants"),           grants.GetGrants(env))
+  r.POST("/publishes",                utils.AuthorizationRequired(aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
+  r.GET("/publishes",                 utils.AuthorizationRequired(aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
+  r.DELETE("/publishes",              utils.AuthorizationRequired(aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
 
   r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identity"),    authorizations.PostAuthorize(env))
   r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identity"),       authorizations.PostReject(env))
