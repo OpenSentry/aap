@@ -1,16 +1,5 @@
 package client
 
-import (
-  _ "net/http"
-  _ "encoding/json"
-  _ "io/ioutil"
-  _ "bytes"
-  _ "strings"
-  _ "errors"
-  _ "golang.org/x/net/context"
-  _ "golang.org/x/oauth2/clientcredentials"
-)
-
 // /grants
 
 type Grant struct {
@@ -21,30 +10,31 @@ type Grant struct {
 }
 
 type ReadGrantsRequest struct {
-  IdentityId                string    `json:"identity_id" binding:"required"`
+  IdentityId                string    `json:"identity_id,omitempty" binding:"required"`
+  Scope                     string    `json:"scope,omitempty" binding:"required"`
+  PublishedBy               string    `json:"published_by,omitempty" binding:"required"`
 }
 
 type ReadGrantsResponse struct {
-  IdentityId                string    `json:"identity_id" binding:"required,uuid"`
-  CreatedByIdentityId       string    `json:"created_by_identity_id" binding:"required"`
-  Scope                     string    `json:"scope" binding:"required"`
+  BulkResponse
+  Ok                        []Grant   `json:"ok,omitempty" validate:"dive"`
 }
 
 type CreateGrantsRequest struct {
-  IdentityId                string    `json:"identity_id" validate:"omitempty,uuid"`
-  Scope                     string    `json:"scope" validate:"required"`
-  PublishedBy               string    `json:"published_by" validate:"required,uuid"`
+  IdentityId                string    `json:"identity_id" binding:"required"`
+  Scope                     string    `json:"scope" binding:"required"`
+  PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
 type CreateGrantsResponse struct {
   BulkResponse
-  Ok Grant `json:"ok,omitempty" validate:"dive"`
+  Ok                        Grant     `json:"ok,omitempty" validate:"dive"`
 }
 
 type DeleteGrantsRequest struct {
   IdentityId                string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
-  PublishedBy               string    `json:"published_by" validate:"required,uuid"`
+  PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
 type DeleteGrantsResponse struct {

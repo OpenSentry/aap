@@ -5,7 +5,7 @@ import (
   "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   // log "github.com/sirupsen/logrus"
-  // "fmt"
+  "fmt"
 )
 
 type Identity struct {
@@ -85,6 +85,13 @@ func marshalNodeToScope(node neo4j.Node) (Scope) {
     Title:       p["title"].(string),
     Description: p["description"].(string),
   }
+}
+
+type Grant struct {
+  Identity Identity
+  Scope Scope
+  PublishedBy Identity
+  GrantedBy   Identity
 }
 
 type Consent struct {
@@ -471,7 +478,6 @@ func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish I
 
   logCypher(cypher, params)
 
-
   // Check if we encountered any error during record streaming
   if err = result.Err(); err != nil {
     return rScope, rPublisher, rGranted, rGranter, err
@@ -484,6 +490,80 @@ func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish I
   return rScope, rPublisher, rGranted, rGranter, nil
 }
 
+func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope, iFilterPublishers []Identity) (grants []Grant, err error) {
+  var result neo4j.Result
+  var cypher string
+  var params = make(map[string]interface{})
+
+  var where1 string
+  var where2 string
+
+  if len(iFilterScopes) > 0 {
+    var filterScopes []string
+    for _,e := range iFilterScopes {
+      filterScopes = append(filterScopes, e.Name)
+    }
+
+    where1 = "and scope.name in split($filterScopes, \",\")"
+    params["filterScopes"] = strings.Join(filterScopes, ",")
+  }
+
+  if len(iFilterPublishers) > 0 {
+    var filterPublishers []string
+    for _,e := range iFilterPublishers {
+      filterPublishers = append(filterPublishers, e.Id)
+    }
+
+    where2 = "and publisher.id in split($filterPublishers, \",\")"
+    params["filterPublishers"] = strings.Join(filterPublishers, ",")
+  }
+
+  cypher = fmt.Sprintf(`
+    match (identity:Identity {id:$id})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    where 1=1 %s
+    match (publisher:Identity)-[:IS_PUBLISHING]->(pr)
+    where 1=1 %s
+    match (gr)-[:GRANTED_BY]->(granter:Identity)
+    return identity, scope, publisher, granter
+  `, where1, where2)
+
+  params["id"] = iGranted.Id
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return nil, err
+  }
+
+  for result.Next() {
+    record          := result.Record()
+    identityNode    := record.GetByIndex(0)
+    scopeNode       := record.GetByIndex(1)
+    publishedByNode := record.GetByIndex(2)
+    grantedByNode   := record.GetByIndex(3)
+
+    if identityNode != nil && scopeNode != nil && publishedByNode != nil && grantedByNode != nil {
+      i := marshalNodeToIdentity(identityNode.(neo4j.Node))
+      s := marshalNodeToScope(scopeNode.(neo4j.Node))
+      p := marshalNodeToIdentity(publishedByNode.(neo4j.Node))
+      g := marshalNodeToIdentity(grantedByNode.(neo4j.Node))
+
+      grants = append(grants, Grant{
+        Identity: i,
+        Scope: s,
+        PublishedBy: p,
+        GrantedBy: g,
+      })
+    }
+  }
+
+  logCypher(cypher, params)
+
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return nil, err
+  }
+
+  return grants, nil
+}
 func UpdateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (Scope, Identity, error) {
   var err error
   var session neo4j.Session
