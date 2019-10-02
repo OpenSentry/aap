@@ -5,14 +5,14 @@ package client
 type Scope struct {
   Scope       string    `json:"scope" validate:"required"`
   Title       string    `json:"title" validate:"required"`
-  Description string    `json:"description" validate:"required"`
+  Description string    `json:"description" validate:""`
   CreatedBy   string    `json:"created_by" validate:"required,uuid"`
 }
 
 type CreateScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
   Title                     string    `json:"title" validate:"required"`
-  Description               string    `json:"description" validate:"required"`
+  Description               string    `json:"description" validate:""`
 }
 
 type CreateScopesResponse struct {

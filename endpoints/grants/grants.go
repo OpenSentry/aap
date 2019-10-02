@@ -19,9 +19,93 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
       "func": "GetGrants",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
-      "message": "pong",
-    })
+    var requests []client.ReadGrantsRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
+
+    var handleRequest = func(iRequests []*utils.Request){
+      iRequest := aap.Identity{
+        Id: c.MustGet("sub").(string),
+      }
+
+      session, tx, err := aap.BeginReadTx(env.Driver)
+
+      if err != nil {
+        utils.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      for _, request := range iRequests {
+        var r client.ReadGrantsRequest
+        if request.Request != nil {
+          r = request.Request.(client.ReadGrantsRequest)
+        }
+
+        iGranted := aap.Identity{
+          Id: iRequest.Id,
+        }
+        // if identity id is given, use this instead
+        if r.IdentityId != "" {
+          iGranted.Id = r.IdentityId
+        }
+
+        var iPublisher []aap.Identity
+        if r.PublishedBy != "" {
+          iPublisher = []aap.Identity{
+            {Id: r.PublishedBy},
+          }
+        }
+
+        var iScopes []aap.Scope
+        if r.Scope != "" {
+          iScopes = []aap.Scope{
+            {Name: r.Scope},
+          }
+        }
+
+        // TODO handle error
+        grants, err := aap.FetchGrants(tx, iGranted, iScopes, iPublisher)
+
+        if err != nil {
+          // fail all requests
+          utils.FailAllRequestsWithInternalErrorResponse(iRequests, E.OPERATION_ABORTED)
+
+          // specify error on this request
+          request.Response = utils.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          return
+        }
+
+        var ok = []client.Grant{}
+        for _,e := range grants {
+          ok = append(ok, client.Grant{
+            IdentityId: e.Identity.Id,
+            Scope: e.Scope.Name,
+            PublishedBy: e.PublishedBy.Id,
+            GrantedBy: e.GrantedBy.Id,
+          })
+        }
+
+
+        response := client.ReadGrantsResponse{Ok: ok}
+        response.Index = request.Index
+        response.Status = http.StatusOK
+        request.Response = response
+      }
+
+      tx.Commit()
+    }
+
+    responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
+
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
@@ -107,7 +191,15 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         request.Response = response
       }
 
-      tx.Commit()
+      err = utils.OutputValidateRequests(iRequests)
+
+      if err == nil {
+        tx.Commit()
+        return
+      }
+
+      // deny by default
+      tx.Rollback()
     }
 
     responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{})
