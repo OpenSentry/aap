@@ -554,15 +554,16 @@ func OutputValidateRequests(requests []*Request) (error){
     passedRequests = append(passedRequests, request)
   }
 
-  if len(passedRequests) != len(requests) {
-    for _,request := range passedRequests {
-      request.Response = NewInternalErrorResponse(request.Index, E.OPERATION_ABORTED)
-    }
-
-    return errors.New("Output validation failed")
+  if len(passedRequests) == len(requests) {
+    return nil
   }
 
-  return nil
+  // deny by default
+  for _,request := range passedRequests {
+    request.Response = NewInternalErrorResponse(request.Index, E.OPERATION_ABORTED)
+  }
+
+  return errors.New("Output validation failed")
 }
 func NewInternalErrorResponse(index int, code... int) (client.BulkResponse) {
 
