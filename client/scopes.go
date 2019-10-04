@@ -17,7 +17,7 @@ type CreateScopesRequest struct {
 
 type CreateScopesResponse struct {
   BulkResponse
-  Ok Scope `json:"ok,omitempty" validate:"dive"`
+  Ok Scope `json:"ok" validate:"dive"`
 }
 
 type UpdateScopesRequest struct {
@@ -39,7 +39,7 @@ type ReadScopesRequest struct {
 
 type ReadScopesResponse struct {
   BulkResponse
-  Ok []Scope `json:"ok,omitempty" validate:"dive"`
+  Ok []Scope `json:"ok" validate:"dive"`
 }
 
 func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, response []ReadScopesResponse, err error) {

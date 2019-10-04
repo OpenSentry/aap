@@ -37,7 +37,7 @@ type ErrorResponse struct {
 type BulkResponse struct {
   Index  int             `json:"index" binding:"required"`
   Status int             `json:"status" binding:"required"`
-  Errors []ErrorResponse `json:"errors,omitempty"`
+  Errors []ErrorResponse `json:"errors"`
 }
 
 func handleRequest(client *AapClient, request interface{}, method string, url string, response interface{}) (status int, err error) {

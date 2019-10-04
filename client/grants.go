@@ -17,7 +17,7 @@ type ReadGrantsRequest struct {
 
 type ReadGrantsResponse struct {
   BulkResponse
-  Ok                        []Grant   `json:"ok,omitempty" validate:"dive"`
+  Ok                        []Grant   `json:"ok" validate:"dive"`
 }
 
 type CreateGrantsRequest struct {
@@ -28,7 +28,7 @@ type CreateGrantsRequest struct {
 
 type CreateGrantsResponse struct {
   BulkResponse
-  Ok                        Grant     `json:"ok,omitempty" validate:"dive"`
+  Ok                        Grant     `json:"ok" validate:"dive"`
 }
 
 type DeleteGrantsRequest struct {
