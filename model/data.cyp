@@ -39,7 +39,18 @@ MERGE (i)<-[:CREATED_BY]-(:Scope {name:"aap:delete:consents", title:"Remove cons
 MERGE (i)<-[:CREATED_BY]-(:Scope {name:"aap:authorizations:get", title:"Not used?", description:""})
 MERGE (i)<-[:CREATED_BY]-(:Scope {name:"aap:authorizations:post", title:"Not used?", description:""})
 MERGE (i)<-[:CREATED_BY]-(:Scope {name:"aap:authorizations:put", title:"Not used?", description:""})
+
+WITH i
+
+// maygrant scopes
+MATCH (scope:Scope)
+MERGE (mgscope:MayGrant:Scope {name: "mg:"+scope.name, title: "May grant "+scope.name, description: ""})-[:CREATED_BY]->(i)
+MERGE (mmgscope:MayMayGrant:Scope {name: "mmg:"+scope.name, title: "May grant may grant "+scope.name, description: ""})-[:CREATED_BY]->(i)
+MERGE (mgscope)-[:MAY_GRANT]->(scope)
+MERGE (mmgscope)-[:MAY_GRANT]->(mgscope)
 ;
+
+
 
 // ### Publish scopes for IDP
 

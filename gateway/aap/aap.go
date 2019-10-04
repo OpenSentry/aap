@@ -367,6 +367,10 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
 
       // create scope and match it to the identity who created it
       MERGE (scope:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
+      MERGE (mgscope:MayGrant:Scope {name: "mg:"+$name, title: "May grant "+$name, description: ""})-[:CREATED_BY]->(createdByIdentity)
+      MERGE (mmgscope:MayMayGrant:Scope {name: "mmg:"+$name, title: "May grant "+$name, description: ""})-[:CREATED_BY]->(createdByIdentity)
+      MERGE (mgscope)-[:MAY_GRANT]->(scope)
+      MERGE (mmgscope)-[:MAY_GRANT]->(mgscope)
 
       // Conclude
       return scope, createdByIdentity

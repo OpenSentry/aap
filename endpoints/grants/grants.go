@@ -95,6 +95,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
 
 
         response := client.ReadGrantsResponse{Ok: ok}
+        response.Errors = []client.ErrorResponse{}
         response.Index = request.Index
         response.Status = http.StatusOK
         request.Response = response
