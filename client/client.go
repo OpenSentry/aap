@@ -11,6 +11,8 @@ import (
   "fmt"
   "encoding/json"
   "reflect"
+
+  bulky "github.com/charmixer/bulky/client"
 )
 
 type AapClient struct {
@@ -27,17 +29,6 @@ func NewAapClientWithUserAccessToken(config *oauth2.Config, token *oauth2.Token)
   ctx := context.Background()
   client := config.Client(ctx, token)
   return &AapClient{client}
-}
-
-type ErrorResponse struct {
-  Code  int    `json:"code" binding:"required"`
-  Error string `json:"error" binding:"required"`
-}
-
-type BulkResponse struct {
-  Index  int             `json:"index" binding:"required"`
-  Status int             `json:"status" binding:"required"`
-  Errors []ErrorResponse `json:"errors"`
 }
 
 func handleRequest(client *AapClient, request interface{}, method string, url string, response interface{}) (status int, err error) {
@@ -129,13 +120,12 @@ func parseStatusCode(statusCode int) (error) {
   return errors.New(fmt.Sprintf("Unsupported status code: '%d'", statusCode))
 }
 
-func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk interface{}, rErr []ErrorResponse) {
+func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk interface{}, rErr []bulky.ErrorResponse) {
   responses := reflect.ValueOf(iResponses)
   for index := 0; index < responses.Len(); index++ {
     response := responses.Index(index)
 
     i := response.FieldByName("Index").Interface().(int)
-
     if i == iIndex {
       // found response with given index
 
@@ -148,7 +138,7 @@ func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk int
       }
 
       if err.CanInterface() {
-        rErr = err.Interface().([]ErrorResponse)
+        rErr = err.Interface().([]bulky.ErrorResponse)
       }
 
       return rStatus, rOk, rErr
