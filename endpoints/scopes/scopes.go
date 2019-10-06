@@ -5,13 +5,13 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-
-  "github.com/charmixer/aap/utils"
   "fmt"
 
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
+
+  bs "github.com/charmixer/bulky/server"
 )
 
 func PostScopes(env *environment.State) gin.HandlerFunc {
@@ -28,13 +28,13 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequest = func(iRequests []*utils.Request){
+    var handleRequest = func(iRequests []*bs.Request){
       createdByIdentity := aap.Identity{
         Id: c.MustGet("sub").(string),
       }
 
       for _, request := range iRequests {
-        r := request.Request.(client.CreateScopesRequest)
+        r := request.Input.(client.CreateScopesRequest)
 
         scope := aap.Scope{
           Name: r.Scope,
@@ -46,7 +46,7 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
         rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
 
         if err != nil {
-          request.Response = utils.NewInternalErrorResponse(request.Index)
+          request.Output = bs.NewInternalErrorResponse(request.Index)
           log.Debug(err.Error())
           continue
         }
@@ -58,15 +58,11 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
           CreatedBy: rIdentity.Id,
         }
 
-        response := client.CreateScopesResponse{Ok: ok}
-        response.Errors = []client.ErrorResponse{}
-        response.Index = request.Index
-        response.Status = http.StatusOK
-        request.Response = response
+        request.Output = bs.NewOkResponse(request.Index, ok)
       }
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{})
+    responses := bs.HandleRequest(requests, handleRequest, bs.HandleRequestParams{})
 
     c.JSON(http.StatusOK, responses)
   }
@@ -88,13 +84,13 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequests = func(iRequests []*utils.Request){
+    var handleRequests = func(iRequests []*bs.Request){
       var scopes []aap.Scope
 
       for _, request := range iRequests {
-        if request.Request != nil {
+        if request.Input != nil {
           var r client.ReadScopesRequest
-          r = request.Request.(client.ReadScopesRequest)
+          r = request.Input.(client.ReadScopesRequest)
 
           v := aap.Scope{
             Name: r.Scope,
@@ -107,13 +103,13 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
 
       for _, request := range iRequests {
         var r client.ReadScopesRequest
-        if request.Request != nil {
-          r = request.Request.(client.ReadScopesRequest)
+        if request.Input != nil {
+          r = request.Input.(client.ReadScopesRequest)
         }
 
         var ok []client.Scope
         for _, d := range dbScopes {
-          if request.Request != nil && d.Name != r.Scope {
+          if request.Input != nil && d.Name != r.Scope {
             continue
           }
 
@@ -125,17 +121,11 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
           })
         }
 
-        var response client.ReadScopesResponse
-        utils.NewOkResponse(response)
-        response.Errors = []client.ErrorResponse{}
-        response.Index = request.Index
-        response.Status = http.StatusOK
-        response.Ok = ok
-        request.Response = response
+        request.Output = bs.NewOkResponse(request.Index, ok)
       }
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequests, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
+    responses := bs.HandleRequest(requests, handleRequests, bs.HandleRequestParams{EnableEmptyRequest: true})
 
     c.JSON(http.StatusOK, responses)
   }

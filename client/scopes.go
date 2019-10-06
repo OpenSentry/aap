@@ -1,5 +1,9 @@
 package client
 
+import (
+  bulky "github.com/charmixer/bulky/client"
+)
+
 // /scopes
 
 type Scope struct {
@@ -15,9 +19,8 @@ type CreateScopesRequest struct {
   Description               string    `json:"description" validate:""`
 }
 
-type CreateScopesResponse struct {
-  BulkResponse
-  Ok Scope `json:"ok" validate:"dive"`
+type CreateScopesResponse []struct {
+  Scope `json:"ok" validate:"dive"`
 }
 
 type UpdateScopesRequest struct {
@@ -37,12 +40,9 @@ type ReadScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
 }
 
-type ReadScopesResponse struct {
-  BulkResponse
-  Ok []Scope `json:"ok" validate:"dive"`
-}
+type ReadScopesResponse []Scope
 
-func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, response []ReadScopesResponse, err error) {
+func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, response []bulky.Response, err error) {
   status, err = handleRequest(client, request, "GET", url, &response)
 
   if err != nil {

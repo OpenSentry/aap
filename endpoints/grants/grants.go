@@ -8,8 +8,8 @@ import (
   "github.com/charmixer/aap/client"
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
-  "github.com/charmixer/aap/utils"
-  E "github.com/charmixer/aap/client/errors"
+
+  bulky "github.com/charmixer/bulky/server"
 )
 
 func GetGrants(env *environment.State) gin.HandlerFunc {
@@ -26,7 +26,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequest = func(iRequests []*utils.Request){
+    var handleRequest = func(iRequests []*bulky.Request){
       iRequest := aap.Identity{
         Id: c.MustGet("sub").(string),
       }
@@ -34,7 +34,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
       session, tx, err := aap.BeginReadTx(env.Driver)
 
       if err != nil {
-        utils.FailAllRequestsWithInternalErrorResponse(iRequests)
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
         log.Debug(err.Error())
         return
       }
@@ -44,8 +44,8 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
 
       for _, request := range iRequests {
         var r client.ReadGrantsRequest
-        if request.Request != nil {
-          r = request.Request.(client.ReadGrantsRequest)
+        if request.Input != nil {
+          r = request.Input.(client.ReadGrantsRequest)
         }
 
         iGranted := aap.Identity{
@@ -75,10 +75,10 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
 
         if err != nil {
           // fail all requests
-          utils.FailAllRequestsWithInternalErrorResponse(iRequests, E.OPERATION_ABORTED)
+          bulky.FailAllRequestsWithInternalErrorResponse(iRequests, "OPERATION_ABORTED")
 
           // specify error on this request
-          request.Response = utils.NewInternalErrorResponse(request.Index)
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
           log.Debug(err.Error())
           return
         }
@@ -93,18 +93,13 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
           })
         }
 
-
-        response := client.ReadGrantsResponse{Ok: ok}
-        response.Errors = []client.ErrorResponse{}
-        response.Index = request.Index
-        response.Status = http.StatusOK
-        request.Response = response
+        request.Output = bulky.NewOkResponse(request.Index, ok)
       }
 
       tx.Commit()
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{EnableEmptyRequest: true})
+    responses := bulky.HandleRequest(requests, handleRequest, bulky.HandleRequestParams{EnableEmptyRequest: true})
 
     c.JSON(http.StatusOK, responses)
   }
@@ -125,7 +120,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequest = func(iRequests []*utils.Request){
+    var handleRequest = func(iRequests []*bulky.Request){
       iRequest := aap.Identity{
         Id: c.MustGet("sub").(string),
       }
@@ -133,7 +128,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
       session, tx, err := aap.BeginWriteTx(env.Driver)
 
       if err != nil {
-        utils.FailAllRequestsWithInternalErrorResponse(iRequests)
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
         log.Debug(err.Error())
         return
       }
@@ -142,7 +137,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
       defer session.Close()
 
       for _, request := range iRequests {
-        r := request.Request.(client.CreateGrantsRequest)
+        r := request.Input.(client.CreateGrantsRequest)
 
         iGrant := aap.Identity{
           Id: iRequest.Id,
@@ -171,10 +166,10 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
           }
 
           // fail all requests
-          utils.FailAllRequestsWithInternalErrorResponse(iRequests, E.OPERATION_ABORTED)
+          bulky.FailAllRequestsWithInternalErrorResponse(iRequests, "OPERATION_ABORTED")
 
           // specify error on this request
-          request.Response = utils.NewInternalErrorResponse(request.Index)
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
           log.Debug(err.Error())
           return
         }
@@ -186,13 +181,10 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
           GrantedBy: granter.Id,
         }
 
-        response := client.CreateGrantsResponse{Ok: ok}
-        response.Index = request.Index
-        response.Status = http.StatusOK
-        request.Response = response
+        request.Output = bulky.NewOkResponse(request.Index, ok)
       }
 
-      err = utils.OutputValidateRequests(iRequests)
+      err = bulky.OutputValidateRequests(iRequests)
 
       if err == nil {
         tx.Commit()
@@ -203,7 +195,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
       tx.Rollback()
     }
 
-    responses := utils.HandleBulkRestRequest(requests, handleRequest, utils.HandleBulkRequestParams{})
+    responses := bulky.HandleRequest(requests, handleRequest, bulky.HandleRequestParams{})
 
     c.JSON(http.StatusOK, responses)
   }

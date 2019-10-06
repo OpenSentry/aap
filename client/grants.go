@@ -15,9 +15,8 @@ type ReadGrantsRequest struct {
   PublishedBy               string    `json:"published_by,omitempty" binding:"required"`
 }
 
-type ReadGrantsResponse struct {
-  BulkResponse
-  Ok                        []Grant   `json:"ok" validate:"dive"`
+type ReadGrantsResponse []struct {
+  Grant
 }
 
 type CreateGrantsRequest struct {
@@ -27,8 +26,7 @@ type CreateGrantsRequest struct {
 }
 
 type CreateGrantsResponse struct {
-  BulkResponse
-  Ok                        Grant     `json:"ok" validate:"dive"`
+  Grant
 }
 
 type DeleteGrantsRequest struct {
@@ -38,7 +36,6 @@ type DeleteGrantsRequest struct {
 }
 
 type DeleteGrantsResponse struct {
-  BulkResponse // 200 OK, nothing more fancy than that
 }
 
 func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, response []CreateGrantsResponse, err error) {
