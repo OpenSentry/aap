@@ -83,8 +83,8 @@ func marshalNodeToScope(node neo4j.Node) (Scope) {
 
   return Scope{
     Name:        p["name"].(string),
-    Title:       p["title"].(string),
-    Description: p["description"].(string),
+    //Title:       p["title"].(string),
+    //Description: p["description"].(string),
     Labels:      node.Labels(),
   }
 }
