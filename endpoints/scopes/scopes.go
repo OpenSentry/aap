@@ -7,7 +7,6 @@ import (
 
 
   "github.com/charmixer/aap/utils"
-  "fmt"
 
   "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
@@ -38,12 +37,10 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
 
         scope := aap.Scope{
           Name: r.Scope,
-          Title: r.Title,
-          Description: r.Description,
         }
 
         // TODO handle error
-        rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+        rScope, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
 
         if err != nil {
           request.Response = utils.NewInternalErrorResponse(request.Index)
@@ -53,10 +50,6 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
 
         ok := client.Scope{
           Scope: rScope.Name,
-          Title: rScope.Title,
-          Description: rScope.Description,
-          CreatedBy: rIdentity.Id,
-          Labels: rScope.Labels,
         }
 
         response := client.CreateScopesResponse{Ok: ok}
@@ -120,10 +113,6 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
 
           ok = append(ok, client.Scope{
             Scope:       d.Name,
-            Title:       d.Title,
-            Description: d.Description,
-            CreatedBy:   d.CreatedBy.Id,
-            Labels:      d.Labels,
           })
         }
 
@@ -158,38 +147,7 @@ func PutScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    fmt.Println(c.Request.Header)
-    var createdByIdentity aap.Identity
-    createdByIdentity = aap.Identity{
-      Id: c.MustGet("sub").(string),
-    }
-
-    var responses []client.UpdateScopesResponse
-    for _, request := range requests {
-      scope := aap.Scope{
-        Name:        request.Scope,
-        Title:       request.Title,
-        Description: request.Description,
-      }
-
-      rScope, rIdentity, err := aap.UpdateScope(env.Driver, scope, createdByIdentity)
-      fmt.Println(rScope, rIdentity, err)
-
-      if err != nil {
-        log.Println(err)
-        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
-        return
-      }
-
-      responses = append(responses, client.UpdateScopesResponse{
-        Scope:       rScope.Name,
-        Title:       rScope.Title,
-        Description: rScope.Description,
-        CreatedBy:   rIdentity.Id,
-      })
-    }
-
-    c.AbortWithStatusJSON(http.StatusOK, responses)
+    c.AbortWithStatus(http.StatusNotFound)
   }
   return gin.HandlerFunc(fn)
 }

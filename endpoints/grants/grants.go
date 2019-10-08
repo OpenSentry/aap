@@ -88,8 +88,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
           ok = append(ok, client.Grant{
             IdentityId: e.Identity.Id,
             Scope: e.Scope.Name,
-            PublishedBy: e.PublishedBy.Id,
-            GrantedBy: e.GrantedBy.Id,
+            Publisher: e.Publisher.Id,
           })
         }
 
@@ -162,7 +161,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         }
 
         // TODO handle error
-        scope, publisher, granted, granter, err := aap.CreateGrant(tx, iGrant, iScope, iPublish, iRequest)
+        scope, publisher, granted, err := aap.CreateGrant(tx, iGrant, iScope, iPublish, iRequest)
 
         if err != nil {
           e := tx.Rollback()
@@ -182,8 +181,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         ok := client.Grant{
           IdentityId: granted.Id,
           Scope: scope.Name,
-          PublishedBy: publisher.Id,
-          GrantedBy: granter.Id,
+          Publisher: publisher.Id,
         }
 
         response := client.CreateGrantsResponse{Ok: ok}

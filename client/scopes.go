@@ -4,16 +4,10 @@ package client
 
 type Scope struct {
   Scope       string    `json:"scope" validate:"required"`
-  Title       string    `json:"title" validate:"required"`
-  Description string    `json:"description" validate:""`
-  CreatedBy   string    `json:"created_by" validate:"required,uuid"`
-  Labels      []string  `json:"labels" validate:"required,min=1"`
 }
 
 type CreateScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
-  Title                     string    `json:"title" validate:"required"`
-  Description               string    `json:"description" validate:""`
 }
 
 type CreateScopesResponse struct {
@@ -23,15 +17,10 @@ type CreateScopesResponse struct {
 
 type UpdateScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
-  Title                     string    `json:"title" validate:"required"`
-  Description               string    `json:"description" validate:"required"`
 }
 
 type UpdateScopesResponse struct {
   Scope       string    `json:"scope" validate:"required"`
-  Title       string    `json:"title" validate:"required"`
-  Description string    `json:"description" validate:"required"`
-  CreatedBy   string    `json:"created_by" validate:"required"`
 }
 
 type ReadScopesRequest struct {
