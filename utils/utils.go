@@ -405,6 +405,15 @@ func RequestId() gin.HandlerFunc {
   }
 }
 
+func stringInSlice(a string, list []string) (bool) {
+  for _, b := range list {
+    if b == a {
+      return true
+    }
+  }
+  return false
+}
+
 type Request struct {
   Index int
   Request interface{}

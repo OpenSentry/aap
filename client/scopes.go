@@ -7,6 +7,7 @@ type Scope struct {
   Title       string    `json:"title" validate:"required"`
   Description string    `json:"description" validate:""`
   CreatedBy   string    `json:"created_by" validate:"required,uuid"`
+  Labels      []string  `json:"labels" validate:"required,min=1"`
 }
 
 type CreateScopesRequest struct {

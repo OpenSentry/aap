@@ -56,6 +56,7 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
           Title: rScope.Title,
           Description: rScope.Description,
           CreatedBy: rIdentity.Id,
+          Labels: rScope.Labels,
         }
 
         response := client.CreateScopesResponse{Ok: ok}
@@ -122,6 +123,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
             Title:       d.Title,
             Description: d.Description,
             CreatedBy:   d.CreatedBy.Id,
+            Labels:      d.Labels,
           })
         }
 
