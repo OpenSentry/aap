@@ -5,8 +5,7 @@ package client
 type Grant struct {
   IdentityId                string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
-  PublishedBy               string    `json:"published_by" validate:"required,uuid"`
-  GrantedBy                 string    `json:"granted_by" validate:"required,uuid"`
+  Publisher                 string    `json:"published_by" validate:"required,uuid"`
 }
 
 type ReadGrantsRequest struct {
