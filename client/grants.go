@@ -1,5 +1,9 @@
 package client
 
+import (
+  bulky "github.com/charmixer/bulky/client"
+)
+
 // /grants
 
 type Grant struct {
@@ -14,9 +18,7 @@ type ReadGrantsRequest struct {
   PublishedBy               string    `json:"published_by,omitempty" binding:"required"`
 }
 
-type ReadGrantsResponse []struct {
-  Grant
-}
+type ReadGrantsResponse []Grant
 
 type CreateGrantsRequest struct {
   IdentityId                string    `json:"identity_id" binding:"required"`
@@ -24,9 +26,7 @@ type CreateGrantsRequest struct {
   PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
-type CreateGrantsResponse struct {
-  Grant
-}
+type CreateGrantsResponse Grant
 
 type DeleteGrantsRequest struct {
   IdentityId                string    `json:"identity_id" validate:"required,uuid"`
@@ -34,35 +34,34 @@ type DeleteGrantsRequest struct {
   PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
-type DeleteGrantsResponse struct {
-}
+type DeleteGrantsResponse struct {}
 
-func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, response []CreateGrantsResponse, err error) {
-  status, err = handleRequest(client, request, "POST", url, &response)
-
-  if err != nil {
-    return status, nil, err
-  }
-
-  return status, response, nil
-}
-
-func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) (status int, response []DeleteGrantsResponse, err error) {
-  status, err = handleRequest(client, request, "DELETE", url, &response)
+func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, request, "POST", url, &responses)
 
   if err != nil {
     return status, nil, err
   }
 
-  return status, response, nil
+  return status, responses, nil
 }
 
-func ReadGrants(url string, client *AapClient, request []ReadGrantsRequest) (status int, response []ReadGrantsResponse, err error) {
-  status, err = handleRequest(client, request, "GET", url, &response)
+func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, request, "DELETE", url, &responses)
 
   if err != nil {
     return status, nil, err
   }
 
-  return status, response, nil
+  return status, responses, nil
+}
+
+func ReadGrants(url string, client *AapClient, request []ReadGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, request, "GET", url, &responses)
+
+  if err != nil {
+    return status, nil, err
+  }
+
+  return status, responses, nil
 }
