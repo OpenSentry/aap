@@ -76,6 +76,7 @@ type Scope struct {
   Title       string
   Description string
   CreatedBy   Identity
+  Labels      []string
 }
 func marshalNodeToScope(node neo4j.Node) (Scope) {
   p := node.Props()
@@ -84,6 +85,7 @@ func marshalNodeToScope(node neo4j.Node) (Scope) {
     Name:        p["name"].(string),
     Title:       p["title"].(string),
     Description: p["description"].(string),
+    Labels:      node.Labels(),
   }
 }
 
@@ -366,9 +368,9 @@ func CreateScope(driver neo4j.Driver, scope Scope, createdByIdentity Identity) (
       MATCH (createdByIdentity:Human:Identity {id: $createdByIdentityId})
 
       // create scope and match it to the identity who created it
-      MERGE (scope:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
+      MERGE (scope:Grant:Scope {name: $name, title: $title, description: $description})-[:CREATED_BY]->(createdByIdentity)
       MERGE (mgscope:MayGrant:Scope {name: "mg:"+$name, title: "May grant "+$name, description: ""})-[:CREATED_BY]->(createdByIdentity)
-      MERGE (mmgscope:MayMayGrant:Scope {name: "mmg:"+$name, title: "May grant "+$name, description: ""})-[:CREATED_BY]->(createdByIdentity)
+      MERGE (mmgscope:MayGrantMayGrant:Scope {name: "mmg:"+$name, title: "May grant "+$name, description: ""})-[:CREATED_BY]->(createdByIdentity)
       MERGE (mgscope)-[:MAY_GRANT]->(scope)
       MERGE (mmgscope)-[:MAY_GRANT]->(mgscope)
 
