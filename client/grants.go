@@ -1,5 +1,9 @@
 package client
 
+import (
+  bulky "github.com/charmixer/bulky/client"
+)
+
 // /grants
 
 type Grant struct {
@@ -38,7 +42,7 @@ type DeleteGrantsRequest struct {
 type DeleteGrantsResponse struct {
 }
 
-func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, response []CreateGrantsResponse, err error) {
+func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "POST", url, &response)
 
   if err != nil {
@@ -48,7 +52,7 @@ func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) 
   return status, response, nil
 }
 
-func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) (status int, response []DeleteGrantsResponse, err error) {
+func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "DELETE", url, &response)
 
   if err != nil {
@@ -58,7 +62,7 @@ func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) 
   return status, response, nil
 }
 
-func ReadGrants(url string, client *AapClient, request []ReadGrantsRequest) (status int, response []ReadGrantsResponse, err error) {
+func ReadGrants(url string, client *AapClient, request []ReadGrantsRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "GET", url, &response)
 
   if err != nil {

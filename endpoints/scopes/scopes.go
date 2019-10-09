@@ -11,7 +11,7 @@ import (
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
 
-  bs "github.com/charmixer/bulky/server"
+  bulky "github.com/charmixer/bulky/server"
 )
 
 func PostScopes(env *environment.State) gin.HandlerFunc {
@@ -28,7 +28,7 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequest = func(iRequests []*bs.Request){
+    var handleRequest = func(iRequests []*bulky.Request){
       createdByIdentity := aap.Identity{
         Id: c.MustGet("sub").(string),
       }
@@ -46,7 +46,7 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
         rScope, rIdentity, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
 
         if err != nil {
-          request.Output = bs.NewInternalErrorResponse(request.Index)
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
           log.Debug(err.Error())
           continue
         }
@@ -58,11 +58,11 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
           CreatedBy: rIdentity.Id,
         }
 
-        request.Output = bs.NewOkResponse(request.Index, ok)
+        request.Output = bulky.NewOkResponse(request.Index, ok)
       }
     }
 
-    responses := bs.HandleRequest(requests, handleRequest, bs.HandleRequestParams{})
+    responses := bulky.HandleRequest(requests, handleRequest, bulky.HandleRequestParams{})
 
     c.JSON(http.StatusOK, responses)
   }
@@ -84,7 +84,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    var handleRequests = func(iRequests []*bs.Request){
+    var handleRequests = func(iRequests []*bulky.Request){
       var scopes []aap.Scope
 
       for _, request := range iRequests {
@@ -121,11 +121,11 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
           })
         }
 
-        request.Output = bs.NewOkResponse(request.Index, ok)
+        request.Output = bulky.NewOkResponse(request.Index, ok)
       }
     }
 
-    responses := bs.HandleRequest(requests, handleRequests, bs.HandleRequestParams{EnableEmptyRequest: true})
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{EnableEmptyRequest: true})
 
     c.JSON(http.StatusOK, responses)
   }
