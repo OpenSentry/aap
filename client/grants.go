@@ -36,8 +36,8 @@ type DeleteGrantsRequest struct {
 
 type DeleteGrantsResponse struct {}
 
-func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "POST", url, &responses)
+func CreateGrants(client *AapClient, url string, requests []CreateGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "POST", url, &responses)
 
   if err != nil {
     return status, nil, err
@@ -46,8 +46,8 @@ func CreateGrants(url string, client *AapClient, request []CreateGrantsRequest) 
   return status, responses, nil
 }
 
-func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "DELETE", url, &responses)
+func DeleteGrants(client *AapClient, url string, requests []DeleteGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "DELETE", url, &responses)
 
   if err != nil {
     return status, nil, err
@@ -56,8 +56,8 @@ func DeleteGrants(url string, client *AapClient, request []DeleteGrantsRequest) 
   return status, responses, nil
 }
 
-func ReadGrants(url string, client *AapClient, request []ReadGrantsRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "GET", url, &responses)
+func ReadGrants(client *AapClient, url string, requests []ReadGrantsRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "GET", url, &responses)
 
   if err != nil {
     return status, nil, err

@@ -47,7 +47,7 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
           continue
         }
 
-        ok := client.Scope{
+        ok := client.CreateScopesResponse{
           Scope: rScope.Name,
         }
 
@@ -100,7 +100,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
           r = request.Input.(client.ReadScopesRequest)
         }
 
-        var ok []client.Scope
+        var ok client.ReadScopesResponse
         for _, d := range dbScopes {
           if request.Input != nil && d.Name != r.Scope {
             continue
