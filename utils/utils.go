@@ -609,15 +609,6 @@ func NewClientErrorResponse(index int, code... int) (client.BulkResponse) {
     Errors: data,
   }
 }
-func NewOkResponse(data interface{}) (interface{}) {
-  r := reflect.ValueOf(data)
-
-  fmt.Println("==========================")
-  fmt.Println(reflect.TypeOf(data))
-  fmt.Println(r)
-  fmt.Println("==========================")
-  return nil
-}
 func FailAllRequestsWithClientErrorResponse(requests []*Request, code... int) {
   for _,r := range requests {
     r.Response = NewClientErrorResponse(r.Index, code...)

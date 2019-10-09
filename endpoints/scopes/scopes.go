@@ -117,7 +117,6 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
         }
 
         var response client.ReadScopesResponse
-        utils.NewOkResponse(response)
         response.Errors = []client.ErrorResponse{}
         response.Index = request.Index
         response.Status = http.StatusOK
