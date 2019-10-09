@@ -28,8 +28,8 @@ type ReadScopesRequest struct {
 
 type ReadScopesResponse []Scope
 
-func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "GET", url, &responses)
+func ReadScopes(client *AapClient, url string, requests []ReadScopesRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "GET", url, &responses)
 
   if err != nil {
     return status, nil, err
@@ -38,8 +38,8 @@ func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (sta
   return status, responses, nil
 }
 
-func CreateScopes(url string, client *AapClient, request []CreateScopesRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "POST", url, &responses)
+func CreateScopes(client *AapClient, url string, requests []CreateScopesRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "POST", url, &responses)
 
   if err != nil {
     return status, nil, err
@@ -48,8 +48,8 @@ func CreateScopes(url string, client *AapClient, request []CreateScopesRequest) 
   return status, responses, nil
 }
 
-func UpdateScopes(url string, client *AapClient, request []UpdateScopesRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, request, "PUT", url, &responses)
+func UpdateScopes(client *AapClient, url string, requests []UpdateScopesRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "PUT", url, &responses)
 
   if err != nil {
     return status, nil, err
