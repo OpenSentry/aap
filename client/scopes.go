@@ -42,7 +42,7 @@ type ReadScopesRequest struct {
 
 type ReadScopesResponse []Scope
 
-func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, response []bulky.Response, err error) {
+func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "GET", url, &response)
 
   if err != nil {
@@ -52,7 +52,7 @@ func ReadScopes(url string, client *AapClient, request []ReadScopesRequest) (sta
   return status, response, nil
 }
 
-func CreateScopes(url string, client *AapClient, request []CreateScopesRequest) (status int, response []CreateScopesResponse, err error) {
+func CreateScopes(url string, client *AapClient, request []CreateScopesRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "POST", url, &response)
 
   if err != nil {
@@ -62,7 +62,7 @@ func CreateScopes(url string, client *AapClient, request []CreateScopesRequest) 
   return status, response, nil
 }
 
-func UpdateScopes(url string, client *AapClient, request []UpdateScopesRequest) (status int, response []UpdateScopesResponse, err error) {
+func UpdateScopes(url string, client *AapClient, request []UpdateScopesRequest) (status int, response bulky.Responses, err error) {
   status, err = handleRequest(client, request, "PUT", url, &response)
 
   if err != nil {
