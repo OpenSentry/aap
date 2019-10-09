@@ -75,7 +75,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
 
         if err != nil {
           // fail all requests
-          bulky.FailAllRequestsWithInternalErrorResponse(iRequests, "OPERATION_ABORTED")
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
 
           // specify error on this request
           request.Output = bulky.NewInternalErrorResponse(request.Index)
@@ -165,7 +165,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
           }
 
           // fail all requests
-          bulky.FailAllRequestsWithInternalErrorResponse(iRequests, "OPERATION_ABORTED")
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
 
           // specify error on this request
           request.Output = bulky.NewInternalErrorResponse(request.Index)

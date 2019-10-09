@@ -10,23 +10,23 @@ type Scope struct {
   Scope       string    `json:"scope" validate:"required"`
 }
 
+type CreateScopesResponse Scope
 type CreateScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
 }
 
-type CreateScopesResponse Scope
 
+type UpdateScopesResponse Scope
 type UpdateScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
 }
 
-type UpdateScopesResponse Scope
 
+type ReadScopesResponse []Scope
 type ReadScopesRequest struct {
   Scope                     string    `json:"scope" validate:"required"`
 }
 
-type ReadScopesResponse []Scope
 
 func ReadScopes(client *AapClient, url string, requests []ReadScopesRequest) (status int, responses bulky.Responses, err error) {
   status, err = handleRequest(client, requests, "GET", url, &responses)

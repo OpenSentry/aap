@@ -12,29 +12,29 @@ type Grant struct {
   Publisher                 string    `json:"published_by" validate:"required,uuid"`
 }
 
+type ReadGrantsResponse []Grant
 type ReadGrantsRequest struct {
   IdentityId                string    `json:"identity_id,omitempty" binding:"required"`
   Scope                     string    `json:"scope,omitempty" binding:"required"`
   PublishedBy               string    `json:"published_by,omitempty" binding:"required"`
 }
 
-type ReadGrantsResponse []Grant
 
+type CreateGrantsResponse Grant
 type CreateGrantsRequest struct {
   IdentityId                string    `json:"identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
   PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
-type CreateGrantsResponse Grant
 
+type DeleteGrantsResponse struct {}
 type DeleteGrantsRequest struct {
   IdentityId                string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
   PublishedBy               string    `json:"published_by" binding:"required"`
 }
 
-type DeleteGrantsResponse struct {}
 
 func CreateGrants(client *AapClient, url string, requests []CreateGrantsRequest) (status int, responses bulky.Responses, err error) {
   status, err = handleRequest(client, requests, "POST", url, &responses)
