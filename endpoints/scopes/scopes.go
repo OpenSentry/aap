@@ -111,16 +111,7 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
           })
         }
 
-<<<<<<< HEAD
         request.Output = bulky.NewOkResponse(request.Index, ok)
-=======
-        var response client.ReadScopesResponse
-        response.Errors = []client.ErrorResponse{}
-        response.Index = request.Index
-        response.Status = http.StatusOK
-        response.Ok = ok
-        request.Response = response
->>>>>>> master
       }
     }
 
