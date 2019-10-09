@@ -10,9 +10,6 @@ import (
   "golang.org/x/oauth2/clientcredentials"
   "fmt"
   "encoding/json"
-  "reflect"
-
-  bulky "github.com/charmixer/bulky/client"
 )
 
 type AapClient struct {
@@ -118,33 +115,4 @@ func parseStatusCode(statusCode int) (error) {
          return nil
   }
   return errors.New(fmt.Sprintf("Unsupported status code: '%d'", statusCode))
-}
-
-func UnmarshalResponse(iIndex int, iResponses interface{}) (rStatus int, rOk interface{}, rErr []bulky.ErrorResponse) {
-  responses := reflect.ValueOf(iResponses)
-  for index := 0; index < responses.Len(); index++ {
-    response := responses.Index(index)
-
-    i := response.FieldByName("Index").Interface().(int)
-    if i == iIndex {
-      // found response with given index
-
-      rStatus := response.FieldByName("Status").Interface().(int)
-      err    := response.FieldByName("Errors")
-      ok     := response.FieldByName("Ok")
-
-      if ok.CanInterface() {
-        rOk = ok.Interface()
-      }
-
-      if err.CanInterface() {
-        rErr = err.Interface().([]bulky.ErrorResponse)
-      }
-
-      return rStatus, rOk, rErr
-    }
-
-  }
-
-  panic("Given index not found")
 }
