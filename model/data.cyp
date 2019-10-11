@@ -4,7 +4,6 @@
 
 // ### Scopes, IDPAPI
 
-MATCH (i:Identity:Human {username:"root"})
 // idp
 MERGE (:Scope {name:"openid", title:"Login to the IDP system", description:"Allows access to login to the IDP system"})
 MERGE (:Scope {name:"offline", title:"Remember me", description:"Allows access to remember your login session over a longer period of time"})
@@ -20,6 +19,10 @@ MERGE (:Scope {name:"idp:accept:invite", title:"Accept an Invite", description:"
 MERGE (:Scope {name:"idp:send::invite", title:"Send an Invite", description:""})
 MERGE (:Scope {name:"idp:read:follow", title:"Read follows relations", description:""})
 MERGE (:Scope {name:"idp:create:follow", title:"Create follows relations", description:""})
+MERGE (:Scope {name:"idp:create:resourceservers", title:"Create resource servers", description:""})
+MERGE (:Scope {name:"idp:read:resourceservers", title:"Read resource servers", description:""})
+MERGE (:Scope {name:"idp:update:resourceservers", title:"Update resource servers", description:""})
+MERGE (:Scope {name:"idp:delete:resourceservers", title:"Delete resource servers", description:""})
 
 // aap
 MERGE (:Scope {name:"aap:authorize:identity", title:"Authorize identity", description:"Allows to authorize or reject scopes on behalf of the identity"})
@@ -47,20 +50,17 @@ MERGE (:Scope {name:"aap:authorizations:put", title:"Not used?", description:""}
 
 // give all idp: named scope to IDP resource server
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope)
 WHERE s.name =~ "idp:.*"
 MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 ;
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"openid"})
 MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 ;
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"offline"})
 MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
@@ -70,20 +70,17 @@ MERGE (idp)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 
 // give all aap: named scope to AAP resource server
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (aap:Identity:ResourceServer {name:"AAP"})
 MATCH (s:Scope)
 WHERE s.name =~ "aap:.*"
 MERGE (aap)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 ;
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (aap:Identity:ResourceServer {name:"AAP"})
 MATCH (s:Scope {name:"openid"})
 MERGE (aap)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 ;
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (aap:Identity:ResourceServer {name:"AAP"})
 MATCH (s:Scope {name:"offline"})
 MERGE (aap)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
@@ -92,7 +89,6 @@ MERGE (aap)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 
 // create and publish all may grant scopes for each resource server
 
-MATCH (i:Identity:Human {username:"root"})
 MATCH (rs:Identity:ResourceServer)-[:IS_PUBLISHING]->(pr:Publish:Rule)-[:PUBLISH]->(s:Scope)
 MERGE (mgs:Scope {name:"mg:"+s.name, title:"May grant scope '"+s.name+"' to others", description:""})
 MERGE (rs)-[:IS_PUBLISHING]->(mgpr:Publish:Rule)-[:PUBLISH]->(mgs)
@@ -121,7 +117,6 @@ MERGE (pr)-[:MAY_GRANT]->(pr)
 // ## IDPUI
 
 // Grant IDPUI access to authenticate:identity in IDPAPI
-MATCH (i:Identity:Human {username:"root"})
 MATCH (idpui:Identity:Client {client_id:"idpui"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
