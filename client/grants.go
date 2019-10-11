@@ -7,32 +7,33 @@ import (
 // /grants
 
 type Grant struct {
-  IdentityId                string    `json:"identity_id" validate:"required,uuid"`
+  Identity                  string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
-  Publisher                 string    `json:"published_by" validate:"required,uuid"`
+  Publisher                 string    `json:"publisher_id" validate:"required,uuid"`
 }
+
 
 type ReadGrantsResponse []Grant
 type ReadGrantsRequest struct {
-  IdentityId                string    `json:"identity_id,omitempty" binding:"required"`
+  Identity                  string    `json:"identity_id,omitempty" binding:"required"`
   Scope                     string    `json:"scope,omitempty" binding:"required"`
-  PublishedBy               string    `json:"published_by,omitempty" binding:"required"`
+  Publisher                 string    `json:"publisher_id,omitempty" binding:"required"`
 }
 
 
 type CreateGrantsResponse Grant
 type CreateGrantsRequest struct {
-  IdentityId                string    `json:"identity_id" binding:"required"`
+  Identity                  string    `json:"identity_id" binding:"required"`
   Scope                     string    `json:"scope" binding:"required"`
-  PublishedBy               string    `json:"published_by" binding:"required"`
+  Publisher                 string    `json:"publisher_id" binding:"required"`
 }
 
 
 type DeleteGrantsResponse struct {}
 type DeleteGrantsRequest struct {
-  IdentityId                string    `json:"identity_id" validate:"required,uuid"`
+  Identity                  string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
-  PublishedBy               string    `json:"published_by" binding:"required"`
+  Publisher                 string    `json:"publisher_id" binding:"required"`
 }
 
 

@@ -52,14 +52,14 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
           Id: iRequest.Id,
         }
         // if identity id is given, use this instead
-        if r.IdentityId != "" {
-          iGranted.Id = r.IdentityId
+        if r.Identity != "" {
+          iGranted.Id = r.Identity
         }
 
         var iPublisher []aap.Identity
-        if r.PublishedBy != "" {
+        if r.Publisher != "" {
           iPublisher = []aap.Identity{
-            {Id: r.PublishedBy},
+            {Id: r.Publisher},
           }
         }
 
@@ -86,7 +86,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
         var ok = []client.Grant{}
         for _,e := range grants {
           ok = append(ok, client.Grant{
-            IdentityId: e.Identity.Id,
+            Identity: e.Identity.Id,
             Scope: e.Scope.Name,
             Publisher: e.Publisher.Id,
           })
@@ -143,12 +143,12 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         }
 
         // no identity id provided, so use whoever requested it
-        if r.IdentityId != "" {
-          iGrant.Id = r.IdentityId
+        if r.Identity != "" {
+          iGrant.Id = r.Identity
         }
 
         iPublish := aap.Identity{
-          Id: r.PublishedBy,
+          Id: r.Publisher,
         }
 
         iScope := aap.Scope{
@@ -174,7 +174,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         }
 
         ok := client.Grant{
-          IdentityId: granted.Id,
+          Identity: granted.Id,
           Scope: scope.Name,
           Publisher: publisher.Id,
         }
