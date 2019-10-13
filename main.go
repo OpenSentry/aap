@@ -67,7 +67,7 @@ func init() {
 func main() {
 
   optMigrate := getopt.BoolLong("migrate", 0, "Run migration")
-  //optServe := getopt.BoolLong("serve", 0, "Serve application")
+  optServe := getopt.BoolLong("serve", 0, "Serve application")
   optHelp := getopt.BoolLong("help", 0, "Help")
   getopt.Parse()
 
@@ -122,12 +122,12 @@ func main() {
     Driver: driver,
   }
 
-  //if *optServe {
+  if *optServe {
     serve(env)
-  /*} else {
+  } else {
     getopt.Usage()
     os.Exit(0)
-  }*/
+  }
 
 }
 

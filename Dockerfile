@@ -29,7 +29,8 @@ COPY . .
 RUN go get -d -v ./...
 
 # Development requires fresh
-RUN go get -v github.com/pilu/fresh
+#RUN go get -v github.com/pilu/fresh
+RUN go get github.com/ivpusic/rerun
 
 # Install the package
 RUN go install -v ./...
@@ -43,4 +44,5 @@ RUN chmod +x /entrypoint.sh
 #USER 1000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["aap"]
+#CMD ["aap"]
+CMD ["rerun", "-a--serve"]
