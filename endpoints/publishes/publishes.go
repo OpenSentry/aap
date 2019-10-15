@@ -94,14 +94,18 @@ fn := func(c *gin.Context) {
       fmt.Println(r)
 
       var ok client.ReadPublishesResponse
-      for _, _ = range dbPublishes {
-        //if request.Input != nil && db.Id != r.Publisher {
-          //continue
-        //}
+      for _, db := range dbPublishes {
+        if request.Input != nil && db.Publisher.Id != r.Publisher {
+          continue
+        }
 
-        //ok = append(ok, client.Publish{
-          //Scope:       db.Name,
-        //})
+        ok = append(ok, client.Publish{
+          Publisher:     db.Publisher.Id,
+          Scope:         db.Scope.Name,
+          Title:         db.Rule.Title,
+          Description:   db.Rule.Description,
+          MayGrantScope: db.MayGrantScope.Name,
+        })
       }
 
       request.Output = bulky.NewOkResponse(request.Index, ok)

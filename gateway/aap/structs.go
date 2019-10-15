@@ -99,3 +99,11 @@ type Consent struct {
   ResourceServer
   Scope
 }
+
+type Publish struct {
+  Publisher Identity
+  Scope Scope
+  MayGrantScope Scope
+  Rule PublishRule
+  MayGrantRule PublishRule
+}

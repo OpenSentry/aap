@@ -6,7 +6,7 @@ import (
   "fmt"
 )
 
-func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publishRules []PublishRule, err error) {
+func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publishes []Publish, err error) {
   var result neo4j.Result
   var params = make(map[string]interface{})
   var wherePublishers string
@@ -40,19 +40,35 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
     scopeNode         := record.GetByIndex(3)
     mgScopeNode       := record.GetByIndex(4)
 
-    if publisherNode != nil &&
-    publishRuleNode != nil &&
-    mgPublishRuleNode != nil &&
-    scopeNode != nil &&
-    mgScopeNode != nil {
-      publisher     := marshalNodeToIdentity(publisherNode.(neo4j.Node))
-      publishRule   := marshalNodeToPublishRule(publishRuleNode.(neo4j.Node))
-      mgPublishRule := marshalNodeToPublishRule(mgPublishRuleNode.(neo4j.Node))
-      scope         := marshalNodeToScope(scopeNode.(neo4j.Node))
-      mgScope       := marshalNodeToScope(mgScopeNode.(neo4j.Node))
+    var publisher Identity
+    var publishRule PublishRule
+    var mgPublishRule PublishRule
+    var scope Scope
+    var mgScope Scope
 
-      fmt.Println(publisher, publishRule, mgPublishRule, scope, mgScope)
+    if publisherNode != nil {
+      publisher     = marshalNodeToIdentity(publisherNode.(neo4j.Node))
     }
+    if publishRuleNode != nil {
+      publishRule   = marshalNodeToPublishRule(publishRuleNode.(neo4j.Node))
+    }
+    if mgPublishRuleNode != nil {
+      mgPublishRule = marshalNodeToPublishRule(mgPublishRuleNode.(neo4j.Node))
+    }
+    if scopeNode != nil {
+      scope         = marshalNodeToScope(scopeNode.(neo4j.Node))
+    }
+    if mgScopeNode != nil {
+      mgScope       = marshalNodeToScope(mgScopeNode.(neo4j.Node))
+    }
+
+    publishes = append(publishes, Publish{
+      Publisher: publisher,
+      Scope: scope,
+      MayGrantScope: mgScope,
+      Rule: publishRule,
+      MayGrantRule: mgPublishRule,
+    })
   }
 
   logCypher(cypher, params)
@@ -62,5 +78,5 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
     return nil, err
   }
 
-  return publishRules, nil
+  return publishes, nil
 }
