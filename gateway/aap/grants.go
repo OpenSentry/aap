@@ -6,42 +6,41 @@ import (
   "fmt"
 )
 
-func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish Identity, iRequest Identity) (rScope Scope, rPublisher Identity, rGranted Identity, err error) {
+func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish Identity, iRequest Identity) (rScope Scope, rPublisher Identity, rReceiver Identity, err error) {
   var result neo4j.Result
   var cypher string
   var params map[string]interface{}
 
   cypher = `
     // FIXME ensure users exists and return errors
-    MATCH (granted:Identity {id: $grantedId})
+    MATCH (receiver:Identity {id: $receiverId})
     MATCH (publisher:Identity {id: $publisherId})
     MATCH (scope:Scope {name: $scopeName})
     MATCH (publisher)-[:IS_PUBLISHING]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
 
     // create scope and match it to the identity who created it
-    MERGE (granted)-[:IS_GRANTED]->(grantRule:Grant:Rule)-[:GRANTS]->(publishRule)
-    MERGE (grantRule)
+    MERGE (receiver)-[:IS_GRANTED]->(grantRule:Grant:Rule)-[:GRANTS]->(publishRule)
 
     // Conclude
-    return scope, publisher, granted
+    return scope, publisher, receiver
   `
 
   params = map[string]interface{}{
+    "receiverId":  iReceive.Id,
     "scopeName":   iScope.Name,
-    "grantedId":   iRequest.Id,
     "publisherId": iPublish.Id,
   }
 
   if result, err = tx.Run(cypher, params); err != nil {
-    return rScope, rPublisher, rGranted, err
+    return rScope, rPublisher, rReceiver, err
   }
 
   if result.Next() {
     record := result.Record()
 
-    scopeNode := record.GetByIndex(0)
+    scopeNode     := record.GetByIndex(0)
     publisherNode := record.GetByIndex(1)
-    grantedNode := record.GetByIndex(2)
+    receiverNode  := record.GetByIndex(2)
 
     if scopeNode != nil {
       rScope = marshalNodeToScope(scopeNode.(neo4j.Node))
@@ -51,8 +50,8 @@ func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish I
       rPublisher = marshalNodeToIdentity(publisherNode.(neo4j.Node))
     }
 
-    if grantedNode != nil {
-      rGranted = marshalNodeToIdentity(grantedNode.(neo4j.Node))
+    if receiverNode != nil {
+      rReceiver = marshalNodeToIdentity(receiverNode.(neo4j.Node))
     }
 
   }
@@ -61,14 +60,14 @@ func CreateGrant(tx neo4j.Transaction, iGrant Identity, iScope Scope, iPublish I
 
   // Check if we encountered any error during record streaming
   if err = result.Err(); err != nil {
-    return rScope, rPublisher, rGranted, err
+    return rScope, rPublisher, rReceiver, err
   }
 
   if err != nil {
-    return rScope, rPublisher, rGranted, err
+    return rScope, rPublisher, rReceiver, err
   }
 
-  return rScope, rPublisher, rGranted, nil
+  return rScope, rPublisher, rReceiver, nil
 }
 
 func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope, iFilterPublishers []Identity) (grants []Grant, err error) {

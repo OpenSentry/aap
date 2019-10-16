@@ -15,17 +15,17 @@ type Grant struct {
 
 type ReadGrantsResponse []Grant
 type ReadGrantsRequest struct {
-  Identity                  string    `json:"identity_id,omitempty" binding:"required"`
+  Identity                  string    `json:"identity_id,omitempty" binding:"required,uuid"`
   Scope                     string    `json:"scope,omitempty" binding:"required"`
-  Publisher                 string    `json:"publisher_id,omitempty" binding:"required"`
+  Publisher                 string    `json:"publisher_id,omitempty" binding:"required,uuid"`
 }
 
 
 type CreateGrantsResponse Grant
 type CreateGrantsRequest struct {
-  Identity                  string    `json:"identity_id" binding:"required"`
+  Identity                  string    `json:"identity_id" binding:"required,uuid"`
   Scope                     string    `json:"scope" binding:"required"`
-  Publisher                 string    `json:"publisher_id" binding:"required"`
+  Publisher                 string    `json:"publisher_id" binding:"required,uuid"`
 }
 
 
@@ -33,7 +33,7 @@ type DeleteGrantsResponse struct {}
 type DeleteGrantsRequest struct {
   Identity                  string    `json:"identity_id" validate:"required,uuid"`
   Scope                     string    `json:"scope" validate:"required"`
-  Publisher                 string    `json:"publisher_id" binding:"required"`
+  Publisher                 string    `json:"publisher_id" binding:"required,uuid"`
 }
 
 
