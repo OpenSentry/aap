@@ -101,9 +101,9 @@ type Consent struct {
 }
 
 type Publish struct {
-  Publisher Identity
-  Scope Scope
-  MayGrantScope Scope
-  Rule PublishRule
-  MayGrantRule PublishRule
+  Publisher      Identity
+  Scope          Scope
+  Rule           PublishRule
+  MayGrantScopes []Scope
+  MayGrantRules  []PublishRule
 }

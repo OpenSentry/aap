@@ -9,7 +9,7 @@ import (
 type Publish struct {
   Publisher         string    `json:"publisher_id" validate:"required,uuid"`
   Scope             string    `json:"scope" validate:"required"`
-  MayGrantScope     string    `json:"may_grant_scope" validate:"omitempty"`
+  MayGrantScopes    []string  `json:"may_grant_scopes" validate:"omitempty"`
   Title             string    `json:"title" validate:"required"`
   Description       string    `json:"description"`
 }
