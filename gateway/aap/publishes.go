@@ -25,7 +25,7 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
     match (publisher:Identity)-[:IS_PUBLISHING]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
     where 1=1 %s
     optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISH]->(mgscope:Scope)
-    return publisher, pr, mgpr, scope, mgscope
+    return publisher, pr, collect(mgpr), scope, collect(mgscope)
   `, wherePublishers)
 
   if result, err = tx.Run(cypher, params); err != nil {
@@ -33,18 +33,18 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
   }
 
   for result.Next() {
-    record            := result.Record()
-    publisherNode     := record.GetByIndex(0)
-    publishRuleNode   := record.GetByIndex(1)
-    mgPublishRuleNode := record.GetByIndex(2)
-    scopeNode         := record.GetByIndex(3)
-    mgScopeNode       := record.GetByIndex(4)
+    record                 := result.Record()
+    publisherNode          := record.GetByIndex(0)
+    publishRuleNode        := record.GetByIndex(1)
+    mgPublishRuleNodeSlice := record.GetByIndex(2)
+    scopeNode              := record.GetByIndex(3)
+    mgScopeNodeSlice       := record.GetByIndex(4)
 
-    var publisher Identity
-    var publishRule PublishRule
-    var mgPublishRule PublishRule
-    var scope Scope
-    var mgScope Scope
+    var publisher      Identity
+    var publishRule    PublishRule
+    var mgPublishRules []PublishRule
+    var scope          Scope
+    var mgScopes       []Scope
 
     if publisherNode != nil {
       publisher     = marshalNodeToIdentity(publisherNode.(neo4j.Node))
@@ -52,22 +52,26 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
     if publishRuleNode != nil {
       publishRule   = marshalNodeToPublishRule(publishRuleNode.(neo4j.Node))
     }
-    if mgPublishRuleNode != nil {
-      mgPublishRule = marshalNodeToPublishRule(mgPublishRuleNode.(neo4j.Node))
+    if mgPublishRuleNodeSlice != nil {
+      for _,node := range mgPublishRuleNodeSlice.([]interface{}) {
+        mgPublishRules = append(mgPublishRules, marshalNodeToPublishRule(node.(neo4j.Node)))
+      }
     }
     if scopeNode != nil {
       scope         = marshalNodeToScope(scopeNode.(neo4j.Node))
     }
-    if mgScopeNode != nil {
-      mgScope       = marshalNodeToScope(mgScopeNode.(neo4j.Node))
+    if mgScopeNodeSlice != nil {
+      for _,node := range mgScopeNodeSlice.([]interface{}) {
+        mgScopes = append(mgScopes, marshalNodeToScope(node.(neo4j.Node)))
+      }
     }
 
     publishes = append(publishes, Publish{
-      Publisher: publisher,
-      Scope: scope,
-      MayGrantScope: mgScope,
-      Rule: publishRule,
-      MayGrantRule: mgPublishRule,
+      Publisher:      publisher,
+      Scope:          scope,
+      MayGrantScopes: mgScopes,
+      Rule:           publishRule,
+      MayGrantRules:  mgPublishRules,
     })
   }
 
