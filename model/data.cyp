@@ -7,7 +7,7 @@
 // idp
 MERGE (:Scope {name:"openid", title:"Login to the IDP system", description:"Allows access to login to the IDP system"})
 MERGE (:Scope {name:"offline", title:"Remember me", description:"Allows access to remember your login session over a longer period of time"})
-MERGE (:Scope {name:"idp:authenticate:identity", title:"Authenticate and manage your password", description:"Allows access to authenticate you and update your password"})
+MERGE (:Scope {name:"idp:authenticate:human", title:"Authenticate and manage your password", description:"Allows access to authenticate you and update your password"})
 MERGE (:Scope {name:"idp:read:identity", title:"Read your identity", description:"Allows access to your profile information, such as email, name and profile picture"})
 MERGE (:Scope {name:"idp:update:identity", title:"Update your identity", description:"Allows access to update your profile information, such as email, name and profile picture"})
 MERGE (:Scope {name:"idp:delete:identity", title:"Delete your identity", description:"Allows access to delete your profile from the system"})
@@ -25,6 +25,7 @@ MERGE (:Scope {name:"idp:update:resourceservers", title:"Update resource servers
 MERGE (:Scope {name:"idp:delete:resourceservers", title:"Delete resource servers", description:""})
 
 // aap
+// @TODO fix identity -> human
 MERGE (:Scope {name:"aap:authorize:identity", title:"Authorize identity", description:"Allows to authorize or reject scopes on behalf of the identity"})
 MERGE (:Scope {name:"aap:reject:identity", title:"Not used?", description:""})
 MERGE (:Scope {name:"aap:read:scopes", title:"Read scopes", description:""})

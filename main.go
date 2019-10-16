@@ -162,10 +162,6 @@ func serve(env *environment.State) {
     HydraIntrospectUrl: hydraIntrospectUrl,
   }
 
-  r.GET("/authorizations",            utils.AuthorizationRequired(aconf, "aap:authorizations:get"),    authorizations.GetAuthorizations(env))
-  r.POST("/authorizations",           utils.AuthorizationRequired(aconf, "aap:authorizations:post"),   authorizations.PostAuthorizations(env))
-  r.PUT("/authorizations",            utils.AuthorizationRequired(aconf, "aap:authorizations:update"), authorizations.PutAuthorizations(env))
-
   r.GET("/scopes",                    utils.AuthorizationRequired(aconf, "aap:read:scopes"),           scopes.GetScopes(env))
   r.POST("/scopes",                   utils.AuthorizationRequired(aconf, "aap:create:scopes"),         scopes.PostScopes(env))
   r.PUT("/scopes",                    utils.AuthorizationRequired(aconf, "aap:update:scopes"),         scopes.PutScopes(env))
@@ -177,6 +173,9 @@ func serve(env *environment.State) {
   r.POST("/consents",                 utils.AuthorizationRequired(aconf, "aap:create:consents"),        consents.PostConsents(env))
   r.GET("/consents",                  utils.AuthorizationRequired(aconf, "aap:read:consents"),          consents.GetConsents(env))
   r.DELETE("/consents",               utils.AuthorizationRequired(aconf, "aap:delete:consents"),        consents.DeleteConsents(env))
+  // @TODO refactor to use /consents
+  r.GET("/authorizations",            utils.AuthorizationRequired(aconf, "aap:read:consents"),    authorizations.GetAuthorizations(env))
+  r.POST("/authorizations",           utils.AuthorizationRequired(aconf, "aap:create:consents"),   authorizations.PostAuthorizations(env))
 
   r.POST("/publishes",                utils.AuthorizationRequired(aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
   r.GET("/publishes",                 utils.AuthorizationRequired(aconf, "aap:read:publishes"),        publishes.GetPublishes(env))

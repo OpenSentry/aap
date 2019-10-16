@@ -139,12 +139,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         r := request.Input.(client.CreateGrantsRequest)
 
         iGrant := aap.Identity{
-          Id: iRequest.Id,
-        }
-
-        // no identity id provided, so use whoever requested it
-        if r.Identity != "" {
-          iGrant.Id = r.Identity
+          Id: r.Identity,
         }
 
         iPublish := aap.Identity{
