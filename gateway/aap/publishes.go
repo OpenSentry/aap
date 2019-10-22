@@ -2,9 +2,97 @@ package aap
 
 import (
   "strings"
+  "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "fmt"
 )
+
+func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publish) (publish Publish, err error) {
+  var result neo4j.Result
+  var cypher string
+  var params = make(map[string]interface{})
+
+  if newPublish.Publisher.Id == "" {
+    return Publish{}, errors.New("Missing Publish.Publiser.Id")
+  }
+  params["publisher_id"] = newPublish.Publisher.Id
+
+  if newPublish.Scope.Name == "" {
+    return Publish{}, errors.New("Missing Publish.Scope.Name")
+  }
+  params["scope"] = newPublish.Scope.Name
+
+  if newPublish.Rule.Title == "" {
+    return Publish{}, errors.New("Missing Publish.Rule.Title")
+  }
+  params["title"] = newPublish.Rule.Title
+
+  if newPublish.Rule.Description == "" {
+    return Publish{}, errors.New("Missing Publish.Rule.Description")
+  }
+  params["description"] = newPublish.Rule.Description
+
+  cypher = fmt.Sprintf(`
+    // Require scope existance
+    MATCH (s:Scope {name:$scope})
+    MATCH (mg:Scope)-[:MAY_GRANT]->(s)
+    MATCH (0mg:Scope)-[:MAY_GRANT]->(mg)
+
+    // Require publisher existance
+    MATCH (publisher:Identity {id:$publisher_id})
+
+    MERGE (publisher)-[:PUBLISHES]-(pr:PublishRule {title:$title, description:$description})-[:PUBLISHES]->(s)
+    MERGE (publisher)-[:PUBLISHES]-(mgpr:PublishRule)-[:PUBLISHES]->(mg)
+    MERGE (publisher)-[:PUBLISHES]-(0mgpr:PublishRule)-[:PUBLISHES]->(0mg)
+
+    RETURN publisher, pr, s, 0mg
+  `)
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return Publish{}, err
+  }
+
+  var rootScope Scope
+
+  if result.Next() {
+    record        := result.Record()
+    publisherNode := record.GetByIndex(0)
+    prNode        := record.GetByIndex(1)
+    scopeNode     := record.GetByIndex(2)
+    rootScopeNode := record.GetByIndex(3)
+
+    if publisherNode != nil {
+      publish.Publisher = marshalNodeToIdentity(publisherNode.(neo4j.Node))
+    }
+    if prNode != nil {
+      publish.Rule = marshalNodeToPublishRule(prNode.(neo4j.Node))
+    }
+    if scopeNode != nil {
+      publish.Scope = marshalNodeToScope(scopeNode.(neo4j.Node))
+    }
+    if rootScopeNode != nil {
+      rootScope = marshalNodeToScope(scopeNode.(neo4j.Node))
+    }
+
+  } else {
+    return Publish{}, errors.New("Unable to create Publish")
+  }
+
+  logCypher(cypher, params)
+
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return Publish{}, err
+  }
+
+  // Grant maygrant root on new publish rule to creator
+  _, _, _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
+  if err != nil {
+    return Publish{}, err
+  }
+
+  return publish, nil
+}
 
 func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publishes []Publish, err error) {
   var result neo4j.Result
