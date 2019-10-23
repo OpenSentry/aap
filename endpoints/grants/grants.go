@@ -56,13 +56,19 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
           iGranted.Id = r.Identity
         }
 
-        var iPublisher []aap.Identity
+        var iPublishers []aap.Identity
         if r.Publisher != "" {
-          iPublisher = []aap.Identity{
+          iPublishers = []aap.Identity{
             {Id: r.Publisher},
           }
         }
 
+        var iOnBehalfOf []aap.Identity
+        if r.OnBehalfOf != "" {
+          iOnBehalfOf = []aap.Identity{
+            {Id: r.OnBehalfOf},
+          }
+        }
         var iScopes []aap.Scope
         if r.Scope != "" {
           iScopes = []aap.Scope{
@@ -71,7 +77,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
         }
 
         // TODO handle error
-        grants, err := aap.FetchGrants(tx, iGranted, iScopes, iPublisher)
+        grants, err := aap.FetchGrants(tx, iGranted, iScopes, iPublishers, iOnBehalfOf)
 
         if err != nil {
           // fail all requests
@@ -89,6 +95,7 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
             Identity: e.Identity.Id,
             Scope: e.Scope.Name,
             Publisher: e.Publisher.Id,
+            OnBehalfOf: e.OnBehalfOf.Id,
           })
         }
 
@@ -120,10 +127,6 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
     }
 
     var handleRequest = func(iRequests []*bulky.Request){
-      iRequest := aap.Identity{
-        Id: c.MustGet("sub").(string),
-      }
-
       session, tx, err := aap.BeginWriteTx(env.Driver)
 
       if err != nil {
@@ -138,20 +141,24 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
       for _, request := range iRequests {
         r := request.Input.(client.CreateGrantsRequest)
 
-        iGrant := aap.Identity{
+        iReceive := aap.Identity{
           Id: r.Identity,
-        }
-
-        iPublish := aap.Identity{
-          Id: r.Publisher,
         }
 
         iScope := aap.Scope{
           Name: r.Scope,
         }
 
+        iPublishedBy := aap.Identity{
+          Id: r.Publisher,
+        }
+
+        iOnBehalfOf := aap.Identity{
+          Id: r.OnBehalfOf,
+        }
+
         // TODO handle error
-        scope, publisher, granted, err := aap.CreateGrant(tx, iGrant, iScope, iPublish, iRequest)
+        scope, publisher, granted, onBehalfOf, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf)
 
         if err != nil {
           e := tx.Rollback()
@@ -172,6 +179,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
           Identity: granted.Id,
           Scope: scope.Name,
           Publisher: publisher.Id,
+          OnBehalfOf: onBehalfOf.Id,
         }
 
         request.Output = bulky.NewOkResponse(request.Index, ok)
