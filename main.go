@@ -181,8 +181,8 @@ func serve(env *environment.State) {
   r.GET("/publishes",                 utils.AuthorizationRequired(aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
   r.DELETE("/publishes",              utils.AuthorizationRequired(aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
 
-  r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identity"),    authorizations.PostAuthorize(env))
-  r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identity"),       authorizations.PostReject(env))
+  r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identities"),    authorizations.PostAuthorize(env))
+  r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identities"),       authorizations.PostReject(env))
 
   // r.POST("/scopes", utils.AuthorizationRequired(), Route(GetScopes(), input, output))
   // r.POST("/scopes", utils.AuthorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))

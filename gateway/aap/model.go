@@ -91,6 +91,7 @@ type Grant struct {
   Identity Identity
   Scope Scope
   Publisher Identity
+  OnBehalfOf Identity
 }
 
 type Consent struct {
