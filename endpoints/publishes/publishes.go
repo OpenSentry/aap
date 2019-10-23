@@ -18,12 +18,78 @@ func PostPublishes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "PostPublishesExpose",
+      "func": "PostPublishes",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
+    var requests []client.CreatePublishesRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
 
-    })
+    var handleRequests = func(iRequests []*bulky.Request) {
+
+      session, tx, err := aap.BeginWriteTx(env.Driver)
+      if err != nil {
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      requestor := c.MustGet("sub").(string)
+
+      for _, request := range iRequests {
+        r := request.Input.(client.CreatePublishesRequest)
+
+        newPublish := aap.Publish{
+          Publisher: aap.Identity{Id:r.Publisher},
+          Scope: aap.Scope{Name:r.Scope},
+        }
+        publish, err := aap.CreatePublishes(tx, aap.Identity{Id:requestor}, newPublish)
+        if err != nil {
+          e := tx.Rollback()
+          if e != nil {
+            log.Debug(e.Error())
+          }
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          return
+        }
+
+        if publish.Rule.Title != "" {
+          ok := client.CreatePublishesResponse{
+
+          }
+          request.Output = bulky.NewOkResponse(request.Index, ok)
+          continue
+        }
+
+        // Deny by default
+        e := tx.Rollback()
+        if e != nil {
+          log.Debug(e.Error())
+        }
+        bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+        request.Output = bulky.NewInternalErrorResponse(request.Index) // Specify error on failed one
+        return
+      }
+
+      err = bulky.OutputValidateRequests(iRequests)
+      if err == nil {
+        tx.Commit()
+        return
+      }
+
+      // Deny by default
+      tx.Rollback()
+    }
+
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{MaxRequests: 1})
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }

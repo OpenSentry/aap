@@ -16,7 +16,8 @@ type Publish struct {
 
 type CreatePublishesResponse Publish
 type CreatePublishesRequest struct {
-  Publisher         string    `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
+  Publisher string `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
+  Scope     string `json:"scope" validate:"required"`
 }
 
 
