@@ -86,7 +86,7 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   }
 
   // Grant maygrant root on new publish rule to creator
-  _, _, _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
+  _, _, _, _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
   if err != nil {
     return Publish{}, err
   }
