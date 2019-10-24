@@ -6,7 +6,22 @@ import (
   "fmt"
 )
 
-func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublishedBy Identity, iOnBehalfOf Identity) (rScope Scope, rPublisher Identity, rReceiver Identity, rOnBehalfOf Identity, err error) {
+func CreateGrants(tx neo4j.Transaction, iGrants []Grant) (rGrants []Grant, err error) {
+
+  for _,g := range iGrants {
+    grant, err := CreateGrant(tx, g.Identity, g.Scope, g.Publisher, g.OnBehalfOf)
+
+    if err != nil {
+      return nil, err
+    }
+
+    rGrants = append(rGrants, grant)
+  }
+
+  return rGrants, nil
+}
+
+func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublishedBy Identity, iOnBehalfOf Identity) (rGrant Grant, err error) {
   var result neo4j.Result
   var cypher string
   var params map[string]interface{}
@@ -35,8 +50,13 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
   }
 
   if result, err = tx.Run(cypher, params); err != nil {
-    return rScope, rPublisher, rReceiver, rOnBehalfOf, err
+    return Grant{}, err
   }
+
+  var rScope Scope
+  var rPublisher Identity
+  var rReceiver Identity
+  var rOnBehalfOf Identity
 
   if result.Next() {
     record := result.Record()
@@ -62,20 +82,27 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
       rOnBehalfOf = marshalNodeToIdentity(onBehalfOfNode.(neo4j.Node))
     }
 
+    rGrant = Grant{
+      Identity: rReceiver,
+      Scope: rScope,
+      Publisher: rPublisher,
+      OnBehalfOf: rOnBehalfOf,
+    }
+
   }
 
   logCypher(cypher, params)
 
   // Check if we encountered any error during record streaming
   if err = result.Err(); err != nil {
-    return rScope, rPublisher, rReceiver, rOnBehalfOf, err
+    return Grant{}, err
   }
 
   if err != nil {
-    return rScope, rPublisher, rReceiver, rOnBehalfOf, err
+    return Grant{}, err
   }
 
-  return rScope, rPublisher, rReceiver, rOnBehalfOf, nil
+  return rGrant, nil
 }
 
 func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope, iFilterPublishers []Identity, iFilterOnBehalfOf []Identity) (grants []Grant, err error) {

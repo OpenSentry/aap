@@ -36,16 +36,16 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
     // Require scope existance
     MATCH (s:Scope {name:$scope})
     MATCH (mg:Scope)-[:MAY_GRANT]->(s)
-    MATCH (0mg:Scope)-[:MAY_GRANT]->(mg)
+    MATCH (rootmg:Scope)-[:MAY_GRANT]->(mg)
 
     // Require publisher existance
     MATCH (publisher:Identity {id:$publisher_id})
 
-    MERGE (publisher)-[:PUBLISHES]-(pr:PublishRule {title:$title, description:$description})-[:PUBLISHES]->(s)
-    MERGE (publisher)-[:PUBLISHES]-(mgpr:PublishRule)-[:PUBLISHES]->(mg)
-    MERGE (publisher)-[:PUBLISHES]-(0mgpr:PublishRule)-[:PUBLISHES]->(0mg)
+    MERGE (publisher)-[:PUBLISHES]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISHES]->(s)
+    MERGE (publisher)-[:PUBLISHES]-(mgpr:Publish:Rule)-[:PUBLISHES]->(mg)
+    MERGE (publisher)-[:PUBLISHES]-(rootmgpr:Publish:Rule)-[:PUBLISHES]->(rootmg)
 
-    RETURN publisher, pr, s, 0mg
+    RETURN publisher, pr, s, rootmg
   `)
 
   if result, err = tx.Run(cypher, params); err != nil {
@@ -86,7 +86,7 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   }
 
   // Grant maygrant root on new publish rule to creator
-  _, _, _, _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
+  _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
   if err != nil {
     return Publish{}, err
   }

@@ -35,6 +35,9 @@ MERGE (:Scope {name:"aap:delete:grants", title:"Remove grants", description:""})
 MERGE (:Scope {name:"aap:read:publishes", title:"Read published scopes", description:""})
 MERGE (:Scope {name:"aap:create:publishes", title:"Publish scopes", description:""})
 MERGE (:Scope {name:"aap:delete:publishes", title:"Remove published scopes", description:""})
+MERGE (:Scope {name:"aap:read:subscribes", title:"Read subscribed scopes", description:""})
+MERGE (:Scope {name:"aap:create:subscribes", title:"Subscribe to scopes", description:""})
+MERGE (:Scope {name:"aap:delete:subscribes", title:"Remove subscribed scopes", description:""})
 MERGE (:Scope {name:"aap:read:consents", title:"Read consents", description:""})
 MERGE (:Scope {name:"aap:create:consents", title:"Consent to scopes", description:""})
 MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", description:""})
@@ -44,7 +47,10 @@ MERGE (:Scope {name:"aap:authorizations:post", title:"Not used?", description:""
 MERGE (:Scope {name:"aap:authorizations:put", title:"Not used?", description:""})
 ;
 
-
+MATCH (s:Scope)
+MERGE (s)<-[:MAY_GRANT]-(mgs:Scope {name:"mg:"+s.name, title:"May grant scope: "+s.name, description: ""})
+MERGE (mgs)<-[:MAY_GRANT]-(root:Scope {name:"0:"+mgs.name, title:"May grant scope: "+mgs.name, description: ""})
+;
 
 // ### Publish scopes for IDP
 
@@ -90,12 +96,12 @@ MERGE (aap)-[:IS_PUBLISHING]->(er:Publish:Rule)-[:PUBLISH]->(s)
 // create and publish all may grant scopes for each resource server
 
 MATCH (rs:Identity:ResourceServer)-[:IS_PUBLISHING]->(pr:Publish:Rule)-[:PUBLISH]->(s:Scope)
-MERGE (mgs:Scope {name:"mg:"+s.name, title:"May grant scope '"+s.name+"' to others", description:""})
+// find definition for this scope
+MATCH (rootmgs)-[:MAY_GRANT]->(mgs:Scope)-[:MAY_GRANT]->(s:Scope)
+
 MERGE (rs)-[:IS_PUBLISHING]->(mgpr:Publish:Rule)-[:PUBLISH]->(mgs)
 MERGE (mgpr)-[:MAY_GRANT]->(pr)
-
-MERGE (root:Scope {name:"0:"+mgs.name, title:"May grant scope '"+mgs.name+"' to others", description:""})
-MERGE (rs)-[:IS_PUBLISHING]->(rootpr:Publish:Rule)-[:PUBLISH]->(root)
+MERGE (rs)-[:IS_PUBLISHING]->(rootpr:Publish:Rule)-[:PUBLISH]->(rootmgs)
 MERGE (rootpr)-[:MAY_GRANT]->(mgpr)
 ;
 

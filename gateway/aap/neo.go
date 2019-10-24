@@ -35,5 +35,5 @@ func logCypher(query string, params map[string]interface{}) {
     query = strings.Replace(query, "$"+i, "\""+e.(string)+"\"", -1)
   }
 
-  fmt.Printf("\n========== NEO4J DEBUGGING ==========\nCypher: %v", query)
+  fmt.Printf("\n========== NEO4J DEBUGGING ==========\nCypher: %v\n", query)
 }
