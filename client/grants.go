@@ -11,6 +11,7 @@ type Grant struct {
   Scope                     string    `json:"scope" validate:"required"`
   Publisher                 string    `json:"publisher_id" validate:"required,uuid"`
   OnBehalfOf                string    `json:"on_behalf_of_id" validate:"required,uuid"`
+  MayGrantScopes            []string  `json:"may_grant_scopes" validate:"omitempty"`
 }
 
 
