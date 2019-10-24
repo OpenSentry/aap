@@ -158,7 +158,7 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         }
 
         // TODO handle error
-        scope, publisher, granted, onBehalfOf, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf)
+        grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf)
 
         if err != nil {
           e := tx.Rollback()
@@ -176,10 +176,10 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
         }
 
         ok := client.Grant{
-          Identity: granted.Id,
-          Scope: scope.Name,
-          Publisher: publisher.Id,
-          OnBehalfOf: onBehalfOf.Id,
+          Identity: grant.Identity.Id,
+          Scope: grant.Scope.Name,
+          Publisher: grant.Publisher.Id,
+          OnBehalfOf: grant.OnBehalfOf.Id,
         }
 
         request.Output = bulky.NewOkResponse(request.Index, ok)

@@ -98,7 +98,7 @@ func DeletePublishes(env *environment.State) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(environment.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "DeletePublishesExpose",
+      "func": "DeletePublishes",
     })
 
     c.AbortWithStatusJSON(http.StatusOK, gin.H{
