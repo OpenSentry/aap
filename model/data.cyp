@@ -123,7 +123,7 @@ MERGE (pr)-[:MAY_GRANT]->(pr)
 // ## IDPUI
 
 // Grant IDPUI access to authenticate:identity in IDPAPI
-MATCH (idpui:Identity:Client {client_id:"idpui"})
+MATCH (idpui:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (idp:Identity:ResourceServer {name:"IDP"})
 MATCH (s:Scope {name:"authenticate:identity"})
 MERGE (idpui)-[:IS_GRANTED]->(gr:GrantRule)-[:GRANT]->(s)
