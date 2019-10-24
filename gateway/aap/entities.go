@@ -2,6 +2,8 @@ package aap
 
 import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
+
+  "github.com/charmixer/aap/config"
 )
 
 func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iRequest Identity) (rEntity Identity, err error) {
@@ -48,7 +50,7 @@ func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iRe
   }
 
   var aapIdentity = Identity{
-    Id: "7b45424e-3e8c-4f17-8f02-3fbfe67530ae",
+    Id: config.GetString("id"),
   }
 
   var grants []Grant
