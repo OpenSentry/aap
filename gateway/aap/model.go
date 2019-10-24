@@ -42,7 +42,7 @@ func marshalNodeToClient(node neo4j.Node) (Client) {
   p := node.Props()
 
   return Client{
-    ClientId:     p["client_id"].(string),
+    ClientId:     p["id"].(string),
     ClientSecret: p["client_secret"].(string),
     Name:         p["name"].(string),
     Description:  p["description"].(string),
