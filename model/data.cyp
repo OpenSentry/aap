@@ -42,6 +42,8 @@ MERGE (:Scope {name:"aap:read:consents", title:"Read consents", description:""})
 MERGE (:Scope {name:"aap:create:consents", title:"Consent to scopes", description:""})
 MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", description:""})
 
+MERGE (:Scope {name:"aap:judge:entities", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
+
 MERGE (:Scope {name:"aap:authorizations:get", title:"Not used?", description:""})
 MERGE (:Scope {name:"aap:authorizations:post", title:"Not used?", description:""})
 MERGE (:Scope {name:"aap:authorizations:put", title:"Not used?", description:""})
