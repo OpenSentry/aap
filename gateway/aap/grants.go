@@ -34,8 +34,11 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     MATCH (scope:Scope {name: $scopeName})
     MATCH (publisher)-[:IS_PUBLISHING]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
 
+    // ensure unique rules
+    CREATE (grantRule:Grant:Rule)
+
     // create scope and match it to the identity who created it
-    MERGE (receiver)-[:IS_GRANTED]->(grantRule:Grant:Rule)-[:GRANTS]->(publishRule)
+    MERGE (receiver)-[:IS_GRANTED]->(grantRule)-[:GRANTS]->(publishRule)
     MERGE (grantRule)-[:ON_BEHALF_OF]->(obo)
 
     // Conclude
