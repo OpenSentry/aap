@@ -90,12 +90,19 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
         }
 
         var ok = []client.Grant{}
-        for _,e := range grants {
+        for _,grant := range grants {
+
+          var mgscopes = []string{}
+          for _,mgscope := range grant.MayGrantScopes {
+            mgscopes = append(mgscopes, mgscope.Name)
+          }
+
           ok = append(ok, client.Grant{
-            Identity: e.Identity.Id,
-            Scope: e.Scope.Name,
-            Publisher: e.Publisher.Id,
-            OnBehalfOf: e.OnBehalfOf.Id,
+            Identity: grant.Identity.Id,
+            Scope: grant.Scope.Name,
+            Publisher: grant.Publisher.Id,
+            OnBehalfOf: grant.OnBehalfOf.Id,
+            MayGrantScopes: mgscopes,
           })
         }
 

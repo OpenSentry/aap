@@ -151,7 +151,10 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
     where 1=1 %s
     match (gr)-[:ON_BEHALF_OF]->(obo:Identity)
     where 1=1 %s
-    return identity, scope, publisher, obo
+
+    optional match (pr)-[:MAY_GRANT]->(mgpr:Publish:Rule)-[:PUBLISH]->(mgs:Scope)
+
+    return identity, scope, publisher, obo, collect(mgs)
   `, where1, where2, where3)
 
   params["id"] = iGranted.Id
@@ -166,18 +169,27 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
     scopeNode       := record.GetByIndex(1)
     publishedByNode := record.GetByIndex(2)
     onBehalfOfNode  := record.GetByIndex(3)
+    mgsNodes        := record.GetByIndex(4)
 
-    if identityNode != nil && scopeNode != nil && publishedByNode != nil {
+    if identityNode != nil && scopeNode != nil && publishedByNode != nil && onBehalfOfNode != nil {
       i := marshalNodeToIdentity(identityNode.(neo4j.Node))
       s := marshalNodeToScope(scopeNode.(neo4j.Node))
       p := marshalNodeToIdentity(publishedByNode.(neo4j.Node))
       o := marshalNodeToIdentity(onBehalfOfNode.(neo4j.Node))
+
+      var mgs []Scope
+      if mgsNodes != nil {
+        for _, n := range mgsNodes.([]interface{}) {
+          mgs = append(mgs, marshalNodeToScope(n.(neo4j.Node)))
+        }
+      }
 
       grants = append(grants, Grant{
         Identity: i,
         Scope: s,
         Publisher: p,
         OnBehalfOf: o,
+        MayGrantScopes: mgs,
       })
     }
   }

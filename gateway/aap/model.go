@@ -92,6 +92,7 @@ type Grant struct {
   Scope Scope
   Publisher Identity
   OnBehalfOf Identity
+  MayGrantScopes []Scope
 }
 
 type Consent struct {
