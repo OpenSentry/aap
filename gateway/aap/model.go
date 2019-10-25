@@ -109,3 +109,9 @@ type Publish struct {
   MayGrantScopes []Scope
   MayGrantRules  []PublishRule
 }
+
+type Subscription struct {
+  Subscriber     Identity
+  Publisher      Identity
+  Scope          Scope
+}

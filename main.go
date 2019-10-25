@@ -20,6 +20,7 @@ import (
   "github.com/charmixer/aap/endpoints/grants"
   "github.com/charmixer/aap/endpoints/publishes"
   "github.com/charmixer/aap/endpoints/consents"
+  "github.com/charmixer/aap/endpoints/subscriptions"
   "github.com/charmixer/aap/migration"
   "github.com/charmixer/aap/utils"
 )
@@ -183,6 +184,10 @@ func serve(env *environment.State) {
   r.POST("/publishes",                utils.AuthorizationRequired(aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
   r.GET("/publishes",                 utils.AuthorizationRequired(aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
   r.DELETE("/publishes",              utils.AuthorizationRequired(aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
+
+  r.POST("/subscriptions",            utils.AuthorizationRequired(aconf, "aap:create:subscriptions"),  subscriptions.PostSubscriptions(env))
+  r.GET("/subscriptions",             utils.AuthorizationRequired(aconf, "aap:read:subscriptions"),    subscriptions.GetSubscriptions(env))
+  r.DELETE("/subscriptions",          utils.AuthorizationRequired(aconf, "aap:delete:subscriptions"),  subscriptions.DeleteSubscriptions(env))
 
   r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
   r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identities"),     authorizations.PostReject(env))
