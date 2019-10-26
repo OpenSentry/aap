@@ -32,7 +32,7 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     MATCH (publisher:Identity {id: $publisherId})
     MATCH (obo:Identity {id: $onBehalfOfId})
     MATCH (scope:Scope {name: $scopeName})
-    MATCH (publisher)-[:IS_PUBLISHING]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
+    MATCH (publisher)-[:PUBLISH]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
 
     // ensure unique rules
     CREATE (grantRule:Grant:Rule)
@@ -150,7 +150,7 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
   cypher = fmt.Sprintf(`
     match (identity:Identity {id:$id})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
     where 1=1 %s
-    match (publisher:Identity)-[:IS_PUBLISHING]->(pr)
+    match (publisher:Identity)-[:PUBLISH]->(pr)
     where 1=1 %s
     match (gr)-[:ON_BEHALF_OF]->(obo:Identity)
     where 1=1 %s

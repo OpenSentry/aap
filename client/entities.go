@@ -34,7 +34,7 @@ type Verdict struct {
 
 type ReadEntitiesJudgeResponse Verdict
 type ReadEntitiesJudgeRequest struct {
-  Publisher string  // Resource Server
+  Publisher string  // Resource Server Audience
   Owners []string   // Resource Owners
   Scopes []string
 }
