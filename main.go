@@ -164,7 +164,7 @@ func serve(env *environment.State) {
   }
 
   r.POST("/entities",                 utils.AuthorizationRequired(aconf, "aap:create:entities"),       entities.PostEntities(env))
-  r.GET( "/entities/judge",           utils.AuthorizationRequired(aconf, "aap:judge:entities"),        entities.GetEntitiesJudge(env))  // FIXME Hvad skal have lov til at requeste denne? Det skal resource serverne
+  r.GET( "/entities/judge",           utils.AuthorizationRequired(aconf, "aap:judge:entities"),        entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
 
   r.GET("/scopes",                    utils.AuthorizationRequired(aconf, "aap:read:scopes"),           scopes.GetScopes(env))
   r.POST("/scopes",                   utils.AuthorizationRequired(aconf, "aap:create:scopes"),         scopes.PostScopes(env))

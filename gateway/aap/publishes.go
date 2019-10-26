@@ -110,7 +110,7 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
   }
 
   cypher := fmt.Sprintf(`
-    match (publisher:Identity)-[:IS_PUBLISHING]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    match (publisher:Identity)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
     where 1=1 %s
     optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISH]->(mgscope:Scope)
     return publisher, pr, collect(mgpr), scope, collect(mgscope)
