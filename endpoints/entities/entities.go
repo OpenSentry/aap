@@ -5,7 +5,7 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
 
@@ -14,9 +14,9 @@ import (
   //"fmt"
 )
 
-func PostEntities(env *environment.State) gin.HandlerFunc {
+func PostEntities(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostEntities",
     })
@@ -91,9 +91,9 @@ func PostEntities(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func DeleteEntities(env *environment.State) gin.HandlerFunc {
+func DeleteEntities(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "DeleteEntities",
     })
@@ -105,9 +105,9 @@ func DeleteEntities(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func GetEntities(env *environment.State) gin.HandlerFunc {
+func GetEntities(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetEntities",
     })

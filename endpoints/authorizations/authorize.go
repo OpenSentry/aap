@@ -6,15 +6,15 @@ import (
   "github.com/gin-gonic/gin"
   hydra "github.com/charmixer/hydra/client"
 
-  client "github.com/charmixer/aap/client"
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/environment"
+  client "github.com/charmixer/aap/client"
 )
 
-func PostAuthorize(env *environment.State) gin.HandlerFunc {
+func PostAuthorize(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostAuthorize",
     })
@@ -27,7 +27,7 @@ func PostAuthorize(env *environment.State) gin.HandlerFunc {
     }
 
     // Create a new HTTP client to perform the request, to prevent serialization
-    hydraClient := hydra.NewHydraClient(env.HydraConfig)
+    hydraClient := hydra.NewHydraClient(env.OAuth2Delegator.Config)
 
     authorizeResponse, err := authorize(hydraClient, input, log)
     if err != nil {
@@ -46,10 +46,10 @@ func PostAuthorize(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PostReject(env *environment.State) gin.HandlerFunc {
+func PostReject(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostReject",
     })
@@ -61,7 +61,7 @@ func PostReject(env *environment.State) gin.HandlerFunc {
       return
     }
 
-    hydraClient := hydra.NewHydraClient(env.HydraConfig)
+    hydraClient := hydra.NewHydraClient(env.OAuth2Delegator.Config)
 
     hydraConsentRejectRequest := hydra.ConsentRejectRequest{
       Error: "",
