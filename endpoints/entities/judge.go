@@ -37,13 +37,13 @@ func GetEntitiesJudge(env *environment.State) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      requestor := c.MustGet("sub").(string)
-      iRequestor := aap.Identity{Id:requestor}
+      // requestor := c.MustGet("sub").(string) // This is the requestor of the Judge call. Not the client we need to judge.
 
       for _, request := range iRequests {
         r := request.Input.(client.ReadEntitiesJudgeRequest)
 
         iPublisher := aap.Identity{Id:r.Publisher}
+        iRequestor := aap.Identity{Id:r.Requestor}
 
         grantedOwnersCount := 0
 

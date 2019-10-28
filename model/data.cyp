@@ -68,11 +68,8 @@ MERGE (:Scope {name:"aap:read:consents", title:"Read consents", description:""})
 MERGE (:Scope {name:"aap:create:consents", title:"Consent to scopes", description:""})
 MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", description:""})
 
-MERGE (:Scope {name:"aap:judge:entities", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
-
-MERGE (:Scope {name:"aap:authorizations:get", title:"Not used?", description:""})
-MERGE (:Scope {name:"aap:authorizations:post", title:"Not used?", description:""})
-MERGE (:Scope {name:"aap:authorizations:put", title:"Not used?", description:""})
+MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
+MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
 ;
 
 MATCH (s:Scope)
@@ -147,13 +144,3 @@ MATCH (pr:Publish:Rule)
 WHERE not ()-[:MAY_GRANT]->(pr)
 MERGE (pr)-[:MAY_GRANT]->(pr)
 ;
-
-// ## IDP UI Grants
-
-// ### The protected grants that deals with password and code credentials)
-MATCH (idpui:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
-MATCH (s:Scope) where s.name in split("idp:create:humans idp:read:humans idp:create:humans:authenticate idp:read:invites idp:create:invites idp:claim:invites idp:read:challenges idp:update:challenges:verify", " ")
-MATCH (idp:Identity:ResourceServer {name:"IDP"})-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
-MERGE (idpui)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-
-// ### Humans default grants
