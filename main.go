@@ -163,30 +163,30 @@ func serve(env *environment.State) {
     HydraIntrospectUrl: hydraIntrospectUrl,
   }
 
-  r.POST("/entities",                 utils.AuthorizationRequired(aconf, "aap:create:entities"),       entities.PostEntities(env))
-  r.GET( "/entities/judge",           utils.AuthorizationRequired(aconf, "aap:judge:entities"),        entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
+  r.POST("/entities",                 utils.AuthorizationRequired(env, aconf, "aap:create:entities"),       entities.PostEntities(env))
+  r.GET( "/entities/judge",           utils.AuthorizationRequired(env, aconf, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
 
-  r.GET("/scopes",                    utils.AuthorizationRequired(aconf, "aap:read:scopes"),           scopes.GetScopes(env))
-  r.POST("/scopes",                   utils.AuthorizationRequired(aconf, "aap:create:scopes"),         scopes.PostScopes(env))
-  r.PUT("/scopes",                    utils.AuthorizationRequired(aconf, "aap:update:scopes"),         scopes.PutScopes(env))
+  r.GET("/scopes",                    utils.AuthorizationRequired(env, aconf, "aap:read:scopes"),           scopes.GetScopes(env))
+  r.POST("/scopes",                   utils.AuthorizationRequired(env, aconf, "aap:create:scopes"),         scopes.PostScopes(env))
+  r.PUT("/scopes",                    utils.AuthorizationRequired(env, aconf, "aap:update:scopes"),         scopes.PutScopes(env))
 
-  r.POST("/grants",                   utils.AuthorizationRequired(aconf, "aap:create:grants"),         grants.PostGrants(env))
-  r.GET("/grants",                    utils.AuthorizationRequired(aconf, "aap:read:grants"),           grants.GetGrants(env))
-  r.DELETE("/grants",                 utils.AuthorizationRequired(aconf, "aap:delete:grants"),         grants.DeleteGrants(env))
+  r.POST("/grants",                   utils.AuthorizationRequired(env, aconf, "aap:create:grants"),         grants.PostGrants(env))
+  r.GET("/grants",                    utils.AuthorizationRequired(env, aconf, "aap:read:grants"),           grants.GetGrants(env))
+  r.DELETE("/grants",                 utils.AuthorizationRequired(env, aconf, "aap:delete:grants"),         grants.DeleteGrants(env))
 
-  r.POST("/consents",                 utils.AuthorizationRequired(aconf, "aap:create:consents"),       consents.PostConsents(env))
-  r.GET("/consents",                  utils.AuthorizationRequired(aconf, "aap:read:consents"),         consents.GetConsents(env))
-  r.DELETE("/consents",               utils.AuthorizationRequired(aconf, "aap:delete:consents"),       consents.DeleteConsents(env))
+  r.POST("/consents",                 utils.AuthorizationRequired(env, aconf, "aap:create:consents"),       consents.PostConsents(env))
+  r.GET("/consents",                  utils.AuthorizationRequired(env, aconf, "aap:read:consents"),         consents.GetConsents(env))
+  r.DELETE("/consents",               utils.AuthorizationRequired(env, aconf, "aap:delete:consents"),       consents.DeleteConsents(env))
   // @TODO refactor to use /consents
-  r.GET("/authorizations",            utils.AuthorizationRequired(aconf, "aap:read:consents"),         authorizations.GetAuthorizations(env))
-  r.POST("/authorizations",           utils.AuthorizationRequired(aconf, "aap:create:consents"),       authorizations.PostAuthorizations(env))
+  r.GET("/authorizations",            utils.AuthorizationRequired(env, aconf, "aap:read:consents"),         authorizations.GetAuthorizations(env))
+  r.POST("/authorizations",           utils.AuthorizationRequired(env, aconf, "aap:create:consents"),       authorizations.PostAuthorizations(env))
 
-  r.POST("/publishes",                utils.AuthorizationRequired(aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
-  r.GET("/publishes",                 utils.AuthorizationRequired(aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
-  r.DELETE("/publishes",              utils.AuthorizationRequired(aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
+  r.POST("/publishes",                utils.AuthorizationRequired(env, aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
+  r.GET("/publishes",                 utils.AuthorizationRequired(env, aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
+  r.DELETE("/publishes",              utils.AuthorizationRequired(env, aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
 
-  r.POST("/authorizations/authorize", utils.AuthorizationRequired(aconf, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
-  r.POST("/authorizations/reject",    utils.AuthorizationRequired(aconf, "aap:reject:identities"),     authorizations.PostReject(env))
+  r.POST("/authorizations/authorize", utils.AuthorizationRequired(env, aconf, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
+  r.POST("/authorizations/reject",    utils.AuthorizationRequired(env, aconf, "aap:reject:identities"),     authorizations.PostReject(env))
 
   // r.POST("/scopes", utils.AuthorizationRequired(), Route(GetScopes(), input, output))
   // r.POST("/scopes", utils.AuthorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))

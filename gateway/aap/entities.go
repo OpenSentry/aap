@@ -1,7 +1,7 @@
 package aap
 
 import (
-  //"strings"
+  "strings"
   "fmt"
   "github.com/neo4j/neo4j-go-driver/neo4j"
 
@@ -20,7 +20,7 @@ type EntityVerdict struct {
 func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iRequest Identity) (rEntity Identity, err error) {
 
   scopes := []string{
-    "aap:judge:entities", // Only AAP should ever have mg:aap:judge:entities, 0:mg:aap:judge:entities
+    "aap:read:entities:judge", // Only AAP should ever have mg:aap:read:entities:judge, 0:mg:aap:read:entities:judge
     "aap:read:grants",
     "aap:create:grants",
     "aap:delete:grants",
@@ -115,50 +115,26 @@ func JudgeEntity(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity,
     params["owners"] = strings.Join(owners, ",")
   }*/
 
-/*
-
-  // AAP.Id a73b547b-f26d-487b-9e3a-2574fe3403fe
-  // Marc (60e1ce36-6e2b-448c-b8e1-dfd5e8af0042) vil gerne give rettigheden login til Cactus (1cd78bcd-ccac-433d-970f-8ef6b12ecd84) til Sune
-  // Dette betyder at marc skal give scope 'openid' til Sune
-
-  // For at give scope 'openid' til Sune skal Marc have lov til at give rettigheder til Cactus
-  // Dette betyder at Marc skal være granted en regel som på vegne af Cactus giver 'openid'
-
-  // Funktionen 'at give rettigheder' bliver published af AAP og er givet ved scope 'aap:create:grants'
-
-  // Dette vil sige at følgende sti i grafen skal findes for Marc
-  MATCH (aap:Identity {id:"a73b547b-f26d-487b-9e3a-2574fe3403fe"})-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s:Scope {name:"aap:create:grants"})
-  MATCH (i:Identity {id:"60e1ce36-6e2b-448c-b8e1-dfd5e8af0042"})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-  MATCH (i)-[:IS_GRANTED]->(gr)-[:ON_BEHALF_OF]->(obo:Identity {id:"1cd78bcd-ccac-433d-970f-8ef6b12ecd84"})
-  return aap, pr, s, i, gr, obo
-
-
-
-
-
-
-
-
-  MATCH (requestor:Identity {id:$requestor})
-
-  MATCH (requestor:Identity {id:$requestor})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-  MATCH (requestor)-[:IS_GRANTED]->(gr)-[:ON_BEHALF_OF]->(owner:Identity {id:$owner})
-
-  MATCH (publisher:Identity {id:"e044d683-5daf-42af-a31a-938094611be9"})-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope {name:"idp:create:humans:authenticate"})
-  MATCH (owner:Identity {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-
-*/
-
   cypher = fmt.Sprintf(`
+    MATCH (publisher:Identity {id:$publisher})
     MATCH (requestor:Identity {id:$requestor})
-    MATCH (publisher:Identity {id:$publisher})-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope {name:$scope})
-    MATCH (owner:Identity {id:$owner})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+    MATCH (owner:Identity) where owner.id in split($owner, " ") // Requestor must be granted a rule on behalf of publisher (root grant) or owner (subject grant)
+    MATCH (scope:Scope {name:$scope})
+
+    // Require publisher must publish scope
+    MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope)
+
+    // Require requestor must be granted the publish rule on behalf of owner
+    MATCH (requestor)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+    MATCH (gr)-[:ON_BEHALF_OF]->(owner)
+
+    // Conclude. This only returns anything if everything match!
     RETURN publisher, requestor, owner, scope
   `)
 
   params["publisher"] = iPublisher.Id
   params["requestor"] = iRequestor.Id
-  params["owner"] = iOwner.Id
+  params["owner"] = strings.Join([]string{iPublisher.Id,iOwner.Id}, " ")
   params["scope"] = iScope.Name
 
   if result, err = tx.Run(cypher, params); err != nil {

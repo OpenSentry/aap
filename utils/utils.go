@@ -8,12 +8,17 @@ import (
   "crypto/rand"
   "encoding/base64"
   "time"
+  "fmt"
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/clientcredentials"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
   "github.com/gofrs/uuid"
   hydra "github.com/charmixer/hydra/client"
+
+  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/config"
+  "github.com/charmixer/aap/gateway/aap"
 )
 
 const ERROR_INVALID_ACCESS_TOKEN = 1
@@ -310,7 +315,7 @@ func AuthenticationRequired(logKey string, accessTokenKey string) gin.HandlerFun
   return gin.HandlerFunc(fn)
 }
 
-func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) gin.HandlerFunc {
+func AuthorizationRequired(env *environment.State, aconf AuthorizationConfig, requiredScopes ...string) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
 
@@ -334,7 +339,6 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
 
     log.WithFields(logrus.Fields{"token": accessToken.AccessToken}).Debug("Introspecting token")
 
-
     introspectRequest := hydra.IntrospectRequest{
       Token: accessToken.AccessToken,
       Scope: strRequiredScopes, // This will make hydra check that all scopes are present else introspect.active will be false.
@@ -348,26 +352,61 @@ func AuthorizationRequired(aconf AuthorizationConfig, requiredScopes ...string) 
     log.Debug(introspectResponse)
 
 
+    var grantedScopes []string
+    var missingScopes []string
+
     if introspectResponse.Active == true {
 
       // Check scopes. (is done by hydra according to doc)
       // https://www.ory.sh/docs/hydra/sdk/api#introspect-oauth2-tokens
 
       // See #4 of QTNA
-      log.WithFields(logrus.Fields{"fixme": 1, "qtna": 4}).Debug("Missing check if the user or client giving the grants in the access token authorized to use the scopes granted")
+      //log.WithFields(logrus.Fields{"fixme": 1, "qtna": 4}).Debug("Missing check if the user or client giving the grants in the access token authorized to use the scopes granted")
+      sub := introspectResponse.Sub
+      //client := introspectResponse.ClientId
 
-      foundRequiredScopes := true
-      if foundRequiredScopes {
+      publisherEntity := aap.Identity{ Id:config.GetString("id") }
+      requestorEntity := aap.Identity{ Id:sub }
+      ownerEntity := aap.Identity{ Id:sub }
+
+      session, tx, err := aap.BeginReadTx(env.Driver)
+      if err != nil {
+        log.Debug(err.Error())
+        c.AbortWithStatus(http.StatusInternalServerError)
+        return
+      }
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      for _, scope := range requiredScopes {
+
+        verdict, err := aap.JudgeEntity(tx, publisherEntity, requestorEntity, ownerEntity, aap.Scope{ Name:scope })
+        if err != nil {
+          log.WithFields(logrus.Fields{ "publisher":publisherEntity.Id, "requestor":requestorEntity.Id, "owner":ownerEntity.Id, "scope":scope }).Debug(err.Error())
+          c.AbortWithStatus(http.StatusInternalServerError)
+          return
+        }
+
+        if verdict.Granted == true {
+          grantedScopes = append(grantedScopes, scope)
+        } else {
+          missingScopes = append(missingScopes, scope)
+        }
+
+      }
+
+      if len(missingScopes) == 0 && len(grantedScopes) == len(requiredScopes) {
         log.WithFields(logrus.Fields{"sub": introspectResponse.Sub, "scope": strRequiredScopes}).Debug("Authorized")
         c.Set("sub", introspectResponse.Sub)
         c.Next() // Authentication successful, continue.
-        return;
+        return
       }
     }
 
     // Deny by default
-    log.WithFields(logrus.Fields{"fixme": 1}).Debug("Calculate missing scopes and only log those");
-    c.AbortWithStatusJSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_REQUIRED_SCOPES, Error: "Missing required scopes. Hint: Some required scopes are missing, invalid or not granted"})
+    var strMissingScopes string = strings.Join(missingScopes, " ")
+    log.WithFields(logrus.Fields{"scope": strMissingScopes}).Debug("Missing Scopes");
+    c.AbortWithStatusJSON(http.StatusForbidden, JsonError{ErrorCode: ERROR_MISSING_REQUIRED_SCOPES, Error: fmt.Sprintf("Missing required scopes: %s. Hint: Some required scopes are missing, invalid or not granted", strMissingScopes)})
     return
 
   }
