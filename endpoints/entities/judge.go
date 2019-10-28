@@ -56,12 +56,6 @@ func GetEntitiesJudge(env *environment.State) gin.HandlerFunc {
           for _, scope := range r.Scopes {
             iScope := aap.Scope{Name:scope}
 
-            log.Debug("CALLING JUDGE: =================")
-            log.Debug(iPublisher)
-            log.Debug(iRequestor)
-            log.Debug(iOwner)
-            log.Debug(iScope)
-
             verdict, err := aap.JudgeEntity(tx, iPublisher, iRequestor, iOwner, iScope)
             if err != nil {
               e := tx.Rollback()
