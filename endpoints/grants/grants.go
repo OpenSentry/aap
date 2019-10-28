@@ -5,16 +5,16 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/client"
-  "github.com/charmixer/aap/environment"
   "github.com/charmixer/aap/gateway/aap"
 
   bulky "github.com/charmixer/bulky/server"
 )
 
-func GetGrants(env *environment.State) gin.HandlerFunc {
+func GetGrants(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetGrants",
     })
@@ -119,9 +119,9 @@ func GetGrants(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PostGrants(env *environment.State) gin.HandlerFunc {
+func PostGrants(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostGrants",
     })
@@ -210,9 +210,9 @@ func PostGrants(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func DeleteGrants(env *environment.State) gin.HandlerFunc {
+func DeleteGrants(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "DeleteGrants",
     })

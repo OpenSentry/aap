@@ -5,16 +5,16 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
 
   bulky "github.com/charmixer/bulky/server"
 )
 
-func PostScopes(env *environment.State) gin.HandlerFunc {
+func PostScopes(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostScopes",
     })
@@ -62,9 +62,9 @@ func PostScopes(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func GetScopes(env *environment.State) gin.HandlerFunc {
+func GetScopes(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetScopes",
     })
@@ -122,9 +122,9 @@ func GetScopes(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PutScopes(env *environment.State) gin.HandlerFunc {
+func PutScopes(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostScopes",
     })

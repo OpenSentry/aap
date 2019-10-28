@@ -11,8 +11,8 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "github.com/pborman/getopt"
 
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/environment"
 
   "github.com/charmixer/aap/endpoints/entities"
   "github.com/charmixer/aap/endpoints/authorizations"
@@ -21,10 +21,17 @@ import (
   "github.com/charmixer/aap/endpoints/publishes"
   "github.com/charmixer/aap/endpoints/consents"
   "github.com/charmixer/aap/migration"
-  "github.com/charmixer/aap/utils"
 )
 
-const app = "aap"
+const (
+  appName = "aap"
+
+  RequestIdKey string = "RequestId"
+  LogKey string = "log"
+
+  AccessTokenKey string = "access_token"
+  IdTokenKey string = "id_token"
+)
 
 var (
   logDebug int // Set to 1 to enable debug
@@ -59,7 +66,7 @@ func init() {
   }
 
   appFields = logrus.Fields{
-    "appname": app,
+    "appname": appName,
     "log.debug": logDebug,
     "log.format": logFormat,
   }
@@ -116,11 +123,26 @@ func main() {
     AuthStyle: 2, // https://godoc.org/golang.org/x/oauth2#AuthStyle
   }
 
+  hydraIntrospectUrl := config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.introspect")
+  if hydraIntrospectUrl == "" {
+    logrus.WithFields(appFields).Panic("Missing hydra introspect url")
+    return
+  }
+
   // Setup app state variables. Can be used in handler functions by doing closures see exchangeAuthorizationCodeCallback
-  env := &environment.State{
+  env := &app.Environment{
+    Driver: driver, // Database
     Provider: provider,
-    HydraConfig: hydraConfig,
-    Driver: driver,
+    OAuth2Delegator: &app.EnvironmentOauth2Delegator{
+      Config: hydraConfig,
+      IntrospectTokenUrl: hydraIntrospectUrl,
+    },
+    Constants: &app.EnvironmentConstants{
+      LogKey: LogKey,
+      AccessTokenKey: AccessTokenKey,
+      IdTokenKey: IdTokenKey,
+      RequestIdKey: RequestIdKey,
+    },
   }
 
   if *optServe {
@@ -136,13 +158,13 @@ func migrate(driver neo4j.Driver) {
   migration.Migrate(driver)
 }
 
-func serve(env *environment.State) {
+func serve(env *app.Environment) {
   r := gin.New() // Clean gin to take control with logging.
-  r.Use(utils.ProcessMethodOverride(r))
+  r.Use(app.ProcessMethodOverride(r))
   r.Use(gin.Recovery())
 
-  r.Use(utils.RequestId())
-  r.Use(utils.RequestLogger(environment.LogKey, environment.RequestIdKey, log, appFields))
+  r.Use(app.RequestId())
+  r.Use(app.RequestLogger(env.Constants.LogKey, env.Constants.RequestIdKey, log, appFields))
 
   // ## QTNA - Questions that need answering before granting access to a protected resource
   // 1. Is the user or client authenticated? Answered by the process of obtaining an access token.
@@ -152,41 +174,32 @@ func serve(env *environment.State) {
   // 5. Is the access token revoked?
 
   // All requests need to be authenticated.
-  r.Use(utils.AuthenticationRequired(environment.LogKey, environment.AccessTokenKey))
+  r.Use(app.AuthenticationRequired(env.Constants.LogKey, env.Constants.AccessTokenKey))
 
-  hydraIntrospectUrl := config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.introspect")
+  r.POST("/entities",                 app.AuthorizationRequired(env, "aap:create:entities"),       entities.PostEntities(env))
+  r.GET( "/entities/judge",           app.AuthorizationRequired(env, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
 
-  aconf := utils.AuthorizationConfig{
-    LogKey:             environment.LogKey,
-    AccessTokenKey:     environment.AccessTokenKey,
-    HydraConfig:        env.HydraConfig,
-    HydraIntrospectUrl: hydraIntrospectUrl,
-  }
+  r.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))
+  r.POST("/scopes",                   app.AuthorizationRequired(env, "aap:create:scopes"),         scopes.PostScopes(env))
+  r.PUT("/scopes",                    app.AuthorizationRequired(env, "aap:update:scopes"),         scopes.PutScopes(env))
 
-  r.POST("/entities",                 utils.AuthorizationRequired(env, aconf, "aap:create:entities"),       entities.PostEntities(env))
-  r.GET( "/entities/judge",           utils.AuthorizationRequired(env, aconf, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
+  r.POST("/grants",                   app.AuthorizationRequired(env, "aap:create:grants"),         grants.PostGrants(env))
+  r.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))
+  r.DELETE("/grants",                 app.AuthorizationRequired(env, "aap:delete:grants"),         grants.DeleteGrants(env))
 
-  r.GET("/scopes",                    utils.AuthorizationRequired(env, aconf, "aap:read:scopes"),           scopes.GetScopes(env))
-  r.POST("/scopes",                   utils.AuthorizationRequired(env, aconf, "aap:create:scopes"),         scopes.PostScopes(env))
-  r.PUT("/scopes",                    utils.AuthorizationRequired(env, aconf, "aap:update:scopes"),         scopes.PutScopes(env))
-
-  r.POST("/grants",                   utils.AuthorizationRequired(env, aconf, "aap:create:grants"),         grants.PostGrants(env))
-  r.GET("/grants",                    utils.AuthorizationRequired(env, aconf, "aap:read:grants"),           grants.GetGrants(env))
-  r.DELETE("/grants",                 utils.AuthorizationRequired(env, aconf, "aap:delete:grants"),         grants.DeleteGrants(env))
-
-  r.POST("/consents",                 utils.AuthorizationRequired(env, aconf, "aap:create:consents"),       consents.PostConsents(env))
-  r.GET("/consents",                  utils.AuthorizationRequired(env, aconf, "aap:read:consents"),         consents.GetConsents(env))
-  r.DELETE("/consents",               utils.AuthorizationRequired(env, aconf, "aap:delete:consents"),       consents.DeleteConsents(env))
+  r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),       consents.PostConsents(env))
+  r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),         consents.GetConsents(env))
+  r.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),       consents.DeleteConsents(env))
   // @TODO refactor to use /consents
-  r.GET("/authorizations",            utils.AuthorizationRequired(env, aconf, "aap:read:consents"),         authorizations.GetAuthorizations(env))
-  r.POST("/authorizations",           utils.AuthorizationRequired(env, aconf, "aap:create:consents"),       authorizations.PostAuthorizations(env))
+  r.GET("/authorizations",            app.AuthorizationRequired(env, "aap:read:consents"),         authorizations.GetAuthorizations(env))
+  r.POST("/authorizations",           app.AuthorizationRequired(env, "aap:create:consents"),       authorizations.PostAuthorizations(env))
 
-  r.POST("/publishes",                utils.AuthorizationRequired(env, aconf, "aap:create:publishes"),      publishes.PostPublishes(env))
-  r.GET("/publishes",                 utils.AuthorizationRequired(env, aconf, "aap:read:publishes"),        publishes.GetPublishes(env))
-  r.DELETE("/publishes",              utils.AuthorizationRequired(env, aconf, "aap:delete:publishes"),      publishes.DeletePublishes(env))
+  r.POST("/publishes",                app.AuthorizationRequired(env, "aap:create:publishes"),      publishes.PostPublishes(env))
+  r.GET("/publishes",                 app.AuthorizationRequired(env, "aap:read:publishes"),        publishes.GetPublishes(env))
+  r.DELETE("/publishes",              app.AuthorizationRequired(env, "aap:delete:publishes"),      publishes.DeletePublishes(env))
 
-  r.POST("/authorizations/authorize", utils.AuthorizationRequired(env, aconf, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
-  r.POST("/authorizations/reject",    utils.AuthorizationRequired(env, aconf, "aap:reject:identities"),     authorizations.PostReject(env))
+  r.POST("/authorizations/authorize", app.AuthorizationRequired(env, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
+  r.POST("/authorizations/reject",    app.AuthorizationRequired(env, "aap:reject:identities"),     authorizations.PostReject(env))
 
   // r.POST("/scopes", utils.AuthorizationRequired(), Route(GetScopes(), input, output))
   // r.POST("/scopes", utils.AuthorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))

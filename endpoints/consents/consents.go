@@ -5,14 +5,15 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/app"
+  _ "github.com/charmixer/aap/config"
   _ "github.com/charmixer/aap/gateway/aap"
   _ "github.com/charmixer/aap/client"
 )
 
-func GetConsents(env *environment.State) gin.HandlerFunc {
+func GetConsents(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetConsents",
     })
@@ -24,9 +25,9 @@ func GetConsents(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PostConsents(env *environment.State) gin.HandlerFunc {
+func PostConsents(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "PostScopesConsent",
     })
@@ -38,9 +39,9 @@ func PostConsents(env *environment.State) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func DeleteConsents(env *environment.State) gin.HandlerFunc {
+func DeleteConsents(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "DeleteScopesConsent",
     })

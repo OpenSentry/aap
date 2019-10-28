@@ -5,16 +5,16 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/environment"
+  "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
 
   bulky "github.com/charmixer/bulky/server"
 )
 
-func GetEntitiesJudge(env *environment.State) gin.HandlerFunc {
+func GetEntitiesJudge(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
-    log := c.MustGet(environment.LogKey).(*logrus.Entry)
+    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "GetEntitiesJudge",
     })
