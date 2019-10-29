@@ -12,7 +12,7 @@
 // ## IDP (ResourceServer) grants to client used to call AAP
 MATCH (client:Identity:Client {id:"8dc7ea3e-c61a-47cd-acf2-2f03615e3f8b"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:read:entities:judge aap:create:entities", " ")
+MATCH (s:Scope) where s.name in split("aap:read:entities:judge aap:create:entities aap:create:grants", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
@@ -34,7 +34,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // ## Human (Identity) required grants (Subject Grants)
 MATCH (i:Identity:Human)
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:humans", " ")
+MATCH (s:Scope) where s.name in split("idp:read:humans idp:create:humans:logout idp:read:humans:logout idp:update:humans:logout", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
