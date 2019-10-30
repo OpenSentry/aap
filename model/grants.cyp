@@ -23,7 +23,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // ## IDP UI (Application) grants to required scopes which relates to credentials like password, otp codes etc. (Secret Grants)
 MATCH (client:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:claim:invites idp:update:challenges:verify idp:read:challenges idp:create:humans", " ")
+MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:claim:invites idp:update:challenges:verify idp:read:challenges idp:create:humans idp:update:humans:totp", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
@@ -32,15 +32,15 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 ;
 
 // ## Human (Identity) required grants (Subject Grants)
-MATCH (i:Identity:Human)
-MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:humans idp:create:humans:logout idp:read:humans:logout idp:update:humans:logout", " ")
-
-MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
-
-MERGE (i)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-MERGE (gr)-[:ON_BEHALF_OF]->(i)
-;
+// MATCH (i:Identity:Human)
+// MATCH (rs:Identity:ResourceServer {name:"IDP"})
+// MATCH (s:Scope) where s.name in split("idp:read:humans idp:create:humans:logout idp:read:humans:logout idp:update:humans:logout", " ")
+//
+// MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+//
+// MERGE (i)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+// MERGE (gr)-[:ON_BEHALF_OF]->(i)
+// ;
 
 
 // # Grants required for AAP to work
