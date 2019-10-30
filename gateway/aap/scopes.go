@@ -6,66 +6,57 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-func CreateScope(driver neo4j.Driver, scope Scope, iRequest Identity) (rScope Scope, err error) {
-  var session neo4j.Session
-  var neoResult interface{}
+func CreateScope(tx neo4j.Transaction, iScope Scope, iRequest Identity) (rScope Scope, err error) {
+  var result neo4j.Result
+  var cypher string
+  var params map[string]interface{}
 
-  session, err = driver.Session(neo4j.AccessModeWrite);
-  if err != nil {
-    return rScope, err
+  cypher = `
+    // create scope and match it to the identity who created it
+    MERGE (scope:Scope {name: $name})
+    MERGE (mgscope:Scope {name: "mg:"+$name})
+    MERGE (mmgscope:Scope {name: "0:mg:"+$name})
+
+    MERGE (mmgscope)-[:MAY_GRANT]->(mmgscope)-[:MAY_GRANT]->(mgscope)-[:MAY_GRANT]->(scope)
+
+    // Conclude
+    return scope
+  `
+
+  params = map[string]interface{}{
+    "name":                iScope.Name,
   }
-  defer session.Close()
 
-  neoResult, err = session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
-    var result neo4j.Result
-    var cypher string
-    var params map[string]interface{}
+  logCypher(cypher,params)
 
-    cypher = `
-      // create scope and match it to the identity who created it
-      MERGE (scope:Scope {name: $name})
-      MERGE (mgscope:Scope {name: "mg:"+$name})
-      MERGE (mmgscope:Scope {name: "0:mg:"+$name})
+  if result, err = tx.Run(cypher, params); err != nil {
+    return Scope{}, err
+  }
 
-      // Conclude
-      return scope
-    `
+  if result.Next() {
+    record := result.Record()
 
-    params = map[string]interface{}{
-      "name":                scope.Name,
+    scopeNode := record.GetByIndex(0)
+
+    if scopeNode != nil {
+      rScope = marshalNodeToScope(scopeNode.(neo4j.Node))
     }
 
-    if result, err = tx.Run(cypher, params); err != nil {
-      return nil, err
-    }
+  } else {
+    return Scope{}, errors.New("Unable to create scope")
+  }
 
-    var scope Scope
-    if result.Next() {
-      record := result.Record()
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return Scope{}, err
+  }
 
-      scopeNode := record.GetByIndex(0)
-
-      if scopeNode != nil {
-        scope = marshalNodeToScope(scopeNode.(neo4j.Node))
-      }
-
-    } else {
-      return nil, errors.New("Unable to create scope")
-    }
-
-    // Check if we encountered any error during record streaming
-    if err = result.Err(); err != nil {
-      return nil, err
-    }
-
-    return scope, nil
-  })
 
   if err != nil {
     return Scope{}, err
   }
 
-  return neoResult.(Scope), nil
+  return rScope, nil
 }
 
 func FetchScopes(driver neo4j.Driver, inputScopes []Scope) ([]Scope, error) {

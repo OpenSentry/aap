@@ -10,8 +10,6 @@ import (
   "github.com/charmixer/aap/client"
 
   bulky "github.com/charmixer/bulky/server"
-
-  "fmt"
 )
 
 func PostPublishes(env *app.Environment) gin.HandlerFunc {
@@ -47,8 +45,12 @@ func PostPublishes(env *app.Environment) gin.HandlerFunc {
         newPublish := aap.Publish{
           Publisher: aap.Identity{Id:r.Publisher},
           Scope: aap.Scope{Name:r.Scope},
+          Rule: aap.PublishRule{
+            Title: r.Title,
+            Description: r.Description,
+          },
         }
-        publish, err := aap.CreatePublishes(tx, aap.Identity{Id:requestor}, newPublish)
+        db, err := aap.CreatePublishes(tx, aap.Identity{Id:requestor}, newPublish)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -60,9 +62,18 @@ func PostPublishes(env *app.Environment) gin.HandlerFunc {
           return
         }
 
-        if publish.Rule.Title != "" {
-          ok := client.CreatePublishesResponse{
+        if db.Rule.Title != "" {
+          var mgs = []string{}
+          for _,e := range db.MayGrantScopes {
+            mgs = append(mgs, e.Name)
+          }
 
+          ok := client.CreatePublishesResponse{
+            Publisher:      db.Publisher.Id,
+            Scope:          db.Scope.Name,
+            Title:          db.Rule.Title,
+            Description:    db.Rule.Description,
+            MayGrantScopes: mgs,
           }
           request.Output = bulky.NewOkResponse(request.Index, ok)
           continue
@@ -156,8 +167,6 @@ func GetPublishes(env *app.Environment) gin.HandlerFunc {
         if request.Input != nil {
           r = request.Input.(client.ReadPublishesRequest)
         }
-
-        fmt.Println(r)
 
         var ok client.ReadPublishesResponse
         for _, db := range dbPublishes {

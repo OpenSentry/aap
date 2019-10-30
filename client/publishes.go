@@ -10,14 +10,16 @@ type Publish struct {
   Publisher         string    `json:"publisher_id" validate:"required,uuid"`
   Scope             string    `json:"scope" validate:"required"`
   MayGrantScopes    []string  `json:"may_grant_scopes" validate:"omitempty"`
-  Title             string    `json:"title" validate:"required"`
+  Title             string    `json:"title"`
   Description       string    `json:"description"`
 }
 
 type CreatePublishesResponse Publish
 type CreatePublishesRequest struct {
-  Publisher string `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
-  Scope     string `json:"scope" validate:"required"`
+  Publisher   string `json:"publisher_id" validate:"required,uuid"`
+  Scope       string `json:"scope" validate:"required"`
+  Title       string `json:"title" validate:"required"`
+  Description string `json:"description" validate:"required"`
 }
 
 

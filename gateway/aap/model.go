@@ -79,13 +79,18 @@ type PublishRule struct {
   Title       string
   Description string
 }
-func marshalNodeToPublishRule(node neo4j.Node) (PublishRule) {
+func marshalNodeToPublishRule(node neo4j.Node) (pr PublishRule) {
   p := node.Props()
 
-  return PublishRule{
-    Title:       p["title"].(string),
-    Description: p["description"].(string),
+  if p["title"] != nil {
+    pr.Title = p["title"].(string)
   }
+
+  if p["description"] != nil {
+    pr.Description = p["description"].(string)
+  }
+
+  return pr
 }
 type Grant struct {
   Identity Identity

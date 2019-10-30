@@ -63,16 +63,3 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // Grants required for MEUI to work
 // # MEUI (Application) grants required to work
 // NONE - everything should be client credentials flow, meaning owners should have required grants to the meui requested scopes. (so see Human grants)
-
-
-MATCH (i:Human:Identity {name:"Sune"})
-MATCH (rs:ResourceServer:Identity {name:"IDP"})
-MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s:Scope)
-MATCH (i)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
-MATCH (gr)-[:ON_BEHALF_OF]->(i)
-
-// FIXME
-MATCH (i:Client:Identity)-[:IS_CONSENTED]->(cr:Consent:Rule)-[:CONSENT]->(s)
-MATCH (cr)-[:CONSENTED_BY]->(i)
-
-return i, rs, pr, gr, s, cr
