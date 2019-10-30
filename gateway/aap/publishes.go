@@ -32,6 +32,12 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   }
   params["description"] = newPublish.Rule.Description
 
+  // ensure scope exists
+  _, err = CreateScope(tx, newPublish.Scope, requestedBy)
+  if err != nil {
+    return Publish{}, err
+  }
+
   cypher = fmt.Sprintf(`
     // Require scope existance
     MATCH (s:Scope {name:$scope})
@@ -45,8 +51,12 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
     MERGE (publisher)-[:PUBLISHES]-(mgpr:Publish:Rule)-[:PUBLISHES]->(mg)
     MERGE (publisher)-[:PUBLISHES]-(rootmgpr:Publish:Rule)-[:PUBLISHES]->(rootmg)
 
+    MERGE (rootmgpr)-[:MAY_GRANT]->(rootmgpr)-[:MAY_GRANT]->(mgpr)-[:MAY_GRANT]->(pr)
+
     RETURN publisher, pr, s, rootmg
   `)
+
+  logCypher(cypher, params)
 
   if result, err = tx.Run(cypher, params); err != nil {
     return Publish{}, err
@@ -71,14 +81,12 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
       publish.Scope = marshalNodeToScope(scopeNode.(neo4j.Node))
     }
     if rootScopeNode != nil {
-      rootScope = marshalNodeToScope(scopeNode.(neo4j.Node))
+      rootScope = marshalNodeToScope(rootScopeNode.(neo4j.Node))
     }
 
   } else {
     return Publish{}, errors.New("Unable to create Publish")
   }
-
-  logCypher(cypher, params)
 
   // Check if we encountered any error during record streaming
   if err = result.Err(); err != nil {
@@ -110,9 +118,9 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
   }
 
   cypher := fmt.Sprintf(`
-    match (publisher:Identity)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    match (publisher:Identity)-[:PUBLISHES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope:Scope)
     where 1=1 %s
-    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISH]->(mgscope:Scope)
+    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISHES]->(mgscope:Scope)
     return publisher, pr, collect(mgpr), scope, collect(mgscope)
   `, wherePublishers)
 

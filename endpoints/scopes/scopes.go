@@ -31,6 +31,15 @@ func PostScopes(env *app.Environment) gin.HandlerFunc {
         Id: c.MustGet("sub").(string),
       }
 
+      session, tx, err := aap.BeginWriteTx(env.Driver)
+      if err != nil {
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
       for _, request := range iRequests {
         r := request.Input.(client.CreateScopesRequest)
 
@@ -39,12 +48,16 @@ func PostScopes(env *app.Environment) gin.HandlerFunc {
         }
 
         // TODO handle error
-        rScope, err := aap.CreateScope(env.Driver, scope, createdByIdentity)
+        rScope, err := aap.CreateScope(tx, scope, createdByIdentity)
 
         if err != nil {
+          tx.Rollback()
+
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
           request.Output = bulky.NewInternalErrorResponse(request.Index)
+
           log.Debug(err.Error())
-          continue
+          return
         }
 
         ok := client.CreateScopesResponse{
@@ -53,6 +66,9 @@ func PostScopes(env *app.Environment) gin.HandlerFunc {
 
         request.Output = bulky.NewOkResponse(request.Index, ok)
       }
+
+      // should be deny by default
+      tx.Commit()
     }
 
     responses := bulky.HandleRequest(requests, handleRequest, bulky.HandleRequestParams{})
