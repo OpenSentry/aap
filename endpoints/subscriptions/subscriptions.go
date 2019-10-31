@@ -39,6 +39,8 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
 
       requestor := c.MustGet("sub").(string)
 
+      subscriptionsMap := make(map[string][]string)
+
       for _, request := range iRequests {
         r := request.Input.(client.CreateSubscriptionsRequest)
 
@@ -66,6 +68,8 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
             Scope: rSubscription.Scope.Name,
           }
           request.Output = bulky.NewOkResponse(request.Index, ok)
+
+          subscriptionsMap[rSubscription.Subscriber.Id] = append(subscriptionsMap[rSubscription.Subscriber.Id], rSubscription.Scope.Name)
           continue
         }
 
@@ -82,6 +86,11 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
       err = bulky.OutputValidateRequests(iRequests)
       if err == nil {
         tx.Commit()
+
+        for i,s := range subscriptionsMap {
+          aap.SyncClientToHydra(i, s) // fire and forget to hydra
+        }
+
         return
       }
 
@@ -89,7 +98,7 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
       tx.Rollback()
     }
 
-    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{MaxRequests: 1})
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{})
     c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
