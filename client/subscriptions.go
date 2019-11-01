@@ -40,7 +40,7 @@ func CreateSubscriptions(client *AapClient, url string, requests []CreateSubscri
 }
 
 func DeleteSubscriptions(client *AapClient, url string, requests []DeleteSubscriptionsRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, requests, "POST", url, &responses)
+  status, err = handleRequest(client, requests, "DELETE", url, &responses)
 
   if err != nil {
     return status, nil, err
@@ -50,7 +50,7 @@ func DeleteSubscriptions(client *AapClient, url string, requests []DeleteSubscri
 }
 
 func ReadSubscriptions(client *AapClient, url string, requests []ReadSubscriptionsRequest) (status int, responses bulky.Responses, err error) {
-  status, err = handleRequest(client, requests, "POST", url, &responses)
+  status, err = handleRequest(client, requests, "GET", url, &responses)
 
   if err != nil {
     return status, nil, err
