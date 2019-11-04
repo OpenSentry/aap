@@ -40,7 +40,7 @@ func CreateSubscription(tx neo4j.Transaction, iSubscription Subscription, iReque
     MATCH (scope:Scope {name:$scope})
 
     // Require publish rules existance
-    MATCH (publisher)-[:PUBLISHES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope)
+    MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope)
 
     // Make the connection
     MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
@@ -106,8 +106,8 @@ func FetchSubscriptions(tx neo4j.Transaction, iFilterSubscribers []Identity, iRe
     MATCH (subscriber:Identity)
     WHERE 1=1 %s
 
-    MATCH (subscriber)-[:SUBSCRIBES]->(:Subscribe:Rule)-[:SUBSCRIBES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope:Scope)
-    MATCH (publisher:Identity)-[:PUBLISHES]->(pr)
+    MATCH (subscriber)-[:SUBSCRIBES]->(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    MATCH (publisher:Identity)-[:PUBLISH]->(pr)
 
     RETURN subscriber, publisher, scope
   `, filterSubscribersCypher)

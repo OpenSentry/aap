@@ -66,11 +66,9 @@ MERGE (:Scope {name:"aap:read:consents", title:"Read consents", description:""})
 MERGE (:Scope {name:"aap:create:consents", title:"Consent to scopes", description:""})
 MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", description:""})
 MERGE (:Scope {name:"aap:create:consents:authorize", title:"Authorize consent to entity", description:"Allow consenting to access to entity onbehalf of entity"})
-MERGE (:Scope {name:"aap:create:consents:reject", title:Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
-
+MERGE (:Scope {name:"aap:create:consents:reject", title:"Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
 MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
 MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
-
 ;
 
 MATCH (s:Scope)
@@ -144,4 +142,40 @@ REMOVE s.title, s.description
 MATCH (pr:Publish:Rule)
 WHERE not ()-[:MAY_GRANT]->(pr)
 MERGE (pr)-[:MAY_GRANT]->(pr)
+;
+
+
+// ## IDP (ResourceServer) grants to client used to call AAP
+MATCH (client:Identity:Client {id:"8dc7ea3e-c61a-47cd-acf2-2f03615e3f8b"})
+MATCH (rs:Identity:ResourceServer {name:"AAP"})
+MATCH (s:Scope) where s.name in split("aap:read:entities:judge aap:create:entities aap:create:grants", " ")
+MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+MERGE (gr)-[:ON_BEHALF_OF]->(rs)
+;
+
+// ## IDP UI (Application) grants to required scopes which relates to credentials like password, otp codes etc. (Secret Grants)
+MATCH (client:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
+MATCH (rs:Identity:ResourceServer {name:"IDP"})
+MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:claim:invites idp:update:challenges:verify idp:read:challenges idp:create:humans idp:update:humans:totp", " ")
+MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+MERGE (gr)-[:ON_BEHALF_OF]->(rs)
+;
+
+// ## AAP UI (Application) grants to required scopes which relates to consents (Consent Grants)
+MATCH (client:Identity:Client {id:"919e2026-06af-4c82-9d84-6af4979d9e7a"})
+MATCH (rs:Identity:ResourceServer {name:"AAP"})
+MATCH (s:Scope) where s.name in split("aap:create:consents:authorize aap:read:consents aap:create:consents aap:read:subscriptions aap:read:publishes", " ")
+MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
+MERGE (gr)-[:ON_BEHALF_OF]->(rs)
+;
+
+// ## ME UI subscribes to IDP
+MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
+MATCH (publisher:Identity:ResourceServer {name:"IDP"})
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:delete:humans idp:recover:humans idp:logout:humans idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients", " ")
+MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
