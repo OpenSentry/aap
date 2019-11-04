@@ -11,11 +11,12 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "github.com/pborman/getopt"
 
+  nats "github.com/nats-io/nats.go"
+
   "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/config"
 
   "github.com/charmixer/aap/endpoints/entities"
-  "github.com/charmixer/aap/endpoints/authorizations"
   "github.com/charmixer/aap/endpoints/scopes"
   "github.com/charmixer/aap/endpoints/grants"
   "github.com/charmixer/aap/endpoints/publishes"
@@ -130,6 +131,13 @@ func main() {
     return
   }
 
+  natsConnection, err := nats.Connect(config.GetString("nats.url"))
+  if err != nil {
+    log.WithFields(appFields).Panic(err.Error())
+    return
+  }
+  defer natsConnection.Close()
+
   // Setup app state variables. Can be used in handler functions by doing closures see exchangeAuthorizationCodeCallback
   env := &app.Environment{
     Driver: driver, // Database
@@ -144,6 +152,7 @@ func main() {
       IdTokenKey: IdTokenKey,
       RequestIdKey: RequestIdKey,
     },
+    Nats: natsConnection,
   }
 
   if *optServe {
@@ -178,7 +187,7 @@ func serve(env *app.Environment) {
   r.Use(app.AuthenticationRequired(env.Constants.LogKey, env.Constants.AccessTokenKey))
 
   r.POST("/entities",                 app.AuthorizationRequired(env, "aap:create:entities"),       entities.PostEntities(env))
-  r.GET( "/entities/judge",           app.AuthorizationRequired(env, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))  // Hvad skal have lov til at requeste denne? Det skal resource serverne
+  r.GET( "/entities/judge",           app.AuthorizationRequired(env, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))
 
   r.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))
   r.POST("/scopes",                   app.AuthorizationRequired(env, "aap:create:scopes"),         scopes.PostScopes(env))
@@ -188,12 +197,11 @@ func serve(env *app.Environment) {
   r.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))
   r.DELETE("/grants",                 app.AuthorizationRequired(env, "aap:delete:grants"),         grants.DeleteGrants(env))
 
-  r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),       consents.PostConsents(env))
-  r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),         consents.GetConsents(env))
-  r.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),       consents.DeleteConsents(env))
-  // @TODO refactor to use /consents
-  r.GET("/authorizations",            app.AuthorizationRequired(env, "aap:read:consents"),         authorizations.GetAuthorizations(env))
-  r.POST("/authorizations",           app.AuthorizationRequired(env, "aap:create:consents"),       authorizations.PostAuthorizations(env))
+  r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),           consents.PostConsents(env))
+  r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),             consents.GetConsents(env))
+  r.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),           consents.DeleteConsents(env))
+  r.POST("/consents/authorize",       app.AuthorizationRequired(env, "aap:create:consents:authorize"), consents.PostAuthorize(env))
+  r.POST("/consents/reject",          app.AuthorizationRequired(env, "aap:create:consents:reject"),    consents.PostReject(env))
 
   r.POST("/publishes",                app.AuthorizationRequired(env, "aap:create:publishes"),      publishes.PostPublishes(env))
   r.GET("/publishes",                 app.AuthorizationRequired(env, "aap:read:publishes"),        publishes.GetPublishes(env))
@@ -202,12 +210,6 @@ func serve(env *app.Environment) {
   r.POST("/subscriptions",            app.AuthorizationRequired(env, "aap:create:subscriptions"),  subscriptions.PostSubscriptions(env))
   r.GET("/subscriptions",             app.AuthorizationRequired(env, "aap:read:subscriptions"),    subscriptions.GetSubscriptions(env))
   r.DELETE("/subscriptions",          app.AuthorizationRequired(env, "aap:delete:subscriptions"),  subscriptions.DeleteSubscriptions(env))
-
-  r.POST("/authorizations/authorize", app.AuthorizationRequired(env, "aap:authorize:identities"),  authorizations.PostAuthorize(env))
-  r.POST("/authorizations/reject",    app.AuthorizationRequired(env, "aap:reject:identities"),     authorizations.PostReject(env))
-
-  // r.POST("/scopes", utils.AuthorizationRequired(), Route(GetScopes(), input, output))
-  // r.POST("/scopes", utils.AuthorizationRequired(), bindInput(definition), handler(), bindOutput(defintion))
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
 }
