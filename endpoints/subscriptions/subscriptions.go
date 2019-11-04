@@ -39,7 +39,7 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
 
       requestor := c.MustGet("sub").(string)
 
-      subscriptionsMap := make(map[string][]string)
+      var clients []string
 
       for _, request := range iRequests {
         r := request.Input.(client.CreateSubscriptionsRequest)
@@ -69,7 +69,7 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
           }
           request.Output = bulky.NewOkResponse(request.Index, ok)
 
-          subscriptionsMap[rSubscription.Subscriber.Id] = append(subscriptionsMap[rSubscription.Subscriber.Id], rSubscription.Scope.Name)
+          clients = append(clients, rSubscription.Subscriber.Id)
           continue
         }
 
@@ -87,8 +87,16 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
       if err == nil {
         tx.Commit()
 
-        for i,s := range subscriptionsMap {
-          aap.SyncClientToHydra(i, s) // fire and forget to hydra
+        readSession, readTx, err := aap.BeginReadTx(env.Driver)
+        if err != nil {
+          log.Debug(err.Error())
+          return
+        }
+        defer readTx.Close() // rolls back if not already committed/rolled back
+        defer readSession.Close()
+
+        for _,id := range clients {
+          aap.SyncScopesToHydra(readTx, aap.Identity{Id:id}, aap.Identity{Id:requestor}) // fire and forget to hydra
         }
 
         return
@@ -122,12 +130,74 @@ func GetSubscriptions(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
     log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
-      "func": "GetSubscriptions",
+      "func": "GetGrants",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
+    var requests []client.ReadSubscriptionsRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
 
-    })
+    var handleRequest = func(iRequests []*bulky.Request){
+      iRequest := aap.Identity{
+        Id: c.MustGet("sub").(string),
+      }
+
+      session, tx, err := aap.BeginReadTx(env.Driver)
+
+      if err != nil {
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      for _, request := range iRequests {
+        var r client.ReadSubscriptionsRequest
+        if request.Input != nil {
+          r = request.Input.(client.ReadSubscriptionsRequest)
+        }
+
+        var iFilterSubscribers []aap.Identity
+        if r.Subscriber != "" {
+          iFilterSubscribers = []aap.Identity{
+            {Id: r.Subscriber},
+          }
+        }
+
+        // TODO handle error
+        subscriptions, err := aap.FetchSubscriptions(tx, iFilterSubscribers, iRequest)
+
+        if err != nil {
+          // fail all requests
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
+
+          // specify error on this request
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          return
+        }
+
+        var ok = client.ReadSubscriptionsResponse{}
+        for _,subscription := range subscriptions {
+          ok = append(ok, client.Subscription{
+            Subscriber: subscription.Subscriber.Id,
+            Scope: subscription.Scope.Name,
+            Publisher: subscription.Publisher.Id,
+          })
+        }
+
+        request.Output = bulky.NewOkResponse(request.Index, ok)
+      }
+    }
+
+    responses := bulky.HandleRequest(requests, handleRequest, bulky.HandleRequestParams{EnableEmptyRequest: true})
+
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
