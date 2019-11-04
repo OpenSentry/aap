@@ -47,9 +47,9 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
     // Require publisher existance
     MATCH (publisher:Identity {id:$publisher_id})
 
-    MERGE (publisher)-[:PUBLISHES]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISHES]->(s)
-    MERGE (publisher)-[:PUBLISHES]-(mgpr:Publish:Rule)-[:PUBLISHES]->(mg)
-    MERGE (publisher)-[:PUBLISHES]-(rootmgpr:Publish:Rule)-[:PUBLISHES]->(rootmg)
+    MERGE (publisher)-[:PUBLISH]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISH]->(s)
+    MERGE (publisher)-[:PUBLISH]-(mgpr:Publish:Rule)-[:PUBLISH]->(mg)
+    MERGE (publisher)-[:PUBLISH]-(rootmgpr:Publish:Rule)-[:PUBLISH]->(rootmg)
 
     MERGE (rootmgpr)-[:MAY_GRANT]->(rootmgpr)-[:MAY_GRANT]->(mgpr)-[:MAY_GRANT]->(pr)
 
@@ -118,9 +118,9 @@ func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publish
   }
 
   cypher := fmt.Sprintf(`
-    match (publisher:Identity)-[:PUBLISHES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope:Scope)
+    match (publisher:Identity)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
     where 1=1 %s
-    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISHES]->(mgscope:Scope)
+    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISH]->(mgscope:Scope)
     return publisher, pr, collect(mgpr), scope, collect(mgscope)
   `, wherePublishers)
 

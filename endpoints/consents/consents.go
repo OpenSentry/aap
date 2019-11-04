@@ -39,46 +39,46 @@ func GetConsents(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      // requestor := c.MustGet("sub").(string)
-      // var requestedBy *idp.Identity
-      // if requestor != "" {
-      //   identities, err := idp.FetchIdentities(tx, []idp.Identity{ {Id:requestor} })
-      //   if err != nil {
-      //     bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
-      //     log.Debug(err.Error())
-      //     return
-      //   }
-      //   if len(identities) > 0 {
-      //     requestedBy = &identities[0]
-      //   }
-      // }
+      requestor := c.MustGet("sub").(string)
+      var requestedBy *aap.Identity
+      if requestor != "" {
+        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
+        if err != nil {
+          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+          log.Debug(err.Error())
+          return
+        }
+        if len(entities) > 0 {
+          requestedBy = &entities[0]
+        }
+      }
 
       for _, request := range iRequests {
 
-        var dbConsents []aap.Consent
-        var err error
-        var ok client.ReadConsentsResponse
-
-        r := request.Input.(client.ReadConsentsRequest)
-
-        var owner *aap.Identity = &aap.Identity{Id:r.Reference}
-
+        var owner *aap.Identity
         var subscriber *aap.Identity
-        if r.Subscriber != "" {
-          subscriber = &aap.Identity{Id:r.Subscriber}
-        }
-
         var publisher *aap.Identity
-        if r.Publisher != "" {
-          publisher = &aap.Identity{Id:r.Publisher}
-        }
-
         var scopes []aap.Scope
-        if r.Scope != "" {
-          scopes = append(scopes, aap.Scope{Name:r.Scope})
+
+        if request.Input != nil {
+          r := request.Input.(client.ReadConsentsRequest)
+
+          owner = &aap.Identity{Id:r.Reference}
+
+          if r.Subscriber != "" {
+            subscriber = &aap.Identity{Id:r.Subscriber}
+          }
+
+          if r.Publisher != "" {
+            publisher = &aap.Identity{Id:r.Publisher}
+          }
+
+          if r.Scope != "" {
+            scopes = append(scopes, aap.Scope{Name:r.Scope})
+          }
         }
 
-        dbConsents, err = aap.FetchConsents(tx, owner, subscriber, publisher, scopes)
+        dbConsents, err := aap.FetchConsents(tx, requestedBy, owner, subscriber, publisher, scopes)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -91,6 +91,7 @@ func GetConsents(env *app.Environment) gin.HandlerFunc {
         }
 
         if len(dbConsents) > 0 {
+          var ok client.ReadConsentsResponse
           for _, d := range dbConsents {
             ok = append(ok, client.Consent{
               Reference: d.Identity.Id,
@@ -104,7 +105,7 @@ func GetConsents(env *app.Environment) gin.HandlerFunc {
         }
 
         // Deny by default
-        request.Output = bulky.NewClientErrorResponse(request.Index, E.CONSENT_NOT_FOUND)
+        request.Output = bulky.NewOkResponse(request.Index, nil)
         continue
       }
 
@@ -151,19 +152,19 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      // requestor := c.MustGet("sub").(string)
-      // var requestedBy *idp.Identity
-      // if requestor != "" {
-      //   identities, err := idp.FetchIdentities(tx, []idp.Identity{ {Id:requestor} })
-      //   if err != nil {
-      //     bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
-      //     log.Debug(err.Error())
-      //     return
-      //   }
-      //   if len(identities) > 0 {
-      //     requestedBy = &identities[0]
-      //   }
-      // }
+      requestor := c.MustGet("sub").(string)
+      var requestedBy *aap.Identity
+      if requestor != "" {
+        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
+        if err != nil {
+          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+          log.Debug(err.Error())
+          return
+        }
+        if len(entities) > 0 {
+          requestedBy = &entities[0]
+        }
+      }
 
       var newConsents []aap.Consent
 
@@ -177,7 +178,7 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
           Scope: aap.Scope{Name:r.Scope},
         }
 
-        consent, err := aap.CreateConsent(tx, newConsent.Identity, newConsent.Subscriber, newConsent.Publisher, newConsent.Scope)
+        consent, err := aap.CreateConsent(tx, requestedBy, newConsent.Identity, newConsent.Subscriber, newConsent.Publisher, newConsent.Scope)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -210,7 +211,7 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
         }
         bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
         request.Output = bulky.NewInternalErrorResponse(request.Index) // Specify error on failed one
-        log.WithFields(logrus.Fields{ "name": newConsent.Reference }).Debug(err.Error())
+        log.Debug(err.Error())
         return
       }
 
@@ -231,98 +232,137 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-
-
-func PostConsents(env *app.Environment) gin.HandlerFunc {
-  fn := func(c *gin.Context) {
-    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
-    log = log.WithFields(logrus.Fields{
-      "func": "PostConsents",
-    })
-
-    var input client.ConsentRequest
-    err := c.BindJSON(&input)
-    if err != nil {
-      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      return
-    }
-
-    if len(input.RequestedScopes) <= 0 {
-      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Missing granted_scopes"})
-      return
-    }
-
-    var grantPermissions []aap.Scope
-    for _, scope := range input.GrantedScopes {
-      grantPermissions = append(grantPermissions, aap.Scope{ Name:scope,})
-    }
-
-    var revokePermissions []aap.Scope
-    for _, scope := range input.RevokedScopes {
-      revokePermissions = append(revokePermissions, aap.Scope{ Name:scope,})
-    }
-
-    resourceOwner := aap.Identity{
-      Id: input.Subject,
-    }
-    client := aap.Client{
-      ClientId: input.ClientId,
-    }
-
-    var permissionList []aap.Scope
-    if len(input.RequestedAudiences) > 0 {
-      if ( len(input.RequestedAudiences) ) > 1 {
-        log.WithFields(logrus.Fields{"requested_audiences":input.RequestedAudiences}).Debug("More than one audience not supported yet")
-        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-          "error": "More than one audience not supported yet Hint: Try only to use audience per token request one for now",
-        })
-        return
-      }
-
-      resourceServer, err := aap.FetchResourceServerByAudience(env.Driver, input.RequestedAudiences[0])
-      if err != nil {
-        log.WithFields(logrus.Fields{"aud":input.RequestedAudiences}).Debug("Resource server not found")
-        c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-          "error": "Not found. Hint: Maybe audience does not exist.",
-        })
-        return
-      }
-      permissionList, err = aap.CreateConsentsToResourceServerForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, *resourceServer, grantPermissions, revokePermissions)
-    } else {
-      permissionList, err = aap.CreateConsentsForClientOnBehalfOfResourceOwner(env.Driver, resourceOwner, client, grantPermissions, revokePermissions)
-    }
-    if err != nil {
-      log.Debug(err.Error())
-    }
-
-    if len(permissionList) > 0 {
-      var grantedPermissions []string
-      for _, permission := range permissionList {
-        grantedPermissions = append(grantedPermissions, permission.Name)
-      }
-
-      c.AbortWithStatusJSON(http.StatusOK, grantedPermissions)
-      return
-    }
-
-    // Deny by default
-    c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-      "error": "Not found. Hint does the client exists?",
-    })
-  }
-  return gin.HandlerFunc(fn)
-}
-
 func DeleteConsents(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
+
     log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "DeleteConsents",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
-      "error": "Missing implementation",
-    })
+    var requests []client.DeleteConsentsRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
+
+    var handleRequests = func(iRequests []*bulky.Request) {
+
+      session, tx, err := aap.BeginWriteTx(env.Driver)
+      if err != nil {
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      requestor := c.MustGet("sub").(string)
+      var requestedBy *aap.Identity
+      if requestor != "" {
+        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
+        if err != nil {
+          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+          log.Debug(err.Error())
+          return
+        }
+        if len(entities) > 0 {
+          requestedBy = &entities[0]
+        }
+      }
+
+      for _, request := range iRequests {
+        r := request.Input.(client.DeleteConsentsRequest)
+
+        var owner *aap.Identity = &aap.Identity{Id:r.Reference}
+
+        var subscriber *aap.Identity
+        if r.Subscriber != "" {
+          subscriber = &aap.Identity{Id:r.Subscriber}
+        }
+
+        var publisher *aap.Identity
+        if r.Publisher != "" {
+          publisher = &aap.Identity{Id:r.Publisher}
+        }
+
+        var scopes []aap.Scope
+        if r.Scope != "" {
+          scopes = append(scopes, aap.Scope{Name:r.Scope})
+        }
+
+        dbConsents, err := aap.FetchConsents(tx, requestedBy, owner, subscriber, publisher, scopes)
+        if err != nil {
+          e := tx.Rollback()
+          if e != nil {
+            log.Debug(e.Error())
+          }
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+          request.Output = bulky.NewInternalErrorResponse(request.Index) // Specify error on failed one
+          log.Debug(err.Error())
+          return
+        }
+
+        if len(dbConsents) <= 0 {
+          e := tx.Rollback()
+          if e != nil {
+            log.Debug(e.Error())
+          }
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+          request.Output = bulky.NewClientErrorResponse(request.Index, E.CONSENT_NOT_FOUND)
+          return
+        }
+        consentToDelete := dbConsents[0]
+
+        if consentToDelete.Scope.Name != "" {
+
+          _ /* deletedConsent */, err := aap.DeleteConsent(tx, requestedBy, consentToDelete.Identity, consentToDelete.Subscriber, consentToDelete.Publisher, consentToDelete.Scope)
+          if err != nil {
+            e := tx.Rollback()
+            if e != nil {
+              log.Debug(e.Error())
+            }
+            bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+            request.Output = bulky.NewInternalErrorResponse(request.Index)
+            log.Debug(err.Error())
+            return
+          }
+
+          ok := client.DeleteConsentsResponse{
+            Reference: consentToDelete.Identity.Id,
+            Subscriber: consentToDelete.Subscriber.Id,
+            Publisher: consentToDelete.Publisher.Id,
+            Scope: consentToDelete.Scope.Name,
+          }
+          request.Output = bulky.NewOkResponse(request.Index, ok)
+          continue
+        }
+
+        // Deny by default
+        e := tx.Rollback()
+        if e != nil {
+          log.Debug(e.Error())
+        }
+        bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+        request.Output = bulky.NewClientErrorResponse(request.Index, E.CONSENT_NOT_FOUND)
+        log.Debug("Delete consent failed. Hint: Maybe input validation needs to be improved.")
+        return
+      }
+
+      err = bulky.OutputValidateRequests(iRequests)
+      if err == nil {
+        tx.Commit()
+        // proxy to hydra. Not needed
+        return
+      }
+
+      // Deny by default
+      tx.Rollback()
+    }
+
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{MaxRequests: 1})
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
