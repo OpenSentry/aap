@@ -6,7 +6,7 @@ import (
   "net"
   "net/http"
   "crypto/rand"
-  "encoding/base64"  
+  "encoding/base64"
 )
 
 func GenerateRandomBytes(n int) ([]byte, error) {
@@ -125,7 +125,7 @@ func detectForwardedForIpAndPort(r *http.Request) (string, string) {
     return "", ""
 }
 
-func stringInSlice(a string, list []string) (bool) {
+func StringInSlice(a string, list []string) (bool) {
   for _, b := range list {
     if b == a {
       return true
