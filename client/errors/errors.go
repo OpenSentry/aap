@@ -11,6 +11,8 @@ const FAILED_DUE_TO_OTHER_ERRORS = 4
 const INTERNAL_SERVER_ERROR      = 5
 const OPERATION_ABORTED          = 6
 
+const CONSENT_NOT_FOUND          = 40
+
 // keep em' static
 var ERRORS = map[int]map[int]string{
   INPUT_VALIDATION_FAILED:
@@ -42,6 +44,13 @@ var ERRORS = map[int]map[int]string{
     {
       EN:  "Operation aborted due to other internal server errors",
       DEV: "Operation aborted due to other internal server errors",
+    },
+
+
+  CONSENT_NOT_FOUND:
+    {
+      EN:  "Not found",
+      DEV: "Consent not found",
     },
 }
 

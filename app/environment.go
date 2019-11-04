@@ -12,6 +12,8 @@ import (
   oidc "github.com/coreos/go-oidc"
   "github.com/neo4j/neo4j-go-driver/neo4j"
 
+  nats "github.com/nats-io/nats.go"
+
   "github.com/charmixer/aap/utils"
 )
 
@@ -32,6 +34,7 @@ type Environment struct {
   OAuth2Delegator *EnvironmentOauth2Delegator
   Driver          neo4j.Driver
   Constants       *EnvironmentConstants
+  Nats            *nats.Conn
 }
 
 func ProcessMethodOverride(r *gin.Engine) gin.HandlerFunc {

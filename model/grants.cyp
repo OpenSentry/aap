@@ -51,7 +51,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // ## AAP UI (Application) grants to required scopes which relates to consents (Consent Grants)
 MATCH (client:Identity:Client {id:"919e2026-06af-4c82-9d84-6af4979d9e7a"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:authorize:identities aap:read:consents aap:create:consents", " ")
+MATCH (s:Scope) where s.name in split("aap:create:consents:authorize aap:read:consents aap:create:consents", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 

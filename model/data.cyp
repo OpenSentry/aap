@@ -50,8 +50,6 @@ MERGE (:Scope {name:"idp:delete:resourceservers", title:"Delete resource servers
 
 // aap
 // @TODO fix identity -> human
-MERGE (:Scope {name:"aap:authorize:identities", title:"Authorize identity", description:"Allows to authorize or reject scopes on behalf of the identity"})
-MERGE (:Scope {name:"aap:reject:identities", title:"Not used?", description:""})
 MERGE (:Scope {name:"aap:read:scopes", title:"Read scopes", description:""})
 MERGE (:Scope {name:"aap:create:scopes", title:"Create new scopes", description:""})
 MERGE (:Scope {name:"aap:update:scopes", title:"Update existing scopes", description:""})
@@ -67,9 +65,12 @@ MERGE (:Scope {name:"aap:delete:subscriptions", title:"Remove subscriptions", de
 MERGE (:Scope {name:"aap:read:consents", title:"Read consents", description:""})
 MERGE (:Scope {name:"aap:create:consents", title:"Consent to scopes", description:""})
 MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", description:""})
+MERGE (:Scope {name:"aap:create:consents:authorize", title:"Authorize consent to entity", description:"Allow consenting to access to entity onbehalf of entity"})
+MERGE (:Scope {name:"aap:create:consents:reject", title:Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
 
 MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
 MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
+
 ;
 
 MATCH (s:Scope)
