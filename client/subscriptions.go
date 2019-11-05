@@ -26,7 +26,9 @@ type DeleteSubscriptionsRequest struct {
 
 type ReadSubscriptionsResponse []Subscription
 type ReadSubscriptionsRequest struct {
-  Subscriber string `json:"subscriber_id" validate:"required,uuid"`
+  Subscriber string   `json:"subscriber_id" validate:"required,uuid"`
+  Publisher  string   `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
+  Scopes     []string `json:"scopes" validate:"omitempty"`
 }
 
 func CreateSubscriptions(client *AapClient, url string, requests []CreateSubscriptionsRequest) (status int, responses bulky.Responses, err error) {

@@ -7,7 +7,7 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-func CreateConsent(tx neo4j.Transaction, requestedBy *Identity, iOwner Identity, iSubscriber Identity, iPublisher Identity, iScopes Scope) (consent Consent, err error) {
+func CreateConsent(tx neo4j.Transaction, iOwner Identity, iSubscriber Identity, iPublisher Identity, iScopes Scope) (consent Consent, err error) {
   var result neo4j.Result
   var cypher string
   var params = make(map[string]interface{})
@@ -87,25 +87,25 @@ func CreateConsent(tx neo4j.Transaction, requestedBy *Identity, iOwner Identity,
 }
 
 
-func FetchConsents(tx neo4j.Transaction, requestedBy *Identity, iOwner *Identity, iSubscriber *Identity, iPublisher *Identity, iScopes []Scope) (consents []Consent, err error) {
+func FetchConsents(tx neo4j.Transaction, iOwner Identity, iSubscriber Identity, iPublisher Identity, iScopes []Scope) (rConsents []Consent, err error) {
   var result neo4j.Result
   var cypher string
   var params = make(map[string]interface{})
 
   cypOwner := ""
-  if iOwner != nil {
+  if iOwner.Id != "" {
     cypOwner = ` {id:$owner_id} `
     params["owner_id"] = iOwner.Id
   }
 
   cypSubscriber := ""
-  if iSubscriber != nil {
+  if iSubscriber.Id != "" {
     cypSubscriber = ` {id:$subscriber_id} `
     params["subscriber_id"] = iSubscriber.Id
   }
 
   cypPublisher := ""
-  if iPublisher != nil {
+  if iPublisher.Id != "" {
     cypPublisher = ` {id:$publisher_id} `
     params["publisher_id"] = iPublisher.Id
   }
@@ -158,7 +158,7 @@ func FetchConsents(tx neo4j.Transaction, requestedBy *Identity, iOwner *Identity
 
     if scopeNode != nil {
       consent.Scope = marshalNodeToScope(scopeNode.(neo4j.Node))
-      consents = append(consents, consent) // Only care about consent if scope exists
+      rConsents = append(rConsents, consent) // Only care about consent if scope exists
     }
   }
 
@@ -169,10 +169,10 @@ func FetchConsents(tx neo4j.Transaction, requestedBy *Identity, iOwner *Identity
     return nil, err
   }
 
-  return consents, nil
+  return rConsents, nil
 }
 
-func DeleteConsent(tx neo4j.Transaction, requestedBy *Identity, iOwner Identity, iSubscriber Identity, iPublisher Identity, iScopes Scope) (consent Consent, err error) {
+func DeleteConsent(tx neo4j.Transaction, iOwner Identity, iSubscriber Identity, iPublisher Identity, iScopes Scope) (consent Consent, err error) {
   var result neo4j.Result
   var cypher string
   var params = make(map[string]interface{})

@@ -96,7 +96,7 @@ func PostSubscriptions(env *app.Environment) gin.HandlerFunc {
         defer readSession.Close()
 
         for _,id := range clients {
-          aap.SyncScopesToHydra(readTx, aap.Identity{Id:id}, aap.Identity{Id:requestor}) // fire and forget to hydra
+          aap.SyncScopesToHydra(readTx, aap.Identity{Id:id}) // fire and forget to hydra
         }
 
         return
@@ -141,9 +141,9 @@ func GetSubscriptions(env *app.Environment) gin.HandlerFunc {
     }
 
     var handleRequest = func(iRequests []*bulky.Request){
-      iRequest := aap.Identity{
-        Id: c.MustGet("sub").(string),
-      }
+      //iRequest := aap.Identity{
+        //Id: c.MustGet("sub").(string),
+      //}
 
       session, tx, err := aap.BeginReadTx(env.Driver)
 
@@ -162,15 +162,25 @@ func GetSubscriptions(env *app.Environment) gin.HandlerFunc {
           r = request.Input.(client.ReadSubscriptionsRequest)
         }
 
-        var iFilterSubscribers []aap.Identity
+        var iFilterSubscriber aap.Identity
         if r.Subscriber != "" {
-          iFilterSubscribers = []aap.Identity{
-            {Id: r.Subscriber},
+          iFilterSubscriber = aap.Identity{Id: r.Subscriber}
+        }
+
+        var iFilterPublisher aap.Identity
+        if r.Publisher != "" {
+          iFilterPublisher = aap.Identity{Id: r.Publisher}
+        }
+
+        var iFilterScopes []aap.Scope
+        if r.Scopes != nil {
+          for _,scopeName := range r.Scopes {
+            iFilterScopes = append(iFilterScopes, aap.Scope{Name: scopeName})
           }
         }
 
         // TODO handle error
-        subscriptions, err := aap.FetchSubscriptions(tx, iFilterSubscribers, iRequest)
+        subscriptions, err := aap.FetchSubscriptions(tx, iFilterSubscriber, iFilterPublisher, iFilterScopes)
 
         if err != nil {
           // fail all requests
