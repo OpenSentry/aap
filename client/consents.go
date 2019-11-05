@@ -21,10 +21,10 @@ type CreateConsentsRequest struct {
 
 type ReadConsentsResponse []Consent
 type ReadConsentsRequest struct {
-  Reference  string `json:"reference_id"            validate:"required,uuid"`
-  Subscriber string `json:"subscriber_id,omitempty" validate:"omitempty,uuid"` // OAuth2:Client
-  Publisher  string `json:"publisher_id,omitempty"  validate:"omitempty,uuid"` // OAuth2:Resource Server
-  Scope      string `json:"scope,omitempty"         validate:"omitempty"`      // OAuth2:Scope, published by the resource server
+  Reference  string   `json:"reference_id"            validate:"required,uuid"`
+  Subscriber string   `json:"subscriber_id,omitempty" validate:"omitempty,uuid"` // OAuth2:Client
+  Publisher  string   `json:"publisher_id,omitempty"  validate:"omitempty,uuid"` // OAuth2:Resource Server
+  Scopes     []string `json:"scopes,omitempty"        validate:"omitempty"`      // OAuth2:Scope, published by the resource server
 }
 
 type DeleteConsentsResponse Consent

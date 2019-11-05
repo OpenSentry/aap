@@ -39,46 +39,34 @@ func GetConsents(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      requestor := c.MustGet("sub").(string)
-      var requestedBy *aap.Identity
-      if requestor != "" {
-        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
-        if err != nil {
-          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
-          log.Debug(err.Error())
-          return
-        }
-        if len(entities) > 0 {
-          requestedBy = &entities[0]
-        }
-      }
-
       for _, request := range iRequests {
 
-        var owner *aap.Identity
-        var subscriber *aap.Identity
-        var publisher *aap.Identity
+        var owner aap.Identity
+        var subscriber aap.Identity
+        var publisher aap.Identity
         var scopes []aap.Scope
 
         if request.Input != nil {
           r := request.Input.(client.ReadConsentsRequest)
 
-          owner = &aap.Identity{Id:r.Reference}
+          owner = aap.Identity{Id:r.Reference}
 
           if r.Subscriber != "" {
-            subscriber = &aap.Identity{Id:r.Subscriber}
+            subscriber = aap.Identity{Id:r.Subscriber}
           }
 
           if r.Publisher != "" {
-            publisher = &aap.Identity{Id:r.Publisher}
+            publisher = aap.Identity{Id:r.Publisher}
           }
 
-          if r.Scope != "" {
-            scopes = append(scopes, aap.Scope{Name:r.Scope})
+          if r.Scopes != nil {
+            for _,scopeName := range r.Scopes {
+              scopes = append(scopes, aap.Scope{Name:scopeName})
+            }
           }
         }
 
-        dbConsents, err := aap.FetchConsents(tx, requestedBy, owner, subscriber, publisher, scopes)
+        dbConsents, err := aap.FetchConsents(tx, owner, subscriber, publisher, scopes)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -152,20 +140,6 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      requestor := c.MustGet("sub").(string)
-      var requestedBy *aap.Identity
-      if requestor != "" {
-        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
-        if err != nil {
-          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
-          log.Debug(err.Error())
-          return
-        }
-        if len(entities) > 0 {
-          requestedBy = &entities[0]
-        }
-      }
-
       var newConsents []aap.Consent
 
       for _, request := range iRequests {
@@ -178,7 +152,7 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
           Scope: aap.Scope{Name:r.Scope},
         }
 
-        consent, err := aap.CreateConsent(tx, requestedBy, newConsent.Identity, newConsent.Subscriber, newConsent.Publisher, newConsent.Scope)
+        consent, err := aap.CreateConsent(tx, newConsent.Identity, newConsent.Subscriber, newConsent.Publisher, newConsent.Scope)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -258,33 +232,19 @@ func DeleteConsents(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      requestor := c.MustGet("sub").(string)
-      var requestedBy *aap.Identity
-      if requestor != "" {
-        entities, err := aap.FetchEntities(tx, []aap.Identity{ {Id:requestor} })
-        if err != nil {
-          bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
-          log.Debug(err.Error())
-          return
-        }
-        if len(entities) > 0 {
-          requestedBy = &entities[0]
-        }
-      }
-
       for _, request := range iRequests {
         r := request.Input.(client.DeleteConsentsRequest)
 
-        var owner *aap.Identity = &aap.Identity{Id:r.Reference}
+        var owner aap.Identity = aap.Identity{Id:r.Reference}
 
-        var subscriber *aap.Identity
+        var subscriber aap.Identity
         if r.Subscriber != "" {
-          subscriber = &aap.Identity{Id:r.Subscriber}
+          subscriber = aap.Identity{Id:r.Subscriber}
         }
 
-        var publisher *aap.Identity
+        var publisher aap.Identity
         if r.Publisher != "" {
-          publisher = &aap.Identity{Id:r.Publisher}
+          publisher = aap.Identity{Id:r.Publisher}
         }
 
         var scopes []aap.Scope
@@ -292,7 +252,7 @@ func DeleteConsents(env *app.Environment) gin.HandlerFunc {
           scopes = append(scopes, aap.Scope{Name:r.Scope})
         }
 
-        dbConsents, err := aap.FetchConsents(tx, requestedBy, owner, subscriber, publisher, scopes)
+        dbConsents, err := aap.FetchConsents(tx, owner, subscriber, publisher, scopes)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -317,7 +277,7 @@ func DeleteConsents(env *app.Environment) gin.HandlerFunc {
 
         if consentToDelete.Scope.Name != "" {
 
-          _ /* deletedConsent */, err := aap.DeleteConsent(tx, requestedBy, consentToDelete.Identity, consentToDelete.Subscriber, consentToDelete.Publisher, consentToDelete.Scope)
+          _ /* deletedConsent */, err := aap.DeleteConsent(tx, consentToDelete.Identity, consentToDelete.Subscriber, consentToDelete.Publisher, consentToDelete.Scope)
           if err != nil {
             e := tx.Rollback()
             if e != nil {
