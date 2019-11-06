@@ -23,6 +23,8 @@ import (
   "github.com/charmixer/aap/endpoints/consents"
   "github.com/charmixer/aap/endpoints/subscriptions"
   "github.com/charmixer/aap/migration"
+
+  E "github.com/charmixer/aap/client/errors"
 )
 
 const (
@@ -72,6 +74,8 @@ func init() {
     "log.debug": logDebug,
     "log.format": logFormat,
   }
+
+  E.InitRestErrors()
 }
 
 func main() {
@@ -200,6 +204,7 @@ func serve(env *app.Environment) {
   r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),           consents.PostConsents(env))
   r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),             consents.GetConsents(env))
   r.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),           consents.DeleteConsents(env))
+  r.GET( "/consents/authorize",       app.AuthorizationRequired(env, "aap:read:consents:authorize"),   consents.GetAuthorize(env))
   r.POST("/consents/authorize",       app.AuthorizationRequired(env, "aap:create:consents:authorize"), consents.PostAuthorize(env))
   r.POST("/consents/reject",          app.AuthorizationRequired(env, "aap:create:consents:reject"),    consents.PostReject(env))
 

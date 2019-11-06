@@ -35,28 +35,37 @@ type DeleteConsentsRequest struct {
   Scope      string `json:"scope"         validate:"required"`      // OAuth2:Scope, published by the resource server
 }
 
+type ConsentRequest struct {
+  Scope string
+  Audience string
+  Title string
+  Description string
+  Consented bool
+}
+
 type Authorization struct {
   Challenge  string `json:"challenge" validate:"required"`
   Authorized bool   `json:"authorized"`
   RedirectTo string `json:"redirect_to" validate:"omitempty,uri"`
 
-  ClientId string `json:"client_id,omitempty" validate:"omitempty,uuid"`
+  ClientId string `json:"client_id" validate:"required,uuid"`
   ClientName string `json:"client_name,omitempty"`
 
-  Subject string `json:"subject,omitempty" validate:"omitempty,uuid"`
+  Subject string `json:"subject" validate:"required,uuid"`
   SubjectName string `json:"subject_name,omitempty"`
   SubjectEmail string `json:"subject_email,omitempty" validate:"omitempty,email"`
 
-  RequestedScopes []string `json:"requested_scopes,omitempty"`
-  GrantedScopes   []string `json:"grant_scopes,omitempty"`
-
-  RequestedAudiences []string `json:"requested_audiences,omitempty"` // requested_access_token_audience
+  ConsentRequests []ConsentRequest
 }
 
 type CreateConsentsAuthorizeResponse Authorization
 type CreateConsentsAuthorizeRequest struct {
   Challenge   string   `json:"challenge" validate:"required"`
-  GrantScopes []string `json:"grant_scopes,omitempty"`
+}
+
+type ReadConsentsAuthorizeResponse Authorization
+type ReadConsentsAuthorizeRequest struct {
+  Challenge   string   `json:"challenge" validate:"required"`
 }
 
 type CreateConsentsRejectResponse Authorization
@@ -86,6 +95,16 @@ func ReadConsents(client *AapClient, url string, requests []ReadConsentsRequest)
 
 func DeleteConsents(client *AapClient, url string, requests []DeleteConsentsRequest) (status int, responses bulky.Responses, err error) {
   status, err = handleRequest(client, requests, "DELETE", url, &responses)
+
+  if err != nil {
+    return status, nil, err
+  }
+
+  return status, responses, nil
+}
+
+func ReadConsentsAuthorize(client *AapClient, url string, requests []ReadConsentsAuthorizeRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "GET", url, &responses)
 
   if err != nil {
     return status, nil, err
