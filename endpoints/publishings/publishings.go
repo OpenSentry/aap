@@ -1,4 +1,4 @@
-package publishes
+package publishings
 
 import (
   "net/http"
@@ -135,20 +135,6 @@ func GetPublishes(env *app.Environment) gin.HandlerFunc {
     }
 
     var handleRequests = func(iRequests []*bulky.Request){
-      var identities []aap.Identity
-
-      for _, request := range iRequests {
-        if request.Input != nil {
-          var r client.ReadPublishesRequest
-          r = request.Input.(client.ReadPublishesRequest)
-
-          v := aap.Identity{
-            Id: r.Publisher,
-          }
-          identities = append(identities, v)
-        }
-      }
-
       session, tx, err := aap.BeginReadTx(env.Driver)
 
       if err != nil {
@@ -160,20 +146,32 @@ func GetPublishes(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      dbPublishes, _ := aap.FetchPublishes(tx, identities)
-
       for _, request := range iRequests {
         var r client.ReadPublishesRequest
         if request.Input != nil {
           r = request.Input.(client.ReadPublishesRequest)
         }
 
+        var iFilterPublisher aap.Identity
+        if r.Publisher != "" {
+          iFilterPublisher = aap.Identity{
+            Id: r.Publisher,
+          }
+        }
+
+        var iFilterScopes []aap.Scope
+        if r.Scopes != nil {
+          for _,scopeName := range r.Scopes {
+            iFilterScopes = append(iFilterScopes, aap.Scope{
+              Name: scopeName,
+            })
+          }
+        }
+
+        dbPublishes, _ := aap.FetchPublishes(tx, iFilterPublisher, iFilterScopes)
+
         var ok client.ReadPublishesResponse
         for _, db := range dbPublishes {
-          if request.Input != nil && db.Publisher.Id != r.Publisher {
-            continue
-          }
-
           var mgs []string
           for _,e := range db.MayGrantScopes {
             mgs = append(mgs, e.Name)
