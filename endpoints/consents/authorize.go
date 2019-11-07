@@ -33,6 +33,21 @@ func Difference(a, b []string) (diff []string) {
   return
 }
 
+type ConsentChallenge struct {
+  Skip bool
+
+  Subject string
+  SubjectName string
+  SubjectEmail string
+
+  ClientId string
+  ClientName string
+
+  RequestedScopes []string
+  RequestedAudiences []string
+}
+
+
 func GetAuthorize(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
 
@@ -76,19 +91,19 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
         }
         log.Debug(hydraConsentResponse)
 
-        subject, subjectName, subjectEmail, clientId, clientName, hydraSkip, requestedScopes, grantedAccessTokenAudiences := listHydraResponse(hydraConsentResponse)
+        consentChallenge := parseConsentChallenge(hydraConsentResponse)
 
         // Prepare db lookup filters based on consent challenge.
-        iFilterOwner := aap.Identity{Id:subject}
-        iFilterSubscriber := aap.Identity{Id: clientId}
+        iFilterOwner := aap.Identity{Id:consentChallenge.Subject}
+        iFilterSubscriber := aap.Identity{Id: consentChallenge.ClientId}
 
         var iFilterScopes []aap.Scope
-        for _,scopeName := range requestedScopes {
+        for _,scopeName := range consentChallenge.RequestedScopes {
           iFilterScopes = append(iFilterScopes, aap.Scope{Name: scopeName})
         }
         var iFilterPublishers []aap.Identity
-        if len(grantedAccessTokenAudiences) > 0 {
-          for _,publisherId := range grantedAccessTokenAudiences {
+        if len(consentChallenge.RequestedAudiences) > 0 {
+          for _,publisherId := range consentChallenge.RequestedAudiences {
             iFilterPublishers = append(iFilterPublishers, aap.Identity{Id:publisherId})
           }
         }
@@ -109,15 +124,15 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
         }
 
         // Sanity check. All requested scopes must be subscribed to by client
-        if len(subscribedScopes) < len(requestedScopes) {
+        if len(subscribedScopes) < len(consentChallenge.RequestedScopes) {
 
 log.Debug("REQUESTED SCOPES ==================")
-log.Debug(requestedScopes)
+log.Debug(consentChallenge.RequestedScopes)
 
 log.Debug("SUBSCRIBED SCOPES ==================")
 log.Debug(subscribedScopes)
 
-          invalidScopes := Difference(requestedScopes, subscribedScopes)
+          invalidScopes := Difference(consentChallenge.RequestedScopes, subscribedScopes)
           log.Debug("INVALID SCOPES ==================")
           log.Debug(invalidScopes)
 
@@ -132,12 +147,12 @@ log.Debug(subscribedScopes)
           Authorized: false,
           RedirectTo: "", // This can only come from a hydra accept consent call.
 
-          ClientId: clientId,
-          ClientName: clientName,
+          ClientId: consentChallenge.ClientId,
+          ClientName: consentChallenge.ClientName,
 
-          Subject: subject,
-          SubjectName: subjectName,
-          SubjectEmail: subjectEmail,
+          Subject: consentChallenge.Subject,
+          SubjectName: consentChallenge.SubjectName,
+          SubjectEmail: consentChallenge.SubjectEmail,
 
           ConsentRequests: consentRequests,
         }
@@ -146,10 +161,10 @@ log.Debug(subscribedScopes)
         var hydraGrantScopes []string
         var hydraGrantAudience []string
 
-        if hydraSkip == true {
+        if consentChallenge.Skip == true {
           // Grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
-          hydraGrantScopes = requestedScopes
-          hydraGrantAudience = grantedAccessTokenAudiences
+          hydraGrantScopes = consentChallenge.RequestedScopes
+          hydraGrantAudience = consentChallenge.RequestedAudiences
           hydraAcceptConsent = true
         }
 
@@ -230,19 +245,19 @@ func PostAuthorize(env *app.Environment) gin.HandlerFunc {
         }
         log.Debug(hydraConsentResponse)
 
-        subject, subjectName, subjectEmail, clientId, clientName, _, requestedScopes, grantedAccessTokenAudiences := listHydraResponse(hydraConsentResponse)
+        consentChallenge := parseConsentChallenge(hydraConsentResponse)
 
         // Prepare db lookup filters based on consent challenge.
-        iFilterOwner := aap.Identity{Id:subject}
-        iFilterSubscriber := aap.Identity{Id: clientId}
+        iFilterOwner := aap.Identity{Id:consentChallenge.Subject}
+        iFilterSubscriber := aap.Identity{Id: consentChallenge.ClientId}
 
         var iFilterScopes []aap.Scope
-        for _,scopeName := range requestedScopes {
+        for _,scopeName := range consentChallenge.RequestedScopes {
           iFilterScopes = append(iFilterScopes, aap.Scope{Name: scopeName})
         }
         var iFilterPublishers []aap.Identity
-        if len(grantedAccessTokenAudiences) > 0 {
-          for _,publisherId := range grantedAccessTokenAudiences {
+        if len(consentChallenge.RequestedAudiences) > 0 {
+          for _,publisherId := range consentChallenge.RequestedAudiences {
             iFilterPublishers = append(iFilterPublishers, aap.Identity{Id:publisherId})
           }
         }
@@ -263,9 +278,9 @@ func PostAuthorize(env *app.Environment) gin.HandlerFunc {
         }
 
         // Sanity check. All requested scopes must be subscribed to by client
-        if len(subscribedScopes) < len(requestedScopes) {
+        if len(subscribedScopes) < len(consentChallenge.RequestedScopes) {
 
-          invalidScopes := Difference(requestedScopes, subscribedScopes)
+          invalidScopes := Difference(consentChallenge.RequestedScopes, subscribedScopes)
           log.Debug(invalidScopes)
 
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
@@ -278,12 +293,12 @@ func PostAuthorize(env *app.Environment) gin.HandlerFunc {
           Authorized: false,
           RedirectTo: "", // This can only come from a hydra accept consent call.
 
-          ClientId: clientId,
-          ClientName: clientName,
+          ClientId: consentChallenge.ClientId,
+          ClientName: consentChallenge.ClientName,
 
-          Subject: subject,
-          SubjectName: subjectName,
-          SubjectEmail: subjectEmail,
+          Subject: consentChallenge.Subject,
+          SubjectName: consentChallenge.SubjectName,
+          SubjectEmail: consentChallenge.SubjectEmail,
 
           ConsentRequests: consentRequests,
         }
@@ -355,7 +370,7 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
           return
         }
 
-        subject, _, _, clientId, _, _, _, _ := listHydraResponse(hydraConsentResponse)
+        consentChallenge := parseConsentChallenge(hydraConsentResponse)
 
         hydraConsentRejectResponse, err := hydra.RejectConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentReject"), hydraClient, r.Challenge, hydra.ConsentRejectRequest{
           Error: "Access Denied",
@@ -376,8 +391,8 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
           Challenge: r.Challenge,
           Authorized: false,
           RedirectTo: hydraConsentRejectResponse.RedirectTo,
-          ClientId: clientId,
-          Subject: subject,
+          ClientId: consentChallenge.ClientId,
+          Subject: consentChallenge.Subject,
         })
         continue
       }
@@ -391,21 +406,23 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func listHydraResponse(hydraConsentResponse hydra.ConsentResponse) (subject string, subjectName string, subjectEmail string, clientId string, clientName string, hydraSkip bool, requestedScopes []string, grantedAccessTokenAudiences []string) {
-  subject                     = hydraConsentResponse.Subject
-  clientId                    = hydraConsentResponse.Client.ClientId
-  requestedScopes             = hydraConsentResponse.RequestedScopes
-  grantedAccessTokenAudiences = hydraConsentResponse.RequestedAccessTokenAudience
-  hydraSkip                   = hydraConsentResponse.Skip
+func parseConsentChallenge(hydraConsentResponse hydra.ConsentResponse) (consentChallenge ConsentChallenge) {
+  consentChallenge = ConsentChallenge{
+    Skip: hydraConsentResponse.Skip,
+    Subject: hydraConsentResponse.Subject,
+    ClientId: hydraConsentResponse.Client.ClientId,
+    RequestedScopes: hydraConsentResponse.RequestedScopes,
+    RequestedAudiences: hydraConsentResponse.RequestedAccessTokenAudience,
+  }
 
   loginContext := hydraConsentResponse.Context
   if loginContext != nil {
-    clientName = loginContext["client_name"]
-    subjectName = loginContext["subject_name"]
-    subjectEmail = loginContext["subject_email"]
+    consentChallenge.ClientName = loginContext["client_name"]
+    consentChallenge.SubjectName = loginContext["subject_name"]
+    consentChallenge.SubjectEmail = loginContext["subject_email"]
   }
 
-  return subject, subjectName, subjectEmail, clientId, clientName, hydraSkip, requestedScopes, grantedAccessTokenAudiences
+  return consentChallenge
 }
 
 type PublisherScope struct {
