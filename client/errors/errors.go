@@ -11,7 +11,7 @@ const FAILED_DUE_TO_OTHER_ERRORS = 4
 const INTERNAL_SERVER_ERROR      = 5
 
 const CONSENT_NOT_FOUND = 10
-const NO_CONSENT_REQUESTS = 11
+const NO_SUBSCRIPTIONS = 11
 const INVALID_SCOPES = 12
 
 func InitRestErrors() {
@@ -21,9 +21,9 @@ func InitRestErrors() {
         "en": "Not found",
         "dev": "Consent not found",
       },
-      NO_CONSENT_REQUESTS: {
-        "en": "No consent requests",
-        "dev": "No consent requests. Hint: Missing subscription on any of the requested scopes and audiences.",
+      NO_SUBSCRIPTIONS: {
+        "en": "No subscriptions",
+        "dev": "No subscriptions. Hint: Client is missing subscription on any of the requested scopes and audiences.",
       },
       INVALID_SCOPES: {
         "en": "Invalid scopes",

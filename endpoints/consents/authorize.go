@@ -1,6 +1,7 @@
 package consents
 
 import (
+  "strings"
   "net/http"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
@@ -117,24 +118,18 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
         }
 
         // Sanity check. Require atleast one subscription by client
-        if len(consentRequests) <= 0 {
+        if len(subscribedScopes) <= 0 {
+          log.WithFields(logrus.Fields{ "client_id":iFilterSubscriber.Id }).Debug("No subscriptions")
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
-          request.Output = bulky.NewClientErrorResponse(request.Index, E.NO_CONSENT_REQUESTS)
+          request.Output = bulky.NewClientErrorResponse(request.Index, E.NO_SUBSCRIPTIONS)
           return
         }
 
         // Sanity check. All requested scopes must be subscribed to by client
         if len(subscribedScopes) < len(consentChallenge.RequestedScopes) {
 
-log.Debug("REQUESTED SCOPES ==================")
-log.Debug(consentChallenge.RequestedScopes)
-
-log.Debug("SUBSCRIBED SCOPES ==================")
-log.Debug(subscribedScopes)
-
           invalidScopes := Difference(consentChallenge.RequestedScopes, subscribedScopes)
-          log.Debug("INVALID SCOPES ==================")
-          log.Debug(invalidScopes)
+          log.WithFields(logrus.Fields{ "client_id":iFilterSubscriber.Id, "scopes": strings.Join(invalidScopes, " ") }).Debug("Invalid scopes")
 
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
           request.Output = bulky.NewClientErrorResponse(request.Index, E.INVALID_SCOPES)
@@ -271,9 +266,9 @@ func PostAuthorize(env *app.Environment) gin.HandlerFunc {
         }
 
         // Sanity check. Require atleast one subscription by client
-        if len(consentRequests) <= 0 {
+        if len(subscribedScopes) <= 0 {
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests)
-          request.Output = bulky.NewClientErrorResponse(request.Index, E.NO_CONSENT_REQUESTS)
+          request.Output = bulky.NewClientErrorResponse(request.Index, E.NO_SUBSCRIPTIONS)
           return
         }
 
