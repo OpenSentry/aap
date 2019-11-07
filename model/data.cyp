@@ -47,6 +47,10 @@ MERGE (:Scope {name:"idp:read:resourceservers", title:"Read resource servers", d
 // MERGE (:Scope {name:"idp:update:resourceservers", title:"Update resource servers", description:""})
 MERGE (:Scope {name:"idp:delete:resourceservers", title:"Delete resource servers", description:"Allow access to delete resource servers"})
 
+MERGE (:Scope {name:"idp:create:roles", title:"Create roles", description:"Allow access to create roles"})
+MERGE (:Scope {name:"idp:read:roles", title:"Read roles", description:"Allow access to read roles"})
+MERGE (:Scope {name:"idp:delete:roles", title:"Delete roles", description:"Allow access to delete roles"})
+
 
 // aap
 // @TODO fix identity -> human
