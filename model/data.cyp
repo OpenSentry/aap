@@ -164,6 +164,25 @@ MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
 MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 ;
 
+// ## IDP UI subscribes openid, offline
+MATCH (subscriber:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
+MATCH (publisher:Identity:ResourceServer {name:"IDP"})
+MATCH (s:Scope) where s.name in split("openid offline", " ")
+MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
+;
+
+// ## IDP UI subscribes to IDP
+MATCH (subscriber:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
+MATCH (publisher:Identity:ResourceServer {name:"IDP"})
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:password idp:update:humans:totp idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify", " ")
+MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
+MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
+;
+
+
+
+
 // ## AAP UI (Application) grants to required scopes which relates to consents (Consent Grants)
 MATCH (client:Identity:Client {id:"919e2026-06af-4c82-9d84-6af4979d9e7a"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
@@ -172,6 +191,8 @@ MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
 MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 ;
+
+
 
 // ## ME UI subscribes to OPENID, OFFLINE (skal den det her?)
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
