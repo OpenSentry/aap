@@ -338,15 +338,15 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
     }
 
     // Create a new HTTP client to perform the request, to prevent serialization
-    //hydraClient := hydra.NewHydraClient(env.OAuth2Delegator.Config)
+    hydraClient := hydra.NewHydraClient(env.OAuth2Delegator.Config)
 
     var handleRequests = func(iRequests []*bulky.Request) {
 
       for _, request := range iRequests {
-        r := request.Input.(client.CreateConsentsAuthorizeRequest)
+        r := request.Input.(client.CreateConsentsRejectRequest)
 
         log = log.WithFields(logrus.Fields{"challenge": r.Challenge})
-/*
+
         hydraConsentResponse, err := hydra.GetConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consent"), hydraClient, r.Challenge)
         if err != nil {
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
@@ -355,27 +355,12 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
           return
         }
 
-        var subject string = hydraConsentResponse.Subject
-        var requestedScopes []string = hydraConsentResponse.RequestedScopes
-        var clientId string = hydraConsentResponse.Client.ClientId
-        var requestedAccessTokenAudiences []string = hydraConsentResponse.RequestedAccessTokenAudience
-
-        var clientName string
-        var subjectName string
-        var subjectEmail string
-
-        loginContext := hydraConsentResponse.Context
-        if loginContext != nil {
-          log.Debug(loginContext)
-          clientName = loginContext["client_name"]
-          subjectName = loginContext["subject_name"]
-          subjectEmail = loginContext["subject_email"]
-        }
+        subject, _, _, clientId, _, _, _, _ := listHydraResponse(hydraConsentResponse)
 
         hydraConsentRejectResponse, err := hydra.RejectConsent(config.GetString("hydra.private.url") + config.GetString("hydra.private.endpoints.consentReject"), hydraClient, r.Challenge, hydra.ConsentRejectRequest{
-          Error: "",
+          Error: "Access Denied",
           ErrorDebug: "",
-          ErrorDescription: "",
+          ErrorDescription: "Subject did not consent to access",
           ErrorHint: "",
           StatusCode: http.StatusForbidden,
         })
@@ -386,27 +371,15 @@ func PostReject(env *app.Environment) gin.HandlerFunc {
           return
         }
 
-        reject := client.CreateConsentsRejectResponse{
+        // Reject access
+        request.Output = bulky.NewOkResponse(request.Index, client.CreateConsentsRejectResponse{
           Challenge: r.Challenge,
           Authorized: false,
           RedirectTo: hydraConsentRejectResponse.RedirectTo,
-
           ClientId: clientId,
-          ClientName: clientName,
-
           Subject: subject,
-          SubjectName: subjectName,
-          SubjectEmail: subjectEmail,
-
-          RequestedScopes: requestedScopes,
-          GrantedScopes: []string{},
-
-          RequestedAudiences: requestedAccessTokenAudiences,
-        }
-
-        log.WithFields(logrus.Fields{ "challenge":reject.Challenge, "authorized":reject.Authorized }).Debug("Consent Rejected")
-        request.Output = bulky.NewOkResponse(request.Index, reject)
-        */
+        })
+        continue
       }
 
       bulky.OutputValidateRequests(iRequests)
