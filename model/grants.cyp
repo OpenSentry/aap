@@ -66,9 +66,9 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 
 
 // User grants handy when missing bootstraps
-MATCH (h:Human:Identity {id:"?"})
+MATCH (h:Human:Identity {id:"14d53500-fa42-4530-b953-577d854043d2"})
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:invites idp:create:invites", " ")
+MATCH (s:Scope) where s.name in split("idp:read:invites idp:create:invites idp:send:invites", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 

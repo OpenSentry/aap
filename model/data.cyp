@@ -209,7 +209,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## ME UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:delete:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:delete:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients idp:create:roles idp:read:roles idp:delete:roles", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
