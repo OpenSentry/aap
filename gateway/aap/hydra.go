@@ -8,10 +8,10 @@ import (
   "strings"
 )
 
-func SyncScopesToHydra(tx neo4j.Transaction, iClient Identity, iRequest Identity) (err error) {
+func SyncScopesToHydra(tx neo4j.Transaction, iClient Identity) (err error) {
   // aap is not master with client data, only client scopes
 
-  dbSubscriptions, err := FetchSubscriptions(tx, []Identity{ iClient }, iRequest)
+  dbSubscriptions, err := FetchSubscriptions(tx, iClient, Identity{}, nil)
 
   if err != nil {
     return err

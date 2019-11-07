@@ -177,3 +177,47 @@ func JudgeEntity(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity,
 
   return verdict, nil
 }
+
+func FetchEntities(tx neo4j.Transaction, iEntities []Identity) (entities []Identity, err error) {
+  var result neo4j.Result
+  var cypher string
+  var params = make(map[string]interface{})
+
+  cypEntities := ""
+  if len(iEntities) > 0 {
+    var ids []string
+    for _, entity := range iEntities {
+      ids = append(ids, entity.Id)
+    }
+    cypEntities = ` WHERE i.id in split($ids, ",") `
+    params["ids"] = strings.Join(ids, ",")
+  }
+
+  cypher = fmt.Sprintf(`
+    MATCH (i:Identity) %s RETURN i
+  `, cypEntities)
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return nil, err
+  }
+
+  for result.Next() {
+    record          := result.Record()
+    identityNode    := record.GetByIndex(0)
+
+    if identityNode != nil {
+      i := marshalNodeToIdentity(identityNode.(neo4j.Node))
+
+      entities = append(entities, i)
+    }
+  }
+
+  logCypher(cypher, params)
+
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return nil, err
+  }
+
+  return entities, nil
+}

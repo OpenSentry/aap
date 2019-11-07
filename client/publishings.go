@@ -32,6 +32,7 @@ type UpdatePublishesRequest struct {
 type ReadPublishesResponse []Publish
 type ReadPublishesRequest struct {
   Publisher         string    `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
+  Scopes            []string  `json:"scopes,omitempty" validate:"omitempty"`
 }
 
 

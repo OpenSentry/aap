@@ -101,10 +101,10 @@ type Grant struct {
 }
 
 type Consent struct {
-  Identity
-  Client
-  ResourceServer
-  Scope
+  Identity Identity
+  Subscriber Identity
+  Publisher Identity
+  Scope Scope
 }
 
 type Publish struct {

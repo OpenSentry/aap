@@ -40,7 +40,7 @@ func CreateSubscription(tx neo4j.Transaction, iSubscription Subscription, iReque
     MATCH (scope:Scope {name:$scope})
 
     // Require publish rules existance
-    MATCH (publisher)-[:PUBLISHES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope)
+    MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope)
 
     // Make the connection
     MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
@@ -83,34 +83,47 @@ func CreateSubscription(tx neo4j.Transaction, iSubscription Subscription, iReque
 }
 
 
-func FetchSubscriptions(tx neo4j.Transaction, iFilterSubscribers []Identity, iRequest Identity) (rSubscriptions []Subscription, err error) {
+func FetchSubscriptions(tx neo4j.Transaction, iFilterSubscriber Identity, iFilterPublisher Identity, iFilterScopes []Scope) (rSubscriptions []Subscription, err error) {
   var result neo4j.Result
   var cypher string
   var params = make(map[string]interface{})
 
-  var filterSubscribersCypher = ""
-  if iFilterSubscribers != nil {
-    var ids []string
-    for _,s := range iFilterSubscribers {
-      ids = append(ids, s.Id)
+  var filterSubscriberCypher = ""
+  if iFilterSubscriber.Id != "" {
+    filterSubscriberCypher = " {id: $filterSubscriber}"
+    params["filterSubscriber"] = iFilterSubscriber.Id
+  }
+
+  var filterPublisherCypher = ""
+  if iFilterPublisher.Id != "" {
+    filterPublisherCypher = " {id: $filterPublisher}"
+    params["filterPublisher"] = iFilterPublisher.Id
+  }
+
+  var filterScopesCypher = ""
+  if len(iFilterScopes) > 0 {
+    var filterScopes []string
+    for _,e := range iFilterScopes {
+      filterScopes = append(filterScopes, e.Name)
     }
 
-    filterSubscribersCypher = " and subscriber.id in split($filterSubscribers, \",\")"
-    params["filterSubscribers"] = strings.Join(ids, ",")
+    filterScopesCypher = " and scope.name in split($filterScopes, \",\")"
+    params["filterScopes"] = strings.Join(filterScopes, ",")
   }
+
 
   cypher = fmt.Sprintf(`
     // Fetch subscriptions
 
     // Require subscribers existance
-    MATCH (subscriber:Identity)
-    WHERE 1=1 %s
+    MATCH (subscriber:Identity %s)
 
-    MATCH (subscriber)-[:SUBSCRIBES]->(:Subscribe:Rule)-[:SUBSCRIBES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope:Scope)
-    MATCH (publisher:Identity)-[:PUBLISHES]->(pr)
+    MATCH (subscriber)-[:SUBSCRIBES]->(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    WHERE 1=1 %s
+    MATCH (publisher:Identity %s)-[:PUBLISH]->(pr)
 
     RETURN subscriber, publisher, scope
-  `, filterSubscribersCypher)
+  `, filterSubscriberCypher, filterScopesCypher, filterPublisherCypher)
 
   logCypher(cypher, params)
 

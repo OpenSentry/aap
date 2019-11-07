@@ -47,9 +47,9 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
     // Require publisher existance
     MATCH (publisher:Identity {id:$publisher_id})
 
-    MERGE (publisher)-[:PUBLISHES]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISHES]->(s)
-    MERGE (publisher)-[:PUBLISHES]-(mgpr:Publish:Rule)-[:PUBLISHES]->(mg)
-    MERGE (publisher)-[:PUBLISHES]-(rootmgpr:Publish:Rule)-[:PUBLISHES]->(rootmg)
+    MERGE (publisher)-[:PUBLISH]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISH]->(s)
+    MERGE (publisher)-[:PUBLISH]-(mgpr:Publish:Rule)-[:PUBLISH]->(mg)
+    MERGE (publisher)-[:PUBLISH]-(rootmgpr:Publish:Rule)-[:PUBLISH]->(rootmg)
 
     MERGE (rootmgpr)-[:MAY_GRANT]->(rootmgpr)-[:MAY_GRANT]->(mgpr)-[:MAY_GRANT]->(pr)
 
@@ -102,27 +102,35 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   return publish, nil
 }
 
-func FetchPublishes(tx neo4j.Transaction, iFilterPublishers []Identity) (publishes []Publish, err error) {
+func FetchPublishes(tx neo4j.Transaction, iFilterPublisher Identity, iFilterScopes []Scope) (publishes []Publish, err error) {
   var result neo4j.Result
   var params = make(map[string]interface{})
-  var wherePublishers string
 
-  if len(iFilterPublishers) > 0 {
-    var filterPublishers []string
-    for _,e := range iFilterPublishers {
-      filterPublishers = append(filterPublishers, e.Id)
+  var filterPublisherCypher string
+  if iFilterPublisher.Id != "" {
+    filterPublisherCypher = " {id:$filterPublisher}"
+    params["filterPublisher"] = iFilterPublisher.Id
+  }
+
+  var filterScopesCypher = ""
+  if len(iFilterScopes) > 0 {
+    var filterScopes []string
+    for _,e := range iFilterScopes {
+      filterScopes = append(filterScopes, e.Name)
     }
 
-    wherePublishers = "and publisher.id in split($filterPublishers, \",\")"
-    params["filterPublishers"] = strings.Join(filterPublishers, ",")
+    filterScopesCypher = " and scope.name in split($filterScopes, \",\")"
+    params["filterScopes"] = strings.Join(filterScopes, ",")
   }
 
   cypher := fmt.Sprintf(`
-    match (publisher:Identity)-[:PUBLISHES]->(pr:Publish:Rule)-[:PUBLISHES]->(scope:Scope)
-    where 1=1 %s
-    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISHES]->(mgscope:Scope)
+    match (publisher:Identity %s)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
+    WHERE 1=1 %s
+
+    optional match (pr)-[:MAY_GRANT]->(mgpr)-[:PUBLISH]->(mgscope:Scope)
+
     return publisher, pr, collect(mgpr), scope, collect(mgscope)
-  `, wherePublishers)
+  `, filterPublisherCypher, filterScopesCypher)
 
   if result, err = tx.Run(cypher, params); err != nil {
     return nil, err
