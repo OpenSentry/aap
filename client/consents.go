@@ -122,3 +122,13 @@ func CreateConsentsAuthorize(client *AapClient, url string, requests []CreateCon
 
   return status, responses, nil
 }
+
+func CreateConsentsReject(client *AapClient, url string, requests []CreateConsentsRejectRequest) (status int, responses bulky.Responses, err error) {
+  status, err = handleRequest(client, requests, "POST", url, &responses)
+
+  if err != nil {
+    return status, nil, err
+  }
+
+  return status, responses, nil
+}
