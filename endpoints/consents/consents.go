@@ -200,7 +200,7 @@ func PostConsents(env *app.Environment) gin.HandlerFunc {
       tx.Rollback()
     }
 
-    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{MaxRequests: 1})
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{})
     c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
@@ -321,7 +321,7 @@ func DeleteConsents(env *app.Environment) gin.HandlerFunc {
       tx.Rollback()
     }
 
-    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{MaxRequests: 1})
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{})
     c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
