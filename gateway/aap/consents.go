@@ -116,7 +116,7 @@ func FetchConsents(tx neo4j.Transaction, iOwner Identity, iSubscriber Identity, 
     for _, scope := range iScopes {
       scopes = append(scopes, scope.Name)
     }
-    cypScopes = ` AND scope.id in split($scopes, ",") `
+    cypScopes = ` AND scope.name in split($scopes, ",") `
     params["scopes"] = strings.Join(scopes, ",")
   }
 
