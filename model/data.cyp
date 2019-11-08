@@ -179,7 +179,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## IDP UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:password idp:update:humans:totp idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:password idp:update:humans:totp idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify idp:update:humans:totp", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
