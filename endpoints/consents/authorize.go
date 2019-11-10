@@ -90,7 +90,6 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
           log.Debug(err.Error())
           return
         }
-        log.Debug(hydraConsentResponse)
 
         consentChallenge := parseConsentChallenge(hydraConsentResponse)
 
@@ -109,7 +108,7 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
           }
         }
 
-        consentRequests, subscribedScopes, _, _, err := fetchConsentRequests(tx, iFilterOwner, iFilterSubscriber, iFilterPublishers, iFilterScopes)
+        consentRequests, subscribedScopes, consentedScopes, consentedAudiences, err := fetchConsentRequests(tx, iFilterOwner, iFilterSubscriber, iFilterPublishers, iFilterScopes)
         if err != nil {
           bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
           request.Output = bulky.NewInternalErrorResponse(request.Index) // Specify error on failed one
@@ -158,6 +157,13 @@ func GetAuthorize(env *app.Environment) gin.HandlerFunc {
 
         if consentChallenge.Skip == true {
           // Grant all scopes that have been requested - hydra already checked for us that no additional scopes are requested accidentally.
+          hydraGrantScopes = consentChallenge.RequestedScopes
+          hydraGrantAudience = consentChallenge.RequestedAudiences
+          hydraAcceptConsent = true
+        }
+
+        // If not skip in hydra but all consented in db model, then accept consent.
+        if len(consentedAudiences) == len(consentChallenge.RequestedAudiences) && len(consentedScopes) == len(consentChallenge.RequestedScopes) {
           hydraGrantScopes = consentChallenge.RequestedScopes
           hydraGrantAudience = consentChallenge.RequestedAudiences
           hydraAcceptConsent = true
