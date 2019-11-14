@@ -10,6 +10,7 @@ import (
   "github.com/charmixer/aap/gateway/aap"
 
   bulky "github.com/charmixer/bulky/server"
+  "fmt"
 )
 
 func GetGrants(env *app.Environment) gin.HandlerFunc {
@@ -97,12 +98,16 @@ func GetGrants(env *app.Environment) gin.HandlerFunc {
             mgscopes = append(mgscopes, mgscope.Name)
           }
 
+          fmt.Printf("%#v", grant)
+
           ok = append(ok, client.Grant{
             Identity: grant.Identity.Id,
             Scope: grant.Scope.Name,
             Publisher: grant.Publisher.Id,
             OnBehalfOf: grant.OnBehalfOf.Id,
             MayGrantScopes: mgscopes,
+            NotBefore: grant.GrantRule.NotBefore,
+            Expire: grant.GrantRule.Expire,
           })
         }
 
@@ -165,7 +170,7 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
         }
 
         // TODO handle error
-        grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf)
+        grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf, r.NotBefore, r.Expire)
 
         if err != nil {
           e := tx.Rollback()
@@ -187,6 +192,8 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
           Scope: grant.Scope.Name,
           Publisher: grant.Publisher.Id,
           OnBehalfOf: grant.OnBehalfOf.Id,
+          NotBefore: grant.GrantRule.NotBefore,
+          Expire: grant.GrantRule.Expire,
         }
 
         request.Output = bulky.NewOkResponse(request.Index, ok)
