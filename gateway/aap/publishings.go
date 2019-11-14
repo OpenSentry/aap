@@ -5,6 +5,7 @@ import (
   "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "fmt"
+  "time"
 )
 
 func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publish) (publish Publish, err error) {
@@ -94,7 +95,7 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   }
 
   // Grant maygrant root on new publish rule to creator
-  _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher)
+  _, err = CreateGrant(tx, requestedBy, rootScope, publish.Publisher, publish.Publisher, time.Now().Unix(), 0)
   if err != nil {
     return Publish{}, err
   }
