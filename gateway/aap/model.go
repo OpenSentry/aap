@@ -100,12 +100,12 @@ type GrantRule struct {
 func marshalNodeToGrantRule(node neo4j.Node) (pr GrantRule) {
   p := node.Props()
 
-  if p["not_before"] != nil {
-    pr.NotBefore = p["not_before"].(int64)
+  if p["nbf"] != nil {
+    pr.NotBefore = p["nbf"].(int64)
   }
 
-  if p["expire"] != nil {
-    pr.Expire = p["expire"].(int64)
+  if p["exp"] != nil {
+    pr.Expire = p["exp"].(int64)
   }
 
   return pr

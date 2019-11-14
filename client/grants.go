@@ -13,7 +13,7 @@ type Grant struct {
   OnBehalfOf                string    `json:"on_behalf_of_id" validate:"required,uuid"`
   MayGrantScopes            []string  `json:"may_grant_scopes" validate:"omitempty"`
   NotBefore                 int64     `json:"nbf" validate:"gte=0"`
-  Expire                    int64     `json:"exp" validate:"gte=0"`
+  Expire                    int64     `json:"exp" validate:"eq=0|gtefield=NotBefore"`
 }
 
 

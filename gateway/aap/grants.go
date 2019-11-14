@@ -43,7 +43,7 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     WHERE existingGrantRule is null
 
     // ensure unique rules
-    CREATE (grantRule:Grant:Rule {not_before:$nbf, expire:$exp})
+    CREATE (grantRule:Grant:Rule {nbf:$nbf, exp:$exp})
 
     // create scope and match it to the identity who created it
     MERGE (receiver)-[:IS_GRANTED]->(grantRule)-[:GRANTS]->(publishRule)
