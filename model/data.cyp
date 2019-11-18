@@ -33,6 +33,9 @@ MERGE (:Scope {name:"idp:update:humans:recoververification", title:"Recover veri
 
 MERGE (:Scope {name:"idp:update:humans:deleteverification", title:"Delete verification", description:"Allow handling verification of human deletion. This handles secrets"})
 
+MERGE (:Scope {name:"idp:create:humans:emailchange", title:"Change Email", description:"Allow access to change email"})
+MERGE (:Scope {name:"idp:update:humans:emailchange", title:"Update Email", description:"Allow access to update email"})
+
 MERGE (:Scope {name:"idp:read:challenges", title:"Read a Challenge", description:""})
 MERGE (:Scope {name:"idp:create:challenges", title:"Create a Challenge", description:""})
 MERGE (:Scope {name:"idp:update:challenges:verify", title:"Verify a Challenge", description:""})
@@ -50,6 +53,8 @@ MERGE (:Scope {name:"idp:delete:resourceservers", title:"Delete resource servers
 MERGE (:Scope {name:"idp:create:roles", title:"Create roles", description:"Allow access to create roles"})
 MERGE (:Scope {name:"idp:read:roles", title:"Read roles", description:"Allow access to read roles"})
 MERGE (:Scope {name:"idp:delete:roles", title:"Delete roles", description:"Allow access to delete roles"})
+
+
 
 
 // aap
@@ -179,7 +184,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## IDP UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:delete:humans idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify idp:update:humans:totp idp:update:humans:password", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:delete:humans idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify idp:update:humans:totp idp:update:humans:password idp:create:humans:emailchange idp:update:humans:emailchange", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
