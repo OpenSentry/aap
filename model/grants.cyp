@@ -12,7 +12,7 @@
 // ## IDP (ResourceServer) grants to client used to call AAP
 MATCH (client:Identity:Client {id:"8dc7ea3e-c61a-47cd-acf2-2f03615e3f8b"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:read:entities:judge aap:create:entities aap:create:grants", " ")
+MATCH (s:Scope) where s.name in split("aap:create:entities aap:create:grants", " ") // aap:read:entities:judge
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
