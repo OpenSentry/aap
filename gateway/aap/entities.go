@@ -116,6 +116,8 @@ func JudgeEntity(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity,
   }*/
 
   cypher = fmt.Sprintf(`
+    // Judge
+
     MATCH (publisher:Identity {id:$publisher})
     MATCH (requestor:Identity {id:$requestor})
     MATCH (owner:Identity) where owner.id in split($owner, " ") // Requestor must be granted a rule on behalf of publisher (root grant) or owner (subject grant)
