@@ -47,13 +47,17 @@ func AuthorizationRequired(env *Environment, requiredScopes ...string) gin.Handl
       c.AbortWithStatus(http.StatusInternalServerError)
       return
     }
-    log.Debug(introspectResponse)
-
 
     var grantedScopes []string
     var missingScopes []string
 
     if introspectResponse.Active == true {
+
+      if introspectResponse.TokenType != "access_token" {
+        log.Debug("Token is not an access_token")
+        c.AbortWithStatus(http.StatusForbidden)
+        return
+      }
 
       // Check scopes. (is done by hydra according to doc)
       // https://www.ory.sh/docs/hydra/sdk/api#introspect-oauth2-tokens
