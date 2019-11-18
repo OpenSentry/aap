@@ -92,12 +92,32 @@ func marshalNodeToPublishRule(node neo4j.Node) (pr PublishRule) {
 
   return pr
 }
+
+type GrantRule struct {
+  NotBefore   int64
+  Expire      int64
+}
+func marshalNodeToGrantRule(node neo4j.Node) (pr GrantRule) {
+  p := node.Props()
+
+  if p["nbf"] != nil {
+    pr.NotBefore = p["nbf"].(int64)
+  }
+
+  if p["exp"] != nil {
+    pr.Expire = p["exp"].(int64)
+  }
+
+  return pr
+}
+
 type Grant struct {
   Identity Identity
   Scope Scope
   Publisher Identity
   OnBehalfOf Identity
   MayGrantScopes []Scope
+  GrantRule GrantRule
 }
 
 type Consent struct {

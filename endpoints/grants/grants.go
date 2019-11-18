@@ -10,6 +10,7 @@ import (
   "github.com/charmixer/aap/gateway/aap"
 
   bulky "github.com/charmixer/bulky/server"
+  "fmt"
 )
 
 func GetGrants(env *app.Environment) gin.HandlerFunc {
@@ -97,12 +98,16 @@ func GetGrants(env *app.Environment) gin.HandlerFunc {
             mgscopes = append(mgscopes, mgscope.Name)
           }
 
+          fmt.Printf("%#v", grant)
+
           ok = append(ok, client.Grant{
             Identity: grant.Identity.Id,
             Scope: grant.Scope.Name,
             Publisher: grant.Publisher.Id,
             OnBehalfOf: grant.OnBehalfOf.Id,
             MayGrantScopes: mgscopes,
+            NotBefore: grant.GrantRule.NotBefore,
+            Expire: grant.GrantRule.Expire,
           })
         }
 
@@ -165,7 +170,7 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
         }
 
         // TODO handle error
-        grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf)
+        grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf, r.NotBefore, r.Expire)
 
         if err != nil {
           e := tx.Rollback()
@@ -187,6 +192,8 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
           Scope: grant.Scope.Name,
           Publisher: grant.Publisher.Id,
           OnBehalfOf: grant.OnBehalfOf.Id,
+          NotBefore: grant.GrantRule.NotBefore,
+          Expire: grant.GrantRule.Expire,
         }
 
         request.Output = bulky.NewOkResponse(request.Index, ok)
@@ -212,14 +219,94 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
 
 func DeleteGrants(env *app.Environment) gin.HandlerFunc {
   fn := func(c *gin.Context) {
+
     log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
     log = log.WithFields(logrus.Fields{
       "func": "DeleteGrants",
     })
 
-    c.AbortWithStatusJSON(http.StatusOK, gin.H{
-      "message": "pong",
-    })
+    var requests []client.DeleteGrantsRequest
+    err := c.BindJSON(&requests)
+    if err != nil {
+      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+      return
+    }
+
+    var handleRequests = func(iRequests []*bulky.Request) {
+
+      session, tx, err := aap.BeginWriteTx(env.Driver)
+      if err != nil {
+        bulky.FailAllRequestsWithInternalErrorResponse(iRequests)
+        log.Debug(err.Error())
+        return
+      }
+      defer tx.Close() // rolls back if not already committed/rolled back
+      defer session.Close()
+
+      requestor := c.MustGet("sub").(string)
+
+      for _, request := range iRequests {
+        r := request.Input.(client.DeleteGrantsRequest)
+
+        log = log.WithFields(logrus.Fields{"id": requestor})
+
+        dbGrants, err := aap.FetchGrants(tx, aap.Identity{Id:r.Identity}, []aap.Scope{{Name: r.Scope}}, []aap.Identity{{Id:r.Publisher}}, []aap.Identity{{Id:r.OnBehalfOf}}  )
+        if err != nil {
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          return
+        }
+
+        if len(dbGrants) <= 0  {
+          // not found translate into already deleted
+          ok := client.DeleteGrantsResponse{}
+          request.Output = bulky.NewOkResponse(request.Index, ok)
+          continue;
+        }
+        grantToDelete := dbGrants[0]
+
+        if grantToDelete.Identity.Id != "" {
+
+          err := aap.DeleteGrant(tx, grantToDelete)
+          if err != nil {
+            e := tx.Rollback()
+            if e != nil {
+              log.Debug(e.Error())
+            }
+            bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+            request.Output = bulky.NewInternalErrorResponse(request.Index)
+            log.Debug(err.Error())
+            return
+          }
+
+          ok := client.DeleteGrantsResponse{}
+          request.Output = bulky.NewOkResponse(request.Index, ok)
+          continue
+        }
+
+        // Deny by default
+        e := tx.Rollback()
+        if e != nil {
+          log.Debug(e.Error())
+        }
+        bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+        request.Output = bulky.NewInternalErrorResponse(request.Index)
+        log.Debug("Delete grant failed. Hint: Maybe input validation needs to be improved.")
+        return
+      }
+
+      err = bulky.OutputValidateRequests(iRequests)
+      if err == nil {
+        tx.Commit()
+        return
+      }
+
+      // Deny by default
+      tx.Rollback()
+    }
+
+    responses := bulky.HandleRequest(requests, handleRequests, bulky.HandleRequestParams{})
+    c.JSON(http.StatusOK, responses)
   }
   return gin.HandlerFunc(fn)
 }
