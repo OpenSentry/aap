@@ -140,3 +140,9 @@ type Subscription struct {
   Publisher      Identity
   Scope          Scope
 }
+
+type Shadow struct {
+  Identity       Identity
+  Shadow         Identity
+  GrantRule      GrantRule
+}

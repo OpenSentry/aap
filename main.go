@@ -3,6 +3,9 @@ package main
 import (
   "net/url"
   "os"
+  "runtime"
+  "path"
+  "fmt"
   "golang.org/x/net/context"
   "golang.org/x/oauth2/clientcredentials"
   "github.com/sirupsen/logrus"
@@ -22,6 +25,7 @@ import (
   "github.com/charmixer/aap/endpoints/publishings"
   "github.com/charmixer/aap/endpoints/consents"
   "github.com/charmixer/aap/endpoints/subscriptions"
+  "github.com/charmixer/aap/endpoints/shadows"
   "github.com/charmixer/aap/migration"
 
   E "github.com/charmixer/aap/client/errors"
@@ -58,8 +62,15 @@ func init() {
   logDebug = config.GetInt("log.debug")
   logFormat = config.GetString("log.format")
 
+  log.SetReportCaller(true)
+  log.Formatter = &logrus.TextFormatter{
+    CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+      filename := path.Base(f.File)
+      return "", fmt.Sprintf("%s:%d", filename, f.Line)
+    },
+  }
+
   // We only have 2 log levels. Things developers care about (debug) and things the user of the app cares about (info)
-  log = logrus.New();
   if logDebug == 1 {
     log.SetLevel(logrus.DebugLevel)
   } else {
@@ -200,6 +211,10 @@ func serve(env *app.Environment) {
   r.POST("/grants",                   app.AuthorizationRequired(env, "aap:create:grants"),         grants.PostGrants(env))
   r.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))
   r.DELETE("/grants",                 app.AuthorizationRequired(env, "aap:delete:grants"),         grants.DeleteGrants(env))
+
+  r.POST("/shadows",                   app.AuthorizationRequired(env, "aap:create:shadows"),         shadows.PostShadows(env))
+  r.GET("/shadows",                    app.AuthorizationRequired(env, "aap:read:shadows"),           shadows.GetShadows(env))
+  r.DELETE("/shadows",                 app.AuthorizationRequired(env, "aap:delete:shadows"),         shadows.DeleteShadows(env))
 
   r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),           consents.PostConsents(env))
   r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),             consents.GetConsents(env))
