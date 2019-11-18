@@ -2,6 +2,7 @@ package aap
 
 import (
   "strings"
+  "errors"
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "fmt"
 )
@@ -9,7 +10,7 @@ import (
 func CreateGrants(tx neo4j.Transaction, iGrants []Grant) (rGrants []Grant, err error) {
 
   for _,g := range iGrants {
-    grant, err := CreateGrant(tx, g.Identity, g.Scope, g.Publisher, g.OnBehalfOf)
+    grant, err := CreateGrant(tx, g.Identity, g.Scope, g.Publisher, g.OnBehalfOf, g.GrantRule.NotBefore, g.GrantRule.Expire)
 
     if err != nil {
       return nil, err
@@ -21,28 +22,35 @@ func CreateGrants(tx neo4j.Transaction, iGrants []Grant) (rGrants []Grant, err e
   return rGrants, nil
 }
 
-func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublishedBy Identity, iOnBehalfOf Identity) (rGrant Grant, err error) {
+func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublishedBy Identity, iOnBehalfOf Identity, iNotBefore int64, iExpire int64) (rGrant Grant, err error) {
   var result neo4j.Result
   var cypher string
   var params map[string]interface{}
 
   cypher = `
-    // FIXME ensure users exists and return errors
+    // CreateGrants
+
     MATCH (receiver:Identity {id: $receiverId})
     MATCH (publisher:Identity {id: $publisherId})
     MATCH (obo:Identity {id: $onBehalfOfId})
     MATCH (scope:Scope {name: $scopeName})
     MATCH (publisher)-[:PUBLISH]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
 
+    OPTIONAL MATCH (receiver)-[:IS_GRANTED]->(existingGrantRule)-[:GRANTS]->(publishRule)
+    WHERE (existingGrantRule)-[:ON_BEHALF_OF]->(obo)
+
+    WITH receiver, scope, publisher, publishRule, obo, existingGrantRule
+    WHERE existingGrantRule is null
+
     // ensure unique rules
-    CREATE (grantRule:Grant:Rule)
+    CREATE (grantRule:Grant:Rule {nbf:$nbf, exp:$exp})
 
     // create scope and match it to the identity who created it
     MERGE (receiver)-[:IS_GRANTED]->(grantRule)-[:GRANTS]->(publishRule)
     MERGE (grantRule)-[:ON_BEHALF_OF]->(obo)
 
     // Conclude
-    return scope, publisher, receiver, obo
+    return scope, publisher, receiver, obo, grantRule
   `
 
   params = map[string]interface{}{
@@ -50,8 +58,11 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     "scopeName":   iScope.Name,
     "publisherId": iPublishedBy.Id,
     "onBehalfOfId": iOnBehalfOf.Id,
+    "nbf": iNotBefore,
+    "exp": iExpire,
   }
 
+  logCypher(cypher, params)
   if result, err = tx.Run(cypher, params); err != nil {
     return Grant{}, err
   }
@@ -60,6 +71,7 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
   var rPublisher Identity
   var rReceiver Identity
   var rOnBehalfOf Identity
+  var rGrantRule GrantRule
 
   if result.Next() {
     record := result.Record()
@@ -68,6 +80,7 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     publisherNode := record.GetByIndex(1)
     receiverNode  := record.GetByIndex(2)
     onBehalfOfNode:= record.GetByIndex(3)
+    grantRuleNode := record.GetByIndex(4)
 
     if scopeNode != nil {
       rScope = marshalNodeToScope(scopeNode.(neo4j.Node))
@@ -85,16 +98,19 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
       rOnBehalfOf = marshalNodeToIdentity(onBehalfOfNode.(neo4j.Node))
     }
 
+    if grantRuleNode != nil {
+      rGrantRule = marshalNodeToGrantRule(grantRuleNode.(neo4j.Node))
+    }
+
     rGrant = Grant{
       Identity: rReceiver,
       Scope: rScope,
       Publisher: rPublisher,
       OnBehalfOf: rOnBehalfOf,
+      GrantRule: rGrantRule,
     }
 
   }
-
-  logCypher(cypher, params)
 
   // Check if we encountered any error during record streaming
   if err = result.Err(); err != nil {
@@ -106,6 +122,77 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
   }
 
   return rGrant, nil
+}
+
+func DeleteGrants(tx neo4j.Transaction, iGrants []Grant) (err error) {
+
+  for _,g := range iGrants {
+    err := DeleteGrant(tx, g)
+
+    if err != nil {
+      return err
+    }
+  }
+
+  return nil
+}
+
+func DeleteGrant(tx neo4j.Transaction, iGrant Grant) (err error) {
+  var result neo4j.Result
+  var cypher string
+  var params = make(map[string]interface{})
+
+  if iGrant.Identity.Id == "" {
+    return errors.New("Missing iGrant.Identity.Id")
+  }
+  params["receiverId"] = iGrant.Identity.Id
+
+  if iGrant.Scope.Name == "" {
+    return errors.New("Missing iGrant.Scope.Name")
+  }
+  params["scopeName"] = iGrant.Scope.Name
+
+  if iGrant.Publisher.Id == "" {
+    return errors.New("Missing iGrant.Publisher.Id")
+  }
+  params["publisherId"] = iGrant.Publisher.Id
+
+  if iGrant.OnBehalfOf.Id == "" {
+    return errors.New("Missing iGrant.OnBehalfOf.Id")
+  }
+  params["onBehalfOfId"] = iGrant.OnBehalfOf.Id
+
+  cypher = `
+    // DeleteGrants
+
+    MATCH (receiver:Identity {id: $receiverId})
+    MATCH (publisher:Identity {id: $publisherId})
+    MATCH (obo:Identity {id: $onBehalfOfId})
+    MATCH (scope:Scope {name: $scopeName})
+    MATCH (publisher)-[:PUBLISH]->(publishRule:Publish:Rule)-[:PUBLISH]->(scope)
+
+    MATCH (receiver)-[:IS_GRANTED]->(grantRule:Grant:Rule)-[:GRANTS]->(publishRule)
+    WHERE (grantRule)-[:ON_BEHALF_OF]->(obo)
+
+    DETACH DELETE grantRule
+  `
+
+  logCypher(cypher, params)
+
+  if result, err = tx.Run(cypher, params); err != nil {
+    return err
+  }
+
+  // Check if we encountered any error during record streaming
+  if err = result.Err(); err != nil {
+    return err
+  }
+
+  if err != nil {
+    return err
+  }
+
+  return nil
 }
 
 func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope, iFilterPublishers []Identity, iFilterOnBehalfOf []Identity) (grants []Grant, err error) {
@@ -143,11 +230,13 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
       filterOnBehalfOf = append(filterOnBehalfOf, e.Id)
     }
 
-    where3 = "and onbehalfof.id in split($filterOnBehalfOf, \",\")"
+    where3 = "and obo.id in split($filterOnBehalfOf, \",\")"
     params["filterOnBehalfOf"] = strings.Join(filterOnBehalfOf, ",")
   }
 
   cypher = fmt.Sprintf(`
+    // FetchGrants
+
     match (identity:Identity {id:$id})-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope)
     where 1=1 %s
     match (publisher:Identity)-[:PUBLISH]->(pr)
@@ -157,7 +246,7 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
 
     optional match (pr)-[:MAY_GRANT]->(mgpr:Publish:Rule)-[:PUBLISH]->(mgs:Scope)
 
-    return identity, scope, publisher, obo, collect(mgs)
+    return identity, scope, publisher, obo, collect(mgs), gr
   `, where1, where2, where3)
 
   params["id"] = iGranted.Id
@@ -173,12 +262,14 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
     publishedByNode := record.GetByIndex(2)
     onBehalfOfNode  := record.GetByIndex(3)
     mgsNodes        := record.GetByIndex(4)
+    grantRuleNode   := record.GetByIndex(5)
 
-    if identityNode != nil && scopeNode != nil && publishedByNode != nil && onBehalfOfNode != nil {
+    if identityNode != nil && scopeNode != nil && publishedByNode != nil && onBehalfOfNode != nil && grantRuleNode != nil {
       i := marshalNodeToIdentity(identityNode.(neo4j.Node))
       s := marshalNodeToScope(scopeNode.(neo4j.Node))
       p := marshalNodeToIdentity(publishedByNode.(neo4j.Node))
       o := marshalNodeToIdentity(onBehalfOfNode.(neo4j.Node))
+      g := marshalNodeToGrantRule(grantRuleNode.(neo4j.Node))
 
       var mgs []Scope
       if mgsNodes != nil {
@@ -193,6 +284,7 @@ func FetchGrants(tx neo4j.Transaction, iGranted Identity, iFilterScopes []Scope,
         Publisher: p,
         OnBehalfOf: o,
         MayGrantScopes: mgs,
+        GrantRule: g,
       })
     }
   }
