@@ -18,7 +18,7 @@ return c, gr, p, i
 
 
 // Auto consent IDPUI usage of IDPAPI on behalf of an Identity
-MERGE (:Identity {sub:"user1", email:"user1@domain.com",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"User 1", totp_required:false, totp_secret:"", otp_recover_code:"", otp_recover_code_expire:0, otp_delete_code:"", otp_delete_code_expire:0})
+MERGE (:Identity {sub:"user1", email:"user1@domain.com",  password:"$2a$10$SOyUCy0KLFQJa3xN90UgMe9q5wE.LfakmkCsfKLCIjRY6.CcRDYwu", name:"User 1", totp_required:false, totp_secret:""})
 
 MATCH (user:Identity {sub:"user1"})
 MATCH (idpui:Client {client_id:"idpui"})
