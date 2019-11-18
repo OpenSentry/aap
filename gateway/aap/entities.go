@@ -20,7 +20,7 @@ type EntityVerdict struct {
 func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iRequest Identity) (rEntity Identity, err error) {
 
   scopes := []string{
-    "aap:read:entities:judge", // Only AAP should ever have mg:aap:read:entities:judge, 0:mg:aap:read:entities:judge
+    // "aap:read:entities:judge", // Only AAP should ever have mg:aap:read:entities:judge, 0:mg:aap:read:entities:judge
     "aap:read:grants",
     "aap:create:grants",
     "aap:delete:grants",

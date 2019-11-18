@@ -191,6 +191,12 @@ func serve(env *app.Environment) {
   r.Use(app.RequestId())
   r.Use(app.RequestLogger(env.Constants.LogKey, env.Constants.RequestIdKey, log, appFields))
 
+  // Public endpoints
+  ep := r.Group("/")
+  {
+    ep.GET( "/entities/judge", entities.GetEntitiesJudge(env))
+  }
+
   // ## QTNA - Questions that need answering before granting access to a protected resource
   // 1. Is the user or client authenticated? Answered by the process of obtaining an access token.
   // 2. Is the access token expired?
@@ -198,38 +204,39 @@ func serve(env *app.Environment) {
   // 4. Is the user or client giving the grants in the access token authorized to operate the scopes granted?
   // 5. Is the access token revoked?
 
-  // All requests need to be authenticated.
-  r.Use(app.AuthenticationRequired(env.Constants.LogKey, env.Constants.AccessTokenKey))
+  // Authenticated endpoints
+  ep = r.Group("/")
+  ep.Use(app.AuthenticationRequired(env.Constants.LogKey, env.Constants.AccessTokenKey))
+  {
+    ep.POST("/entities",                 app.AuthorizationRequired(env, "aap:create:entities"),       entities.PostEntities(env))
 
-  r.POST("/entities",                 app.AuthorizationRequired(env, "aap:create:entities"),       entities.PostEntities(env))
-  r.GET( "/entities/judge",           app.AuthorizationRequired(env, "aap:read:entities:judge"),   entities.GetEntitiesJudge(env))
+    ep.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))
+    ep.POST("/scopes",                   app.AuthorizationRequired(env, "aap:create:scopes"),         scopes.PostScopes(env))
+    ep.PUT("/scopes",                    app.AuthorizationRequired(env, "aap:update:scopes"),         scopes.PutScopes(env))
 
-  r.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))
-  r.POST("/scopes",                   app.AuthorizationRequired(env, "aap:create:scopes"),         scopes.PostScopes(env))
-  r.PUT("/scopes",                    app.AuthorizationRequired(env, "aap:update:scopes"),         scopes.PutScopes(env))
+    ep.POST("/grants",                   app.AuthorizationRequired(env, "aap:create:grants"),         grants.PostGrants(env))
+    ep.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))
+    ep.DELETE("/grants",                 app.AuthorizationRequired(env, "aap:delete:grants"),         grants.DeleteGrants(env))
 
-  r.POST("/grants",                   app.AuthorizationRequired(env, "aap:create:grants"),         grants.PostGrants(env))
-  r.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))
-  r.DELETE("/grants",                 app.AuthorizationRequired(env, "aap:delete:grants"),         grants.DeleteGrants(env))
+    ep.POST("/shadows",                   app.AuthorizationRequired(env, "aap:create:shadows"),         shadows.PostShadows(env))
+    ep.GET("/shadows",                    app.AuthorizationRequired(env, "aap:read:shadows"),           shadows.GetShadows(env))
+    ep.DELETE("/shadows",                 app.AuthorizationRequired(env, "aap:delete:shadows"),         shadows.DeleteShadows(env))
 
-  r.POST("/shadows",                   app.AuthorizationRequired(env, "aap:create:shadows"),         shadows.PostShadows(env))
-  r.GET("/shadows",                    app.AuthorizationRequired(env, "aap:read:shadows"),           shadows.GetShadows(env))
-  r.DELETE("/shadows",                 app.AuthorizationRequired(env, "aap:delete:shadows"),         shadows.DeleteShadows(env))
+    ep.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),           consents.PostConsents(env))
+    ep.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),             consents.GetConsents(env))
+    ep.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),           consents.DeleteConsents(env))
+    ep.GET( "/consents/authorize",       app.AuthorizationRequired(env, "aap:read:consents:authorize"),   consents.GetAuthorize(env))
+    ep.POST("/consents/authorize",       app.AuthorizationRequired(env, "aap:create:consents:authorize"), consents.PostAuthorize(env))
+    ep.POST("/consents/reject",          app.AuthorizationRequired(env, "aap:create:consents:reject"),    consents.PostReject(env))
 
-  r.POST("/consents",                 app.AuthorizationRequired(env, "aap:create:consents"),           consents.PostConsents(env))
-  r.GET("/consents",                  app.AuthorizationRequired(env, "aap:read:consents"),             consents.GetConsents(env))
-  r.DELETE("/consents",               app.AuthorizationRequired(env, "aap:delete:consents"),           consents.DeleteConsents(env))
-  r.GET( "/consents/authorize",       app.AuthorizationRequired(env, "aap:read:consents:authorize"),   consents.GetAuthorize(env))
-  r.POST("/consents/authorize",       app.AuthorizationRequired(env, "aap:create:consents:authorize"), consents.PostAuthorize(env))
-  r.POST("/consents/reject",          app.AuthorizationRequired(env, "aap:create:consents:reject"),    consents.PostReject(env))
+    ep.POST("/publishes",                app.AuthorizationRequired(env, "aap:create:publishes"),      publishings.PostPublishes(env))
+    ep.GET("/publishes",                 app.AuthorizationRequired(env, "aap:read:publishes"),        publishings.GetPublishes(env))
+    ep.DELETE("/publishes",              app.AuthorizationRequired(env, "aap:delete:publishes"),      publishings.DeletePublishes(env))
 
-  r.POST("/publishes",                app.AuthorizationRequired(env, "aap:create:publishes"),      publishings.PostPublishes(env))
-  r.GET("/publishes",                 app.AuthorizationRequired(env, "aap:read:publishes"),        publishings.GetPublishes(env))
-  r.DELETE("/publishes",              app.AuthorizationRequired(env, "aap:delete:publishes"),      publishings.DeletePublishes(env))
-
-  r.POST("/subscriptions",            app.AuthorizationRequired(env, "aap:create:subscriptions"),  subscriptions.PostSubscriptions(env))
-  r.GET("/subscriptions",             app.AuthorizationRequired(env, "aap:read:subscriptions"),    subscriptions.GetSubscriptions(env))
-  r.DELETE("/subscriptions",          app.AuthorizationRequired(env, "aap:delete:subscriptions"),  subscriptions.DeleteSubscriptions(env))
+    ep.POST("/subscriptions",            app.AuthorizationRequired(env, "aap:create:subscriptions"),  subscriptions.PostSubscriptions(env))
+    ep.GET("/subscriptions",             app.AuthorizationRequired(env, "aap:read:subscriptions"),    subscriptions.GetSubscriptions(env))
+    ep.DELETE("/subscriptions",          app.AuthorizationRequired(env, "aap:delete:subscriptions"),  subscriptions.DeleteSubscriptions(env))
+  }
 
   r.RunTLS(":" + config.GetString("serve.public.port"), config.GetString("serve.tls.cert.path"), config.GetString("serve.tls.key.path"))
 }

@@ -169,9 +169,7 @@ func PostGrants(env *app.Environment) gin.HandlerFunc {
           Id: r.OnBehalfOf,
         }
 
-        // TODO handle error
         grant, err := aap.CreateGrant(tx, iReceive, iScope, iPublishedBy, iOnBehalfOf, r.NotBefore, r.Expire)
-
         if err != nil {
           e := tx.Rollback()
           if e != nil {

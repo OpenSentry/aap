@@ -77,7 +77,7 @@ MERGE (:Scope {name:"aap:delete:consents", title:"Remove consent to scopes", des
 MERGE (:Scope {name:"aap:read:consents:authorize", title:"Read consent challenge", description:"Allow read consent challenge"})
 MERGE (:Scope {name:"aap:create:consents:authorize", title:"Accept consent challenge", description:"Allow consenting to access to entity onbehalf of entity"})
 MERGE (:Scope {name:"aap:create:consents:reject", title:"Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
-MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
+//MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
 MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
 ;
 
@@ -158,7 +158,7 @@ MERGE (pr)-[:MAY_GRANT]->(pr)
 // ## IDP (ResourceServer) grants to client used to call AAP
 MATCH (client:Identity:Client {id:"8dc7ea3e-c61a-47cd-acf2-2f03615e3f8b"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:read:entities:judge aap:create:entities aap:create:grants", " ")
+MATCH (s:Scope) where s.name in split("aap:create:entities aap:create:grants", " ") // aap:read:entities:judge
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
 MERGE (gr)-[:ON_BEHALF_OF]->(rs)
