@@ -230,5 +230,5 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 
 // # Always set nbf and exp on grant rule
 MATCH (gr:Grant:Rule)
-SET gr.nbf = datetime().epochSeconds, gr.exp = datetime().epochSeconds
+SET gr.nbf = datetime().epochSeconds, gr.exp = 0
 ;
