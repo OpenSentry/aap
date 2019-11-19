@@ -53,7 +53,8 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
     MATCH (publisher)-[:PUBLISH]->(publishing:Publish:Rule)-[:PUBLISH]->(scope)
 
     // Collet all granted owners for requested publishings
-    MATCH (requestor)-[:IS_GRANTED]->(grant:Grant:Rule)-[:GRANTS]->(publishing), (grant)-[:ON_BEHALF_OF]->(owner:Identity) WHERE 1=1 %s
+    MATCH (requestor)-[:IS_GRANTED]->(grant:Grant:Rule)-[:GRANTS]->(publishing), (grant)-[:ON_BEHALF_OF]->(owner:Identity)
+    WHERE grant.nbf <= datetime().epochSeconds AND (grant.exp >= datetime().epochSeconds OR grant.exp = 0) %s
 
     // Conclude. This only returns anything if everything match!
     RETURN publisher, requestor, scope, collect(owner) as owner

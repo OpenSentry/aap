@@ -226,3 +226,9 @@ MATCH (s:Scope) where s.name in split("aap:read:scopes aap:create:scopes aap:upd
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
+
+
+// # Always set nbf and exp on grant rule
+MATCH (gr:Grant:Rule)
+SET gr.nbf = datetime().epochSeconds, gr.exp = datetime().epochSeconds
+;
