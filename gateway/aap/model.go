@@ -146,3 +146,11 @@ type Shadow struct {
   Shadow         Identity
   GrantRule      GrantRule
 }
+
+type Verdict struct {
+  Publisher Identity
+  Requestor Identity
+  Scope Scope
+  Owners []Identity
+  Granted bool
+}

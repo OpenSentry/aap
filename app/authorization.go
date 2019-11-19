@@ -81,7 +81,7 @@ func AuthorizationRequired(env *Environment, requiredScopes ...string) gin.Handl
 
       for _, scope := range requiredScopes {
 
-        verdict, err := aap.JudgeEntity(tx, publisherEntity, requestorEntity, ownerEntity, aap.Scope{ Name:scope })
+        verdict, err := aap.Judge(tx, publisherEntity, requestorEntity, aap.Scope{ Name:scope }, []aap.Identity{ ownerEntity })
         if err != nil {
           log.WithFields(logrus.Fields{ "publisher":publisherEntity.Id, "requestor":requestorEntity.Id, "owner":ownerEntity.Id, "scope":scope }).Debug(err.Error())
           c.AbortWithStatus(http.StatusInternalServerError)

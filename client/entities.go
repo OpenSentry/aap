@@ -20,6 +20,7 @@ type CreateEntitiesRequest struct {
 
 type Verdict struct {
   Granted bool
+  
   // Hvis false så får man data på hvad der mangler.
 }
 
