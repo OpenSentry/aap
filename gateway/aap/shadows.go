@@ -17,7 +17,7 @@ func CreateShadows(tx neo4j.Transaction, iShadow Shadow) (rShadow Shadow, err er
     MATCH (identity:Identity {id:$id})
     MATCH (shadow:Identity {id:$shadow}
 
-    MERGE (identity)-[:IS_GRANTED]-(gr:Grant:Rule)-[:GRAMTS]->(shadow)
+    MERGE (identity)-[:IS_GRANTED]-(gr:Grant:Rule)-[:GRANTS]->(shadow)
     MERGE (gr)-[:ON_BEHALF_OF]->(identity)
 
     RETURN identity, gr, shadow
