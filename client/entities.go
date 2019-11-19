@@ -15,32 +15,22 @@ type CreateEntitiesRequest struct {
   Creator          string    `json:"creator_id" validate:"required,uuid"`
 }
 
-// Måske skal vi bare sige at judge siger ja og nej men at den smider debug med for alt hvad den har checket hvis man vil have det.
-// Så hvis man spørger på mange owners så siger den kun ja hvis alle i listen er der og spørger man på ingen owners så kræver det at man er granted scopes direkte til rs
-
 type Verdict struct {
-  Granted bool
-  
-  // Hvis false så får man data på hvad der mangler.
-}
+  Granted   bool     `json:"is_granted"`
 
-/*
-type Verdict struct {
-  Owner string `json:"owner_id" validate:"required,uuid"`
-  Granted bool `json:"granted"`
-  GrantedScopes []Scope `json:"granted_scopes" validate:"omitempty,dive"`
-  MissingScopes []Scope `json:"missing_scopes" validate:"omitempty,dive"`
+  Identity  string   `json:"identity_id"  validate:"required,uuid"` // Subject access_token.sub
+  Publisher string   `json:"publisher_id" validate:"required,uuid"` // Resource Server Audience
+  Scope     string   `json:"scope"        validate:"required"`
+  Owners    []string `json:"owners"       validate:"omitempty,dive,uuid"`// Resource Owners (often publisher or Subject)
 }
-*/
 
 type ReadEntitiesJudgeResponse Verdict
 type ReadEntitiesJudgeRequest struct {
-  Publisher string  // Resource Server Audience
-  Requestor string  // Subject (Either subject or client_id)
-  Owners []string   // Resource Owners (often publisher or Subject)
-  Scopes []string
+  Identity  string   `json:"identity_id"      validate:"required,uuid"` // Subject access_token.sub
+  Publisher string   `json:"publisher_id"     validate:"required,uuid"` // Resource Server Audience
+  Scope     string   `json:"scope"            validate:"required"`
+  Owners    []string `json:"owners,omitempty" validate:"omitempty,dive,uuid"`// Resource Owners (often publisher or Subject)
 }
-
 
 func CreateEntities(client *AapClient, url string, requests []CreateEntitiesRequest) (status int, responses bulky.Responses, err error) {
   status, err = handleRequest(client, requests, "POST", url, &responses)

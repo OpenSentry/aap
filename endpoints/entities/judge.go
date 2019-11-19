@@ -43,56 +43,38 @@ func GetEntitiesJudge(env *app.Environment) gin.HandlerFunc {
         r := request.Input.(client.ReadEntitiesJudgeRequest)
 
         iPublisher := aap.Identity{Id:r.Publisher}
-        iRequestor := aap.Identity{Id:r.Requestor}
+        iRequestor := aap.Identity{Id:r.Identity}
+        iScope     := aap.Scope{Name:r.Scope}
 
-        grantedOwnersCount := 0
-
+        var iOwners []aap.Identity
         for _, id := range r.Owners {
-          iOwner := aap.Identity{Id:id}
-
-          var grantedScopes []aap.Scope
-          var missingScopes []aap.Scope
-
-          for _, scope := range r.Scopes {
-            iScope := aap.Scope{Name:scope}
-
-            verdict, err := aap.Judge(tx, iPublisher, iRequestor, iScope, []aap.Identity{ iOwner })
-            if err != nil {
-              e := tx.Rollback()
-              if e != nil {
-                log.Debug(e.Error())
-              }
-              bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
-              request.Output = bulky.NewInternalErrorResponse(request.Index)
-              log.Debug(err.Error())
-              return
-            }
-
-            if verdict.Granted == true {
-              grantedScopes = append(grantedScopes, verdict.Scope)
-            } else {
-              missingScopes = append(missingScopes, verdict.Scope)
-            }
-
-          }
-
-          if len(missingScopes) == 0 && len(grantedScopes) == len(r.Scopes) {
-            // Granted
-            grantedOwnersCount += 1
-          }
-
+          iOwners = append(iOwners, aap.Identity{Id:id})
         }
 
-        if grantedOwnersCount == len(r.Owners) {
-          request.Output = bulky.NewOkResponse(request.Index, client.ReadEntitiesJudgeResponse{
-            Granted: true,
-          })
-          continue
+        verdict, err := aap.Judge(tx, iPublisher, iRequestor, iScope, iOwners)
+        if err != nil {
+          e := tx.Rollback()
+          if e != nil {
+            log.Debug(e.Error())
+          }
+          bulky.FailAllRequestsWithServerOperationAbortedResponse(iRequests) // Fail all with abort
+          request.Output = bulky.NewInternalErrorResponse(request.Index)
+          log.Debug(err.Error())
+          return
         }
 
-        // Deny by default
+
+        var owners []string
+        for _, o := range verdict.Owners {
+          owners = append(owners, o.Id)
+        }
+
         request.Output = bulky.NewOkResponse(request.Index, client.ReadEntitiesJudgeResponse{
-          Granted: false,
+          Granted: verdict.Granted,
+          Identity: verdict.Requestor.Id,
+          Publisher: verdict.Publisher.Id,
+          Scope: verdict.Scope.Name,
+          Owners: owners,
         })
       }
 

@@ -39,8 +39,10 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
     OPTIONAL MATCH (receiver)-[:IS_GRANTED]->(existingGrantRule)-[:GRANTS]->(publishRule)
     WHERE (existingGrantRule)-[:ON_BEHALF_OF]->(obo)
 
-    WITH receiver, scope, publisher, publishRule, obo, existingGrantRule
-    WHERE existingGrantRule is null
+    DETACH DELETE existingGrantRule
+
+    //WITH receiver, scope, publisher, publishRule, obo, existingGrantRule
+    //WHERE existingGrantRule is null
 
     // ensure unique rules
     CREATE (grantRule:Grant:Rule {nbf:$nbf, exp:$exp})
