@@ -6,6 +6,7 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "fmt"
   "time"
+  "net/url"
 )
 
 func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publish) (publish Publish, err error) {
@@ -20,6 +21,10 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
 
   if newPublish.Scope.Name == "" {
     return Publish{}, errors.New("Missing Publish.Scope.Name")
+  }
+  _, err = url.ParseRequestURI(newPublish.Scope.Name)
+  if err != nil {
+    return Publish{}, errors.New("Invalid uri in Publish.Scope.Name")
   }
   params["scope"] = newPublish.Scope.Name
 
