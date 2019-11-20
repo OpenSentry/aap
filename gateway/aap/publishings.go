@@ -6,8 +6,16 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
   "fmt"
   "time"
-  "net/url"
 )
+
+func stripChars(str, chr string) string {
+    return strings.Map(func(r rune) rune {
+        if strings.IndexRune(chr, r) < 0 {
+            return r
+        }
+        return -1
+    }, str)
+}
 
 func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publish) (publish Publish, err error) {
   var result neo4j.Result
@@ -22,9 +30,9 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   if newPublish.Scope.Name == "" {
     return Publish{}, errors.New("Missing Publish.Scope.Name")
   }
-  _, err = url.ParseRequestURI(newPublish.Scope.Name)
-  if err != nil {
-    return Publish{}, errors.New("Invalid uri in Publish.Scope.Name")
+  stripped := stripChars(newPublish.Scope.Name, " ")
+  if len(stripped) != len(newPublish.Scope.Name) {
+    return Publish{}, errors.New("No space allowed in Publish.Scope.Name")
   }
   params["scope"] = newPublish.Scope.Name
 

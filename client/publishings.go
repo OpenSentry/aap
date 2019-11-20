@@ -17,11 +17,10 @@ type Publish struct {
 type CreatePublishesResponse Publish
 type CreatePublishesRequest struct {
   Publisher   string `json:"publisher_id" validate:"required,uuid"`
-  Scope       string `json:"scope" validate:"required,uri"`
+  Scope       string `json:"scope" validate:"required,excludes= "`
   Title       string `json:"title" validate:"required"`
   Description string `json:"description" validate:"required"`
 }
-
 
 type UpdatePublishesResponse Publish
 type UpdatePublishesRequest struct {
@@ -34,7 +33,6 @@ type ReadPublishesRequest struct {
   Publisher         string    `json:"publisher_id,omitempty" validate:"omitempty,uuid"`
   Scopes            []string  `json:"scopes,omitempty" validate:"omitempty"`
 }
-
 
 func ReadPublishes(client *AapClient, url string, requests []ReadPublishesRequest) (status int, responses bulky.Responses, err error) {
   status, err = handleRequest(client, requests, "GET", url, &responses)
