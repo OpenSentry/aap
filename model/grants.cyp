@@ -23,7 +23,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // ## IDP UI (Application) grants to required scopes which relates to credentials like password, otp codes etc. (Secret Grants)
 MATCH (client:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:claim:invites idp:update:challenges:verify idp:read:challenges idp:create:humans idp:update:humans:totp", " ")
+MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:create:invites:claim idp:update:challenges:verify idp:read:challenges idp:create:humans idp:update:humans:totp", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
@@ -68,7 +68,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // User grants handy when missing bootstraps
 MATCH (h:Human:Identity {id:"d6ef56ff-5422-42f5-8730-6c1aa6b736fc"})
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:invites idp:create:invites idp:send:invites", " ")
+MATCH (s:Scope) where s.name in split("idp:read:invites idp:create:invites idp:create:invites:send", " ")
 
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 
