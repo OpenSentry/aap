@@ -54,9 +54,6 @@ MERGE (:Scope {name:"idp:create:roles", title:"Create roles", description:"Allow
 MERGE (:Scope {name:"idp:read:roles", title:"Read roles", description:"Allow access to read roles"})
 MERGE (:Scope {name:"idp:delete:roles", title:"Delete roles", description:"Allow access to delete roles"})
 
-
-
-
 // aap
 // @TODO fix identity -> human
 MERGE (:Scope {name:"aap:read:scopes", title:"Read scopes", description:""})
@@ -79,7 +76,12 @@ MERGE (:Scope {name:"aap:create:consents:authorize", title:"Accept consent chall
 MERGE (:Scope {name:"aap:create:consents:reject", title:"Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
 //MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
 MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
+MERGE (:Scope {name:"aap:create:shadows", title:"Create shadow", description:"Allow access to create shadow"})
+MERGE (:Scope {name:"aap:read:shadows", title:"Read shadow", description:"Allow access to read shadow"})
+MERGE (:Scope {name:"aap:delete:shadows", title:"Delete shadow", description:"Allow access to delete shadow"})
 ;
+
+
 
 MATCH (s:Scope)
 MERGE (s)<-[:MAY_GRANT]-(mgs:Scope {name:"mg:"+s.name, title:"May grant scope: "+s.name, description: ""})
@@ -195,7 +197,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## AAP UI (Application) grants to required scopes which relates to consents (Consent Grants)
 MATCH (client:Identity:Client {id:"919e2026-06af-4c82-9d84-6af4979d9e7a"})
 MATCH (rs:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:create:consents:authorize aap:read:consents:authorize aap:create:consents:reject aap:read:consents aap:create:consents aap:read:subscriptions aap:read:publishes", " ")
+MATCH (s:Scope) where s.name in split("aap:create:consents:authorize aap:read:consents:authorize aap:create:consents:reject aap:read:consents aap:create:consents aap:read:subscriptions aap:read:publishes ", " ")
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
 MERGE (gr)-[:ON_BEHALF_OF]->(rs)
@@ -222,7 +224,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## ME UI subscribes to AAP
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
 MATCH (publisher:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:read:scopes aap:create:scopes aap:update:scopes aap:read:grants aap:create:grants aap:delete:grants aap:read:publishes aap:create:publishes aap:delete:publishes aap:read:consents aap:delete:consents aap:create:subscriptions aap:delete:subscriptions aap:read:subscriptions", " ")
+MATCH (s:Scope) where s.name in split("aap:read:scopes aap:create:scopes aap:update:scopes aap:read:grants aap:create:grants aap:delete:grants aap:read:publishes aap:create:publishes aap:delete:publishes aap:read:consents aap:delete:consents aap:create:subscriptions aap:delete:subscriptions aap:read:subscriptions aap:create:shadows aap:read:shadows aap:delete:shadows", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
