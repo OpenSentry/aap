@@ -12,8 +12,8 @@ MERGE (:Scope {name:"idp:read:identities", title:"Read your identity", descripti
 
 MERGE (:Scope {name:"idp:create:invites", title:"Create an Invite", description:"Allow creation of invites to the IDP system"})
 MERGE (:Scope {name:"idp:read:invites", title:"Read an Invite", description:"Allow reading invites in the IDP system"})
-MERGE (:Scope {name:"idp:send:invites", title:"Send an Invite", description:"Allow sending out invites from the IDP system"})
-MERGE (:Scope {name:"idp:claim:invites", title:"Claim an Invite", description:"Allow claiming of invites in the IDP system"})
+MERGE (:Scope {name:"idp:create:invites:send", title:"Send an Invite", description:"Allow sending out invites from the IDP system"})
+MERGE (:Scope {name:"idp:create:invites:claim", title:"Claim an Invite", description:"Allow claiming of invites in the IDP system"})
 
 MERGE (:Scope {name:"idp:create:humans", title:"Create a human", description:"Allow registering data on a claimed invite and converting the invite to a human"})
 MERGE (:Scope {name:"idp:read:humans", title:"Read a human", description:""})
@@ -167,7 +167,7 @@ MERGE (gr)-[:ON_BEHALF_OF]->(rs)
 // ## IDP UI (Application) grants to required scopes which relates to credentials like password, otp codes etc. (Secret Grants)
 MATCH (client:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (rs:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:claim:invites idp:update:challenges:verify idp:read:challenges idp:create:humans idp:read:humans:logout idp:update:humans:logout idp:update:humans:deleteverification idp:create:humans:recover idp:update:humans:recoververification", " ")
+MATCH (s:Scope) where s.name in split("idp:create:humans:authenticate idp:read:humans idp:read:invites idp:create:invites idp:create:invites:claim idp:update:challenges:verify idp:read:challenges idp:create:humans idp:read:humans:logout idp:update:humans:logout idp:update:humans:deleteverification idp:create:humans:recover idp:update:humans:recoververification", " ")
 MATCH (rs)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (client)-[:IS_GRANTED]->(gr:Grant:Rule)-[:GRANTS]->(pr)
 MERGE (gr)-[:ON_BEHALF_OF]->(rs)
@@ -184,7 +184,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## IDP UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"c7f1afc4-1e1f-484e-b3c2-0519419690cb"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:delete:humans idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify idp:update:humans:totp idp:update:humans:password idp:create:humans:emailchange idp:update:humans:emailchange", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:create:invites idp:read:invites idp:create:invites:send idp:create:invites:claim idp:read:humans idp:read:humans:logout idp:create:humans:logout idp:update:humans:logout idp:delete:humans idp:create:humans:recover idp:create:humans idp:create:humans:authenticate idp:update:humans:recoververification idp:update:humans:deleteverification idp:read:challenges idp:create:challenges idp:update:challenges:verify idp:update:humans:totp idp:update:humans:password idp:create:humans:emailchange idp:update:humans:emailchange", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
@@ -214,7 +214,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## ME UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:send:invites idp:claim:invites idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients idp:create:roles idp:read:roles idp:delete:roles", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:create:invites:send idp:create:invites:claim idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients idp:create:roles idp:read:roles idp:delete:roles", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
