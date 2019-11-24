@@ -7,12 +7,14 @@ import (
 type Entity struct {
   Reference        string    `json:"reference_id" validate:"required,uuid"`
   Creator          string    `json:"creator_id" validate:"required,uuid"`
+  Scopes           []string  `json:"scopes" validate:"required"`
 }
 
 type CreateEntitiesResponse Entity
 type CreateEntitiesRequest struct {
   Reference        string    `json:"reference_id" validate:"required,uuid"`
   Creator          string    `json:"creator_id" validate:"required,uuid"`
+  Scopes           []string  `json:"scopes" validate:"required"`
 }
 
 type Verdict struct {

@@ -8,56 +8,13 @@ import (
   "github.com/charmixer/aap/config"
 )
 
-func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iRequest Identity) (rEntity Identity, err error) {
-
-  scopes := []string{
-    // "aap:read:entities:judge", // Only AAP should ever have mg:aap:read:entities:judge, 0:mg:aap:read:entities:judge
-    "aap:read:grants",
-    "aap:create:grants",
-    "aap:delete:grants",
-    "aap:read:publishes",
-    "aap:create:publishes",
-    "aap:delete:publishes",
-    "aap:read:subscriptions",
-    "aap:create:subscriptions",
-    "aap:delete:subscriptions",
-    "aap:read:consents",
-    "aap:create:consents",
-    "aap:delete:consents",
-
-    "mg:aap:read:grants",
-    "mg:aap:create:grants",
-    "mg:aap:delete:grants",
-    "mg:aap:read:publishes",
-    "mg:aap:create:publishes",
-    "mg:aap:delete:publishes",
-    "mg:aap:read:subscriptions",
-    "mg:aap:create:subscriptions",
-    "mg:aap:delete:subscriptions",
-    "mg:aap:read:consents",
-    "mg:aap:create:consents",
-    "mg:aap:delete:consents",
-
-    "0:mg:aap:read:grants",
-    "0:mg:aap:create:grants",
-    "0:mg:aap:delete:grants",
-    "0:mg:aap:read:publishes",
-    "0:mg:aap:create:publishes",
-    "0:mg:aap:delete:publishes",
-    "0:mg:aap:read:subscriptions",
-    "0:mg:aap:create:subscriptions",
-    "0:mg:aap:delete:subscriptions",
-    "0:mg:aap:read:consents",
-    "0:mg:aap:create:consents",
-    "0:mg:aap:delete:consents",
-  }
-
+func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iScopes []string) (rEntity Identity, err error) {
   var aapIdentity = Identity{
     Id: config.GetString("id"),
   }
 
   var grants []Grant
-  for _,scope := range scopes {
+  for _,scope := range iScopes {
     grant := Grant{
       Identity: iCreator,
       Scope: Scope{Name: scope},
