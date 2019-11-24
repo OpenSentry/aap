@@ -10,7 +10,6 @@ import (
   "github.com/charmixer/aap/gateway/aap"
 
   bulky "github.com/charmixer/bulky/server"
-  "fmt"
 )
 
 func GetGrants(env *app.Environment) gin.HandlerFunc {
@@ -98,7 +97,6 @@ func GetGrants(env *app.Environment) gin.HandlerFunc {
             mgscopes = append(mgscopes, mgscope.Name)
           }
 
-          fmt.Printf("%#v", grant)
 
           ok = append(ok, client.Grant{
             Identity: grant.Identity.Id,

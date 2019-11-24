@@ -39,12 +39,76 @@ func PostEntities(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      requestor := c.MustGet("sub").(string)
+      validScopes := []string{
+        "aap:read:grants",
+        "aap:create:grants",
+        "aap:delete:grants",
+        "aap:read:publishes",
+        "aap:create:publishes",
+        "aap:delete:publishes",
+        "aap:read:subscriptions",
+        "aap:create:subscriptions",
+        "aap:delete:subscriptions",
+        "aap:read:consents",
+        "aap:create:consents",
+        "aap:delete:consents",
+        "aap:read:shadows",
+        "aap:create:shadows",
+        "aap:delete:shadows",
+
+        "mg:aap:read:grants",
+        "mg:aap:create:grants",
+        "mg:aap:delete:grants",
+        "mg:aap:read:publishes",
+        "mg:aap:create:publishes",
+        "mg:aap:delete:publishes",
+        "mg:aap:read:subscriptions",
+        "mg:aap:create:subscriptions",
+        "mg:aap:delete:subscriptions",
+        "mg:aap:read:consents",
+        "mg:aap:create:consents",
+        "mg:aap:delete:consents",
+        "mg:aap:read:shadows",
+        "mg:aap:create:shadows",
+        "mg:aap:delete:shadows",
+
+        "0:mg:aap:read:grants",
+        "0:mg:aap:create:grants",
+        "0:mg:aap:delete:grants",
+        "0:mg:aap:read:publishes",
+        "0:mg:aap:create:publishes",
+        "0:mg:aap:delete:publishes",
+        "0:mg:aap:read:subscriptions",
+        "0:mg:aap:create:subscriptions",
+        "0:mg:aap:delete:subscriptions",
+        "0:mg:aap:read:consents",
+        "0:mg:aap:create:consents",
+        "0:mg:aap:delete:consents",
+        "0:mg:aap:read:shadows",
+        "0:mg:aap:create:shadows",
+        "0:mg:aap:delete:shadows",
+      }
 
       for _, request := range iRequests {
         r := request.Input.(client.CreateEntitiesRequest)
 
-        entity, err := aap.CreateEntity(tx, aap.Identity{Id: r.Reference}, aap.Identity{Id:r.Creator}, aap.Identity{Id:requestor})
+        for _,s := range r.Scopes {
+          var foundScope = false
+          for _,vs := range validScopes {
+            if s == vs {
+              foundScope = true
+            }
+          }
+
+          if !foundScope {
+            bulky.FailAllRequestsWithClientOperationAbortedResponse(iRequests) // Fail all with abort
+            request.Output = bulky.NewClientErrorResponse(request.Index)
+
+            return
+          }
+        }
+
+        entity, err := aap.CreateEntity(tx, aap.Identity{Id: r.Reference}, aap.Identity{Id:r.Creator}, r.Scopes)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -60,6 +124,7 @@ func PostEntities(env *app.Environment) gin.HandlerFunc {
           ok := client.CreateEntitiesResponse{
             Reference: entity.Id,
             Creator: r.Creator,
+            Scopes: r.Scopes,
           }
           request.Output = bulky.NewOkResponse(request.Index, ok)
           continue

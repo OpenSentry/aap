@@ -5,7 +5,7 @@ import (
 )
 
 type Shadow struct {
-  Entity        string    `json:"entity_id" validate:"required,uuid"`
+  Identity      string    `json:"identity_id" validate:"required,uuid"`
   Shadow        string    `json:"shadow_id" validate:"required,uuid"`
   NotBefore     int64     `json:"nbf" validate:"gte=0"`
   Expire        int64     `json:"exp" validate:"eq=0|gtefield=NotBefore"`
@@ -13,7 +13,7 @@ type Shadow struct {
 
 type CreateShadowsResponse Shadow
 type CreateShadowsRequest struct {
-  Entity        string    `json:"entity_id" validate:"required,uuid"`
+  Identity      string    `json:"identity_id" validate:"required,uuid"`
   Shadow        string    `json:"shadow_id" validate:"required,uuid"`
   NotBefore     int64     `json:"nbf" validate:"gte=0"`
   Expire        int64     `json:"exp" validate:"eq=0|gtefield=NotBefore"`
@@ -21,13 +21,14 @@ type CreateShadowsRequest struct {
 
 type DeleteShadowsResponse Shadow
 type DeleteShadowsRequest struct {
-  Entity        string    `json:"entity_id" validate:"required,uuid"`
+  Identity      string    `json:"identity_id" validate:"required,uuid"`
   Shadow        string    `json:"shadow_id" validate:"required,uuid"`
 }
 
 type ReadShadowsResponse []Shadow
 type ReadShadowsRequest struct {
-  Entity        string    `json:"entity_id" validate:"required,uuid"`
+  Identity      string    `json:"identity_id" validate:"omitempty,uuid"`
+  Shadow        string    `json:"shadow_id" validate:"omitempty,uuid"`
 }
 
 
