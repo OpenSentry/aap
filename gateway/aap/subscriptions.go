@@ -42,6 +42,10 @@ func CreateSubscription(tx neo4j.Transaction, iSubscription Subscription, iReque
     // Require publish rules existance
     MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope)
 
+    OPTIONAL MATCH (subscriber)-[:SUBSCRIBES]-(existingSr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
+
+    DETACH DELETE existingSr
+
     // Make the connection
     MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 
