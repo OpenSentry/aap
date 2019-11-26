@@ -53,6 +53,8 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
   }
 
   cypher = fmt.Sprintf(`
+    // Create publishing
+
     // Require scope existance
     MATCH (s:Scope {name:$scope})
     MATCH (mg:Scope)-[:MAY_GRANT]->(s)

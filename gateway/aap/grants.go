@@ -41,9 +41,6 @@ func CreateGrant(tx neo4j.Transaction, iReceive Identity, iScope Scope, iPublish
 
     DETACH DELETE existingGrantRule
 
-    //WITH receiver, scope, publisher, publishRule, obo, existingGrantRule
-    //WHERE existingGrantRule is null
-
     // ensure unique rules
     CREATE (grantRule:Grant:Rule {nbf:$nbf, exp:$exp})
 

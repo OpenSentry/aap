@@ -33,11 +33,21 @@ func CreateConsent(tx neo4j.Transaction, iOwner Identity, iSubscriber Identity, 
   params["scope"] = iScopes.Name
 
   cypher = fmt.Sprintf(`
+    // CreateConsent
+
     MATCH (owner:Human:Identity {id:$owner_id})
     MATCH (subscriber:Client:Identity {id:$subscriber_id})
     MATCH (publisher:ResourceServer:Identity {id:$publisher_id})-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(scope:Scope {name:$scope})
 
-    MERGE (owner)-[:CONSENT]->(cr:Consent:Rule)-[:CONSENT]->(pr)
+    OPTIONAL MATCH (owner)-[:CONSENT]->(existingCr:Consent:Rule)-[:CONSENT]->(pr)
+    WHERE (existingCr)-[:CONSENT]->(subscriber)
+
+    DETACH DELETE existingCr
+
+    // ensure unique rules
+    CREATE (cr:Consent:Rule)
+
+    MERGE (owner)-[:CONSENT]->(cr)-[:CONSENT]->(pr)
     MERGE (cr)-[:CONSENT]->(subscriber)
 
     // Conclude
