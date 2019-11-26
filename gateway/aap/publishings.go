@@ -63,6 +63,12 @@ func CreatePublishes(tx neo4j.Transaction, requestedBy Identity, newPublish Publ
     // Require publisher existance
     MATCH (publisher:Identity {id:$publisher_id})
 
+    OPTIONAL MATCH (publisher)-[:PUBLISH]-(existingPr:Publish:Rule)-[:PUBLISH]->(s)
+    OPTIONAL MATCH (publisher)-[:PUBLISH]-(existingMgpr:Publish:Rule)-[:PUBLISH]->(mg)
+    OPTIONAL MATCH (publisher)-[:PUBLISH]-(existingRootmgpr:Publish:Rule)-[:PUBLISH]->(rootmg)
+
+    DETACH DELETE existingPr, existingMgpr, existingRootmgpr
+
     MERGE (publisher)-[:PUBLISH]-(pr:Publish:Rule {title:$title, description:$description})-[:PUBLISH]->(s)
     MERGE (publisher)-[:PUBLISH]-(mgpr:Publish:Rule)-[:PUBLISH]->(mg)
     MERGE (publisher)-[:PUBLISH]-(rootmgpr:Publish:Rule)-[:PUBLISH]->(rootmg)
