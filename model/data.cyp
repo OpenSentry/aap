@@ -76,15 +76,9 @@ MERGE (:Scope {name:"aap:create:consents:authorize", title:"Accept consent chall
 MERGE (:Scope {name:"aap:create:consents:reject", title:"Reject consent to entity", description:"Allow rejecting access to entity on behalf of entity"})
 //MERGE (:Scope {name:"aap:read:entities:judge", title:"Judge entities", description:"Allow to judge if authorized to perform request"})
 MERGE (:Scope {name:"aap:create:entities", title:"Create entities", description:"Allow to create entities"})
-<<<<<<< HEAD
-MERGE (:Scope {name:"aap:read:shadows", title:"Read shadows", description:""})
-MERGE (:Scope {name:"aap:create:shadows", title:"Create shadows", description:""})
-MERGE (:Scope {name:"aap:delete:shadows", title:"Remove shadows", description:""})
-=======
 MERGE (:Scope {name:"aap:create:shadows", title:"Create shadow", description:"Allow access to create shadow"})
 MERGE (:Scope {name:"aap:read:shadows", title:"Read shadow", description:"Allow access to read shadow"})
 MERGE (:Scope {name:"aap:delete:shadows", title:"Delete shadow", description:"Allow access to delete shadow"})
->>>>>>> 8eddb369ea5b944e09681f94579cb88584cb4516
 ;
 
 
@@ -230,7 +224,6 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## ME UI subscribes to AAP
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
 MATCH (publisher:Identity:ResourceServer {name:"AAP"})
-MATCH (s:Scope) where s.name in split("aap:read:scopes aap:create:scopes aap:update:scopes aap:read:grants aap:create:grants aap:delete:grants aap:read:publishes aap:create:publishes aap:delete:publishes aap:read:consents aap:delete:consents aap:create:subscriptions aap:delete:subscriptions aap:read:subscriptions aap:read:shadows aap:create:shadows aap:delete:shadows", " ")
 MATCH (s:Scope) where s.name in split("aap:read:scopes aap:create:scopes aap:update:scopes aap:read:grants aap:create:grants aap:delete:grants aap:read:publishes aap:create:publishes aap:delete:publishes aap:read:consents aap:delete:consents aap:create:subscriptions aap:delete:subscriptions aap:read:subscriptions aap:create:shadows aap:read:shadows aap:delete:shadows", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
