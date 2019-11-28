@@ -191,12 +191,6 @@ func serve(env *app.Environment) {
   r.Use(app.RequestId())
   r.Use(app.RequestLogger(env.Constants.LogKey, env.Constants.RequestIdKey, log, appFields))
 
-  // Public endpoints
-  ep := r.Group("/")
-  {
-    ep.GET( "/entities/judge", entities.GetEntitiesJudge(env))
-  }
-
   // ## QTNA - Questions that need answering before granting access to a protected resource
   // 1. Is the user or client authenticated? Answered by the process of obtaining an access token.
   // 2. Is the access token expired?
@@ -205,9 +199,11 @@ func serve(env *app.Environment) {
   // 5. Is the access token revoked?
 
   // Authenticated endpoints
-  ep = r.Group("/")
+  ep := r.Group("/")
   ep.Use(app.AuthenticationRequired(env.Constants.LogKey, env.Constants.AccessTokenKey))
   {
+    ep.GET( "/entities/judge", app.AuthorizationRequired(env, ""), entities.GetEntitiesJudge(env)) // Look for authenticated access token.
+
     ep.POST("/entities",                 app.AuthorizationRequired(env, "aap:create:entities"),       entities.PostEntities(env))
 
     ep.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))

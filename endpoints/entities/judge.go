@@ -1,13 +1,17 @@
 package entities
 
 import (
+  "strings"
   "net/http"
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
+  "golang.org/x/oauth2"
 
   "github.com/charmixer/aap/app"
   "github.com/charmixer/aap/gateway/aap"
   "github.com/charmixer/aap/client"
+
+  hydra "github.com/charmixer/hydra/client"
 
   bulky "github.com/charmixer/bulky/server"
 )
@@ -37,21 +41,33 @@ func GetEntitiesJudge(env *app.Environment) gin.HandlerFunc {
       defer tx.Close() // rolls back if not already committed/rolled back
       defer session.Close()
 
-      // requestor := c.MustGet("sub").(string) // This is the requestor of the Judge call. Not the client we need to judge.
+      callerId := c.MustGet("sub").(string) // This is the requestor of the Judge call. Not the client we need to judge.
+
+      hydraClient := hydra.NewHydraClient(env.OAuth2Delegator.Config)
 
       for _, request := range iRequests {
         r := request.Input.(client.ReadEntitiesJudgeRequest)
 
+        tokenFromRequest := &oauth2.Token{
+          AccessToken: r.AccessToken,
+          TokenType: "bearer",
+        }
+
+        iCaller := aap.Identity{Id: callerId}
         iPublisher := aap.Identity{Id:r.Publisher}
-        iRequestor := aap.Identity{Id:r.Identity}
-        iScope     := aap.Scope{Name:r.Scope}
+
+        var scopes []string = strings.Split(r.Scope, " ")
+        var iScopes []aap.Scope
+        for _, scope := range scopes {
+          iScopes = append(iScopes, aap.Scope{Name:scope})
+        }
 
         var iOwners []aap.Identity
         for _, id := range r.Owners {
           iOwners = append(iOwners, aap.Identity{Id:id})
         }
 
-        verdict, err := aap.Judge(tx, iPublisher, iRequestor, iScope, iOwners)
+        judgeVerdict, err := app.Judge(tx, tokenFromRequest, iPublisher, iScopes, iOwners, iCaller, hydraClient, env.OAuth2Delegator.IntrospectTokenUrl)
         if err != nil {
           e := tx.Rollback()
           if e != nil {
@@ -63,17 +79,21 @@ func GetEntitiesJudge(env *app.Environment) gin.HandlerFunc {
           return
         }
 
+        var grantedScopes []string
+        for _, s := range judgeVerdict.Verdict.GrantedScopes {
+          grantedScopes = append(grantedScopes, s.Name)
+        }
 
         var owners []string
-        for _, o := range verdict.Owners {
+        for _, o := range judgeVerdict.Verdict.Owners {
           owners = append(owners, o.Id)
         }
 
         request.Output = bulky.NewOkResponse(request.Index, client.ReadEntitiesJudgeResponse{
-          Granted: verdict.Granted,
-          Identity: verdict.Requestor.Id,
-          Publisher: verdict.Publisher.Id,
-          Scope: verdict.Scope.Name,
+          Granted: judgeVerdict.Verdict.Granted,
+          Identity: judgeVerdict.Verdict.Requestor.Id,
+          Publisher: judgeVerdict.Verdict.Publisher.Id,
+          Scope: strings.Join(grantedScopes, " "),
           Owners: owners,
         })
       }

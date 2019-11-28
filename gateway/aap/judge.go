@@ -7,7 +7,7 @@ import (
   "github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScope Scope, iFilterOwners []Identity) (verdict Verdict, err error) {
+func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScopes []Scope, iFilterOwners []Identity) (verdict Verdict, err error) {
   var result neo4j.Result
   var cypher string
   var params = make(map[string]interface{})
@@ -22,10 +22,15 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
   }
   params["requestor"] = iRequestor.Id
 
-  if iScope.Name == "" {
-    return Verdict{}, errors.New("Missing iScope.Name")
+  if len(iScopes) <= 0 {
+    return Verdict{}, errors.New("Missing iScopes")
   }
-  params["scope"] = iScope.Name
+
+  _s := []string{}
+  for _, iScope := range iScopes {
+    _s = append(_s, iScope.Name)
+  }
+  params["scope"] = strings.Join(_s, " ")
 
   // NOTE: Let cypher do the distinction of the owners instead of go.
 
@@ -49,7 +54,7 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
     MATCH (requestor:Identity {id:$requestor})
 
     // Collect all publishings for scopes by publisher
-    MATCH (scope:Scope {name:$scope})
+    MATCH (scope:Scope) WHERE scope.name in split($scope, " ")
     MATCH (publisher)-[:PUBLISH]->(publishing:Publish:Rule)-[:PUBLISH]->(scope)
 
     // Collet all granted owners for requested publishings
@@ -57,7 +62,7 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
     WHERE grant.nbf <= datetime().epochSeconds AND (grant.exp > datetime().epochSeconds OR grant.exp = 0) %s
 
     // Conclude. This only returns anything if everything match!
-    RETURN publisher, requestor, scope, collect(owner) as owner
+    RETURN publisher, requestor, collect(scope) as scope, collect(owner) as owner
   `, cypFilterOwners)
 
   logCypher(cypher, params)
@@ -70,7 +75,9 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
   verdict = Verdict{
     Publisher: iPublisher,
     Requestor: iRequestor,
-    Scope: iScope,
+    RequestedScopes: iScopes,
+    GrantedScopes: []Scope{},
+    MissingScopes: iScopes,
     Owners: iFilterOwners,
     Granted: false,
   }
@@ -79,13 +86,19 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
     record          := result.Record()
     publisherNode   := record.GetByIndex(0)
     requestorNode   := record.GetByIndex(1)
-    scopeNode       := record.GetByIndex(2)
+    scopeNodes      := record.GetByIndex(2)
     ownerNodes      := record.GetByIndex(3)
 
-    if publisherNode != nil && requestorNode != nil && scopeNode != nil && ownerNodes != nil {
+    if publisherNode != nil && requestorNode != nil && scopeNodes != nil && ownerNodes != nil {
       p := marshalNodeToIdentity(publisherNode.(neo4j.Node))
       r := marshalNodeToIdentity(requestorNode.(neo4j.Node))
-      s := marshalNodeToScope(scopeNode.(neo4j.Node))
+
+      var grantedScopes []Scope
+      if scopeNodes != nil {
+        for _, n := range scopeNodes.([]interface{}) {
+          grantedScopes = append(grantedScopes, marshalNodeToScope(n.(neo4j.Node)))
+        }
+      }
 
       var owners []Identity
       if ownerNodes != nil {
@@ -94,12 +107,18 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
         }
       }
 
+      missingScopes := difference(grantedScopes, iScopes)
+
+      granted := len(missingScopes) == 0
+
       verdict = Verdict{
         Publisher: p,
         Requestor: r,
-        Scope: s,
+        RequestedScopes: iScopes,
+        GrantedScopes: grantedScopes,
+        MissingScopes: missingScopes,
         Owners: owners,
-        Granted: true,
+        Granted: granted,
       }
     }
   }
@@ -110,4 +129,20 @@ func Judge(tx neo4j.Transaction, iPublisher Identity, iRequestor Identity, iScop
   }
 
   return verdict, nil
+}
+
+// Set Difference: A - B
+func difference(a []Scope, b []Scope) (diff []Scope) {
+  m := make(map[string]bool)
+
+  for _, item := range b {
+    m[item.Name] = true
+  }
+
+  for _, item := range a {
+    if _, ok := m[item.Name]; !ok {
+      diff = append(diff, item)
+    }
+  }
+  return
 }

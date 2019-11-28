@@ -53,3 +53,11 @@ func AuthenticationRequired(logKey string, accessTokenKey string) gin.HandlerFun
   }
   return gin.HandlerFunc(fn)
 }
+
+func AccessToken(env *Environment, c *gin.Context) (*oauth2.Token) {
+  t, exists := c.Get(env.Constants.AccessTokenKey)
+  if exists == true {
+    return t.(*oauth2.Token)
+  }
+  return nil
+}
