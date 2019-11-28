@@ -26,9 +26,10 @@ type Verdict struct {
   Owners    []string `json:"owners"       validate:"omitempty,dive,uuid"`// Resource Owners (often publisher or Subject)
 }
 
+// AAP requires all calls to be HTTP override post. This prevenst leaking of access token into by accident into access log like with normal GET requests.
 type ReadEntitiesJudgeResponse Verdict
 type ReadEntitiesJudgeRequest struct {
-  Identity  string   `json:"identity_id"      validate:"required,uuid"` // Subject access_token.sub
+  AccessToken string   `json:"access_token"     validate:"required"`
   Publisher string   `json:"publisher_id"     validate:"required,uuid"` // Resource Server Audience
   Scope     string   `json:"scope"            validate:"required"`
   Owners    []string `json:"owners,omitempty" validate:"omitempty,dive,uuid"`// Resource Owners (often publisher or Subject)

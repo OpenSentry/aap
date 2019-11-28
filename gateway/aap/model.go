@@ -150,7 +150,9 @@ type Shadow struct {
 type Verdict struct {
   Publisher Identity
   Requestor Identity
-  Scope Scope
+  RequestedScopes []Scope
+  GrantedScopes []Scope
+  MissingScopes []Scope
   Owners []Identity
   Granted bool
 }
