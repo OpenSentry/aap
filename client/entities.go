@@ -20,10 +20,13 @@ type CreateEntitiesRequest struct {
 type Verdict struct {
   Granted   bool     `json:"is_granted"`
 
-  Identity  string   `json:"identity_id"  validate:"required,uuid"` // Subject access_token.sub
-  Publisher string   `json:"publisher_id" validate:"required,uuid"` // Resource Server Audience
-  Scope     string   `json:"scope"        validate:"required"`
+  // Echo
+  Publisher string   `json:"publisher_id" validate:"omitempty,uuid"` // Resource Server Audience
+  Scope     string   `json:"scope"        validate:"omitempty"`
   Owners    []string `json:"owners"       validate:"omitempty,dive,uuid"`// Resource Owners (often publisher or Subject)
+
+  // Introspected
+  Identity  string   `json:"identity_id"  validate:"omitempty,uuid"` // Subject access_token.sub
 }
 
 // AAP requires all calls to be HTTP override post. This prevenst leaking of access token into by accident into access log like with normal GET requests.
