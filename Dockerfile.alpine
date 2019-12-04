@@ -1,0 +1,47 @@
+# Build with: DOCKER_BUILDKIT=1 docker build -t charmixer/aap:`cat ./VERSION` -f Dockerfile.alpine .
+
+ARG GO_VERSION=1.12
+ARG ALPINE_VERSION=3.10.3
+
+FROM golang:${GO_VERSION}-alpine AS builder
+
+ARG APP=aap
+ARG SEABOLT_VERSION=v1.7.4
+
+RUN apk add --update --no-cache ca-certificates cmake make g++ openssl-dev git curl pkgconfig libcap
+RUN git clone -b ${SEABOLT_VERSION} https://github.com/neo4j-drivers/seabolt.git /seabolt
+RUN update-ca-certificates 2>/dev/null || true
+
+WORKDIR /seabolt/build
+
+RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_LIBDIR=lib .. && cmake --build . --target install
+
+WORKDIR $GOPATH/src/github.com/charmixer/${APP}
+
+COPY . .
+
+RUN rm -f go.mod go.sum
+RUN rm -f application-build*
+
+RUN go get -d -v ./...
+
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+RUN dep init && dep ensure -add github.com/neo4j/neo4j-go-driver/neo4j
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -tags seabolt_static -o /app
+RUN cp -r ./model /model # /views is static data, which isnt built within the binary
+
+RUN setcap 'cap_net_bind_service=+ep' /app
+
+# Create alpine runtime image
+FROM alpine:${ALPINE_VERSION}
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app /app
+COPY --from=builder /model /model
+
+USER 1000
+
+EXPOSE 443
+
+ENTRYPOINT ["/app"]
+CMD ["--help"]
