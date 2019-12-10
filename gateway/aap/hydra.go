@@ -3,8 +3,8 @@ package aap
 import (
   hydra "github.com/charmixer/hydra/client"
   "github.com/neo4j/neo4j-go-driver/neo4j"
-  "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/utils"
+  "github.com/opensentry/aap/config"
+  "github.com/opensentry/aap/utils"
   "strings"
 )
 

@@ -8,8 +8,8 @@ import (
 
   hydra "github.com/charmixer/hydra/client"
 
-  "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/gateway/aap"
+  "github.com/opensentry/aap/config"
+  "github.com/opensentry/aap/gateway/aap"
 )
 
 func AuthorizationRequired(env *Environment, requiredScopes ...string) gin.HandlerFunc {

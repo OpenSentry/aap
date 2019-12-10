@@ -5,9 +5,9 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/app"
-  "github.com/charmixer/aap/gateway/aap"
-  "github.com/charmixer/aap/client"
+  "github.com/opensentry/aap/app"
+  "github.com/opensentry/aap/gateway/aap"
+  "github.com/opensentry/aap/client"
 
   bulky "github.com/charmixer/bulky/server"
 

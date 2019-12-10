@@ -14,7 +14,7 @@ import (
 
   nats "github.com/nats-io/nats.go"
 
-  "github.com/charmixer/aap/utils"
+  "github.com/opensentry/aap/utils"
 )
 
 type EnvironmentOauth2Delegator struct {

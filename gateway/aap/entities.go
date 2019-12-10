@@ -5,7 +5,7 @@ import (
   "fmt"
   "github.com/neo4j/neo4j-go-driver/neo4j"
 
-  "github.com/charmixer/aap/config"
+  "github.com/opensentry/aap/config"
 )
 
 func CreateEntity(tx neo4j.Transaction, iEntity Identity, iCreator Identity, iScopes []string) (rEntity Identity, err error) {

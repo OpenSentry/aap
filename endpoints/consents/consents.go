@@ -5,11 +5,11 @@ import (
   "github.com/sirupsen/logrus"
   "github.com/gin-gonic/gin"
 
-  "github.com/charmixer/aap/app"
-  _ "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/gateway/aap"
-  "github.com/charmixer/aap/client"
-  E "github.com/charmixer/aap/client/errors"
+  "github.com/opensentry/aap/app"
+  _ "github.com/opensentry/aap/config"
+  "github.com/opensentry/aap/gateway/aap"
+  "github.com/opensentry/aap/client"
+  E "github.com/opensentry/aap/client/errors"
 
   bulky "github.com/charmixer/bulky/server"
 )

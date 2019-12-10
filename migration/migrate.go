@@ -6,7 +6,7 @@ import (
   "io/ioutil"
   "strings"
 
-  "github.com/charmixer/aap/config"
+  "github.com/opensentry/aap/config"
 )
 
 func loadMigrationsFromFile(path string) []string {
