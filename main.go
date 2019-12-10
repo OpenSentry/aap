@@ -16,19 +16,19 @@ import (
 
   nats "github.com/nats-io/nats.go"
 
-  "github.com/charmixer/aap/app"
-  "github.com/charmixer/aap/config"
+  "github.com/opensentry/aap/app"
+  "github.com/opensentry/aap/config"
 
-  "github.com/charmixer/aap/endpoints/entities"
-  "github.com/charmixer/aap/endpoints/scopes"
-  "github.com/charmixer/aap/endpoints/grants"
-  "github.com/charmixer/aap/endpoints/publishings"
-  "github.com/charmixer/aap/endpoints/consents"
-  "github.com/charmixer/aap/endpoints/subscriptions"
-  "github.com/charmixer/aap/endpoints/shadows"
-  "github.com/charmixer/aap/migration"
+  "github.com/opensentry/aap/endpoints/entities"
+  "github.com/opensentry/aap/endpoints/scopes"
+  "github.com/opensentry/aap/endpoints/grants"
+  "github.com/opensentry/aap/endpoints/publishings"
+  "github.com/opensentry/aap/endpoints/consents"
+  "github.com/opensentry/aap/endpoints/subscriptions"
+  "github.com/opensentry/aap/endpoints/shadows"
+  "github.com/opensentry/aap/migration"
 
-  E "github.com/charmixer/aap/client/errors"
+  E "github.com/opensentry/aap/client/errors"
 )
 
 const (

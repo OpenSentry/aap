@@ -7,11 +7,11 @@ import (
   "github.com/gin-gonic/gin"
   hydra "github.com/charmixer/hydra/client"
 
-  "github.com/charmixer/aap/app"
-  "github.com/charmixer/aap/config"
-  "github.com/charmixer/aap/gateway/aap"
-  "github.com/charmixer/aap/client"
-  E "github.com/charmixer/aap/client/errors"
+  "github.com/opensentry/aap/app"
+  "github.com/opensentry/aap/config"
+  "github.com/opensentry/aap/gateway/aap"
+  "github.com/opensentry/aap/client"
+  E "github.com/opensentry/aap/client/errors"
 
   bulky "github.com/charmixer/bulky/server"
 

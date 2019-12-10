@@ -7,9 +7,9 @@ import (
   "github.com/gin-gonic/gin"
   "golang.org/x/oauth2"
 
-  "github.com/charmixer/aap/app"
-  "github.com/charmixer/aap/gateway/aap"
-  "github.com/charmixer/aap/client"
+  "github.com/opensentry/aap/app"
+  "github.com/opensentry/aap/gateway/aap"
+  "github.com/opensentry/aap/client"
 
   hydra "github.com/charmixer/hydra/client"
 

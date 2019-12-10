@@ -8,7 +8,7 @@ import (
 
   hydra "github.com/charmixer/hydra/client"
 
-  "github.com/charmixer/aap/gateway/aap"
+  "github.com/opensentry/aap/gateway/aap"
 )
 
 type Introspection struct {

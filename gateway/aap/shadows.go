@@ -6,7 +6,7 @@ import (
   "fmt"
   "github.com/neo4j/neo4j-go-driver/neo4j"
 
-  _ "github.com/charmixer/aap/config"
+  _ "github.com/opensentry/aap/config"
 )
 
 func CreateShadow(tx neo4j.Transaction, iIdentity Identity, iShadow Identity, iNotBefore int64, iExpire int64) (rShadow Shadow, err error) {
