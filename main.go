@@ -208,7 +208,6 @@ func serve(env *app.Environment) {
 
     ep.GET("/scopes",                    app.AuthorizationRequired(env, "aap:read:scopes"),           scopes.GetScopes(env))
     ep.POST("/scopes",                   app.AuthorizationRequired(env, "aap:create:scopes"),         scopes.PostScopes(env))
-    ep.PUT("/scopes",                    app.AuthorizationRequired(env, "aap:update:scopes"),         scopes.PutScopes(env))
 
     ep.POST("/grants",                   app.AuthorizationRequired(env, "aap:create:grants"),         grants.PostGrants(env))
     ep.GET("/grants",                    app.AuthorizationRequired(env, "aap:read:grants"),           grants.GetGrants(env))

@@ -58,7 +58,6 @@ MERGE (:Scope {name:"idp:delete:roles", title:"Delete roles", description:"Allow
 // @TODO fix identity -> human
 MERGE (:Scope {name:"aap:read:scopes", title:"Read scopes", description:""})
 MERGE (:Scope {name:"aap:create:scopes", title:"Create new scopes", description:""})
-MERGE (:Scope {name:"aap:update:scopes", title:"Update existing scopes", description:""})
 MERGE (:Scope {name:"aap:read:grants", title:"Read grants", description:""})
 MERGE (:Scope {name:"aap:create:grants", title:"Create new grants", description:""})
 MERGE (:Scope {name:"aap:delete:grants", title:"Remove grants", description:""})

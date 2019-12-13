@@ -138,21 +138,3 @@ func GetScopes(env *app.Environment) gin.HandlerFunc {
   return gin.HandlerFunc(fn)
 }
 
-func PutScopes(env *app.Environment) gin.HandlerFunc {
-  fn := func(c *gin.Context) {
-    log := c.MustGet(env.Constants.LogKey).(*logrus.Entry)
-    log = log.WithFields(logrus.Fields{
-      "func": "PostScopes",
-    })
-
-    var requests []client.UpdateScopesRequest
-    err := c.BindJSON(&requests)
-    if err != nil {
-      c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      return
-    }
-
-    c.AbortWithStatus(http.StatusNotFound)
-  }
-  return gin.HandlerFunc(fn)
-}
