@@ -7,8 +7,8 @@
 **Closed issues:**
 
 - Judge gives 500 when access token is expired [\#7](https://github.com/OpenSentry/aap/issues/7)
-- Write "Getting started" for golang-cp-be [\#3](https://github.com/OpenSentry/aap/issues/3)
-- Create Dockerfile for golang-cp-be [\#2](https://github.com/OpenSentry/aap/issues/2)
+- Write "Getting started" for aap [\#3](https://github.com/OpenSentry/aap/issues/3)
+- Create Dockerfile for aap [\#2](https://github.com/OpenSentry/aap/issues/2)
 - Figure out which endpoints golang-cp-be should have [\#1](https://github.com/OpenSentry/aap/issues/1)
 
 
