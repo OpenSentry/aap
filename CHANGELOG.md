@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.0.1](https://github.com/OpenSentry/aap/tree/0.0.1) (2019-12-18)
+
+[Full Changelog](https://github.com/OpenSentry/aap/compare/0.0.0...0.0.1)
+
 ## [0.0.0](https://github.com/OpenSentry/aap/tree/0.0.0) (2019-12-16)
 
 [Full Changelog](https://github.com/OpenSentry/aap/compare/a9cdfdb0b212839de5c450f67d408c02bd7b3b7c...0.0.0)
@@ -9,7 +13,7 @@
 - Judge gives 500 when access token is expired [\#7](https://github.com/OpenSentry/aap/issues/7)
 - Write "Getting started" for aap [\#3](https://github.com/OpenSentry/aap/issues/3)
 - Create Dockerfile for aap [\#2](https://github.com/OpenSentry/aap/issues/2)
-- Figure out which endpoints golang-cp-be should have [\#1](https://github.com/OpenSentry/aap/issues/1)
+- Figure out which endpoints aap should have [\#1](https://github.com/OpenSentry/aap/issues/1)
 
 
 
