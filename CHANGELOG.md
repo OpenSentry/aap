@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenSentry/aap/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenSentry/aap/compare/0.0.1...HEAD)
+
+**Merged pull requests:**
+
+- Update FUNDING.yml [\#22](https://github.com/OpenSentry/aap/pull/22) ([CharMixer](https://github.com/CharMixer))
+
 ## [0.0.1](https://github.com/OpenSentry/aap/tree/0.0.1) (2019-12-18)
 
 [Full Changelog](https://github.com/OpenSentry/aap/compare/0.0.0...0.0.1)
