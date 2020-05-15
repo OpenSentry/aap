@@ -42,7 +42,7 @@ MERGE (:Scope {name:"idp:update:challenges:verify", title:"Verify a Challenge", 
 
 MERGE (:Scope {name:"idp:create:clients", title:"Create clients", description:"Allow access to create clients"})
 MERGE (:Scope {name:"idp:read:clients", title:"Read clients", description:"Allow access to read clients"})
-//MERGE (:Scope {name:"idp:update:clients", title:"", description:""})
+MERGE (:Scope {name:"idp:update:clients", title:"Update clients", description:"Allow access to update clients"})
 MERGE (:Scope {name:"idp:delete:clients", title:"Delete clients", description:"Allow access to delete clients"})
 
 MERGE (:Scope {name:"idp:create:resourceservers", title:"Create resource servers", description:"Allow access to create resource servers"})
@@ -216,7 +216,7 @@ MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 // ## ME UI subscribes to IDP
 MATCH (subscriber:Identity:Client {id:"20f2bfc6-44df-424a-b490-c024d009892c"})
 MATCH (publisher:Identity:ResourceServer {name:"IDP"})
-MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:create:invites:send idp:create:invites:claim idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:read:clients idp:delete:clients idp:create:roles idp:read:roles idp:delete:roles", " ")
+MATCH (s:Scope) where s.name in split("idp:read:identities idp:read:humans idp:update:humans idp:create:humans:recover idp:create:invites idp:read:invites idp:create:invites:send idp:create:invites:claim idp:create:resourceservers idp:read:resourceservers idp:delete:resourceservers idp:create:clients idp:update:clients idp:read:clients idp:delete:clients idp:create:roles idp:read:roles idp:delete:roles", " ")
 MATCH (publisher)-[:PUBLISH]->(pr:Publish:Rule)-[:PUBLISH]->(s)
 MERGE (subscriber)-[:SUBSCRIBES]-(sr:Subscribe:Rule)-[:SUBSCRIBES]->(pr)
 ;
