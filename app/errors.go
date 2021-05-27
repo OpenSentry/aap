@@ -5,6 +5,6 @@ const ERROR_INVALID_ACCESS_TOKEN = 1
 const ERROR_MISSING_BEARER_TOKEN = 2
 
 type JsonError struct {
-  ErrorCode int    `json:"error_code" binding:"required"`
-  Error     string `json:"error" binding:"required"`
+	ErrorCode int    `json:"error_code" binding:"required"`
+	Error     string `json:"error" binding:"required"`
 }
